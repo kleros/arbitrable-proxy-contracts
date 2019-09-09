@@ -11,30 +11,29 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     struct DisputeStruct {
         Arbitrator arbitrator;
         bytes arbitratorExtraData;
-        uint disputeID;
         bool isRuled;
         uint disputeIDOnArbitratorSide;
     }
 
 
-    DisputeStruct[] disputes;
-    mapping(uint => DisputeStruct) disputeIDOnArbitratorSidetoDisputeStruct;
+    DisputeStruct[] public disputes;
+    mapping(uint => DisputeStruct) public disputeIDOnArbitratorSidetoDisputeStruct;
 
     function createDispute(Arbitrator _arbitrator, bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI) external payable {
         uint arbitrationCost = _arbitrator.arbitrationCost(_arbitratorExtraData);
-        uint disputeIDOnArbitratorSide = _arbitrator.createDispute.value(arbitrationCost)(NUMBER_OF_CHOICES, _arbitratorExtraData);
+        uint _disputeIDOnArbitratorSide = _arbitrator.createDispute.value(arbitrationCost)(NUMBER_OF_CHOICES, _arbitratorExtraData);
 
         disputes.push(DisputeStruct({
             arbitrator: _arbitrator,
             arbitratorExtraData: _arbitratorExtraData,
-            disputeID: disputeIDOnArbitratorSide,
             isRuled: false,
-            disputeIDOnArbitratorSide: disputeIDOnArbitratorSide
+            disputeIDOnArbitratorSide: _disputeIDOnArbitratorSide
         }));
 
-        disputeIDOnArbitratorSidetoDisputeStruct[disputeIDOnArbitratorSide] = disputes[disputes.length];
+        disputeIDOnArbitratorSidetoDisputeStruct[_disputeIDOnArbitratorSide] = disputes[disputes.length-1];
 
         emit MetaEvidence(disputes.length-1, _metaevidenceURI);
+
     }
 
     function appeal(uint _localDisputeID) external payable {
