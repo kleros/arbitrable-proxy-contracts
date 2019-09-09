@@ -1,0 +1,16 @@
+{
+  "name": "binary-arbitrable-proxy-contract",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/kleros/binary-arbitrable-proxy-contract",
+  "author": "Kleros",
+  "license": "MIT",
+  "private": false,
+  "devDependencies": {
+    "@kleros/kathari": "^0.23.0",
+    "truffle": "^5.0.35"
+  },
+  "dependencies": {
+    "@kleros/erc-792": "^1.1.0"
+  }
+}
