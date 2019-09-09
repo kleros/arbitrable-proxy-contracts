@@ -9,7 +9,8 @@
   "devDependencies": {
     "@kleros/kathari": "^0.23.0",
     "@truffle/hdwallet-provider": "^1.0.18",
-    "truffle": "^5.0.35"
+    "truffle": "^5.0.35",
+    "truffle-plugin-verify": "^0.3.2"
   },
   "dependencies": {
     "@kleros/erc-792": "^1.1.0"
