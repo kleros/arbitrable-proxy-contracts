@@ -8,6 +8,7 @@
   "private": false,
   "devDependencies": {
     "@kleros/kathari": "^0.23.0",
+    "@truffle/hdwallet-provider": "^1.0.18",
     "truffle": "^5.0.35"
   },
   "dependencies": {
