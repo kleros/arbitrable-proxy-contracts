@@ -48,7 +48,6 @@ module.exports = {
     //  port: 8545,            // Standard Ethereum port (default: none)
     //  network_id: "*",       // Any network (default: none)
     // },
-
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port
@@ -58,7 +57,6 @@ module.exports = {
     // from: <address>,        // Account to send txs from (default: accounts[0])
     // websockets: true        // Enable EventEmitter interface for web3 (default: false)
     // },
-
     // Useful for deploying to a public network.
     // NB: It's important to wrap the provider as a function.
     // ropsten: {
@@ -69,24 +67,23 @@ module.exports = {
     // timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
     // skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
     // },
-
     // Useful for private networks
     // private: {
     // provider: () => new HDWalletProvider(mnemonic, `https://network.io`),
     // network_id: 2111,   // This network is yours, in the cloud.
     // production: true    // Treats this network as if it was a public net. (default: false)
     // }
-    kovan: {
-      provider: new HDWalletProvider(
-        process.env.KOVAN_MNEMONIC,
-        'https://kovan.infura.io/v3/344bdb3c652c4ce6acc12f10a7557ba6'
-      ),
-      network_id: 42,
-      gas: 6712388,
-      gasPrice: 20000000000
-    }
+    //   kovan: {
+    //     provider: new HDWalletProvider(
+    //       process.env.KOVAN_MNEMONIC,
+    //       'https://kovan.infura.io/v3/344bdb3c652c4ce6acc12f10a7557ba6'
+    //     ),
+    //     network_id: 42,
+    //     gas: 6712388,
+    //     gasPrice: 20000000000
+    //   }
+    //
   },
-
   // Set default mocha options here, use special reporters etc.
   mocha: {
     // timeout: 100000

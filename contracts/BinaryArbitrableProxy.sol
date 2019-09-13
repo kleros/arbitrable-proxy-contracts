@@ -3,18 +3,34 @@ pragma solidity >=0.5 <0.6.0;
 import "../node_modules/@kleros/erc-792/contracts/IArbitrable.sol";
 import "../node_modules/@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
 import "../node_modules/@kleros/erc-792/contracts/Arbitrator.sol";
+import "./Crowdfunding.sol";
 
 contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     uint constant NUMBER_OF_CHOICES = 2;
+
+    Crowdfunding crowdfunding;
 
     struct DisputeStruct {
         Arbitrator arbitrator;
         bytes arbitratorExtraData;
         bool isRuled;
         uint disputeIDOnArbitratorSide;
+        Round[] rounds;
     }
 
+    enum Party {
+       None,
+       Claimer,
+       Challenger
+   }
+    struct Round {
+      bool[3] hasPaid;
+    }
+
+    constructor(Crowdfunding _crowdfunding) public {
+        crowdfunding = _crowdfunding;
+    }
 
     DisputeStruct[] public disputes;
     mapping(uint => DisputeStruct) public disputeIDOnArbitratorSidetoDisputeStruct;
@@ -23,12 +39,11 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         uint arbitrationCost = _arbitrator.arbitrationCost(_arbitratorExtraData);
         uint _disputeIDOnArbitratorSide = _arbitrator.createDispute.value(arbitrationCost)(NUMBER_OF_CHOICES, _arbitratorExtraData);
 
-        disputes.push(DisputeStruct({
-            arbitrator: _arbitrator,
-            arbitratorExtraData: _arbitratorExtraData,
-            isRuled: false,
-            disputeIDOnArbitratorSide: _disputeIDOnArbitratorSide
-        }));
+        uint disputeID = disputes.length++;
+        DisputeStruct storage dispute = disputes[disputeID];
+        dispute.arbitrator = _arbitrator;
+        dispute.arbitratorExtraData = _arbitratorExtraData;
+        dispute.disputeIDOnArbitratorSide = _disputeIDOnArbitratorSide;
 
         disputeIDOnArbitratorSidetoDisputeStruct[_disputeIDOnArbitratorSide] = disputes[disputes.length-1];
 
@@ -38,7 +53,24 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     function appeal(uint _localDisputeID) external payable {
         DisputeStruct storage dispute = disputes[_localDisputeID];
-        dispute.arbitrator.appeal.value(msg.value)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+
+        uint appealCost = dispute.arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+        dispute.arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+    }
+
+    function fundAppeal(uint _localDisputeID, uint _side)external {
+        DisputeStruct storage dispute = disputes[_localDisputeID];
+        uint round = dispute.rounds.length;
+
+        uint appealCost = dispute.arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+        crowdfunding.contribute(msg.sender, _localDisputeID, round, _side);
+        if(crowdfunding.totalContributionOfADisputeForASideInARound(address(this),_localDisputeID,round,_side) >= appealCost)
+        {
+            uint excessContribution = crowdfunding.totalContributionOfADisputeForASideInARound(address(this),_localDisputeID,round,_side) - appealCost;
+            msg.sender.send(excessContribution);
+            crowdfunding.finalizeFunding(_localDisputeID, round, _side);
+            dispute.rounds[round].hasPaid[_side] = true;
+        }
     }
 
     function rule(uint _localDisputeID, uint _ruling) external {
