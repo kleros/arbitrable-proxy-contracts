@@ -9,11 +9,14 @@
   "devDependencies": {
     "@kleros/kathari": "^0.23.0",
     "@truffle/hdwallet-provider": "^1.0.18",
+    "ganache": "^6.4.4",
+    "ganache-cli": "^6.7.0",
     "truffle": "^5.0.35",
     "truffle-plugin-verify": "^0.3.2"
   },
   "dependencies": {
-    "@kleros/erc-792": "^1.1.0"
+    "@kleros/erc-792": "^1.1.0",
+    "@kleros/ethereum-libraries": "^1.0.0"
   },
   "files": [
     "build",

@@ -3,33 +3,31 @@ pragma solidity >=0.5 <0.6.0;
 import "../node_modules/@kleros/erc-792/contracts/IArbitrable.sol";
 import "../node_modules/@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
 import "../node_modules/@kleros/erc-792/contracts/Arbitrator.sol";
-import "./Crowdfunding.sol";
+import "./CrowdfundedAppeal.sol";
 
 contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     uint constant NUMBER_OF_CHOICES = 2;
 
-    Crowdfunding crowdfunding;
+    uint public sharedStakeMultiplier; // Multiplier for calculating the appeal fee that must be paid by submitter in the case where there isn't a winner and loser (e.g. when the arbitrator ruled "refuse to arbitrate").
+    uint public winnerStakeMultiplier; // Multiplier for calculating the appeal fee of the party that won the previous round.
+    uint public loserStakeMultiplier; // Multiplier for calculating the appeal fee of the party that lost the previous round.
 
     struct DisputeStruct {
         Arbitrator arbitrator;
         bytes arbitratorExtraData;
         bool isRuled;
         uint disputeIDOnArbitratorSide;
-        Round[] rounds;
+        CrowdfundedAppeal crowdfundingManager;
     }
 
-    enum Party {
-       None,
-       Claimer,
-       Challenger
-   }
-    struct Round {
-      bool[3] hasPaid;
-    }
 
-    constructor(Crowdfunding _crowdfunding) public {
-        crowdfunding = _crowdfunding;
+
+
+    constructor(uint _sharedStakeMultipler, uint _winnerStakeMultiplier, uint _loserStakeMultiplier) public {
+        sharedStakeMultiplier = _sharedStakeMultipler;
+        winnerStakeMultiplier = _winnerStakeMultiplier;
+        loserStakeMultiplier = _loserStakeMultiplier;
     }
 
     DisputeStruct[] public disputes;
@@ -44,6 +42,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         dispute.arbitrator = _arbitrator;
         dispute.arbitratorExtraData = _arbitratorExtraData;
         dispute.disputeIDOnArbitratorSide = _disputeIDOnArbitratorSide;
+        dispute.crowdfundingManager = new CrowdfundedAppeal(_arbitrator, _arbitratorExtraData, _disputeIDOnArbitratorSide, 2, sharedStakeMultiplier, winnerStakeMultiplier, loserStakeMultiplier);
 
         disputeIDOnArbitratorSidetoDisputeStruct[_disputeIDOnArbitratorSide] = disputes[disputes.length-1];
 
@@ -51,27 +50,15 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     }
 
-    function appeal(uint _localDisputeID) external payable {
+    function appeal(uint _localDisputeID, uint _side) external {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
-        uint appealCost = dispute.arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
-        dispute.arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+        (uint appealPeriodStart, uint appealPeriodEnd) = dispute.arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
+        require(now >= appealPeriodStart && now < appealPeriodEnd, "Funding must be made within the appeal period.");
+
+        dispute.crowdfundingManager.contribute(msg.sender, _side);
     }
 
-    function fundAppeal(uint _localDisputeID, uint _side)external {
-        DisputeStruct storage dispute = disputes[_localDisputeID];
-        uint round = dispute.rounds.length;
-
-        uint appealCost = dispute.arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
-        crowdfunding.contribute(msg.sender, _localDisputeID, round, _side);
-        if(crowdfunding.totalContributionOfADisputeForASideInARound(address(this),_localDisputeID,round,_side) >= appealCost)
-        {
-            uint excessContribution = crowdfunding.totalContributionOfADisputeForASideInARound(address(this),_localDisputeID,round,_side) - appealCost;
-            msg.sender.send(excessContribution);
-            crowdfunding.finalizeFunding(_localDisputeID, round, _side);
-            dispute.rounds[round].hasPaid[_side] = true;
-        }
-    }
 
     function rule(uint _localDisputeID, uint _ruling) external {
         DisputeStruct storage dispute = disputes[_localDisputeID];

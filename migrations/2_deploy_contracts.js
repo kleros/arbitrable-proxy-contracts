@@ -1,5 +1,5 @@
 const BinaryArbitrableProxy = artifacts.require('./BinaryArbitrableProxy.sol')
 
-module.exports = function(deployer) {
-  deployer.deploy(BinaryArbitrableProxy)
+module.exports = function(deployer, network, accounts) {
+  deployer.deploy(BinaryArbitrableProxy, 1, 1, 1)
 }
