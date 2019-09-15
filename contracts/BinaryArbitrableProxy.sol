@@ -22,8 +22,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     }
 
 
-
-
     constructor(uint _sharedStakeMultipler, uint _winnerStakeMultiplier, uint _loserStakeMultiplier) public {
         sharedStakeMultiplier = _sharedStakeMultipler;
         winnerStakeMultiplier = _winnerStakeMultiplier;
@@ -50,13 +48,13 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     }
 
-    function appeal(uint _localDisputeID, uint _side) external {
+    function appeal(uint _localDisputeID, uint _side) external payable {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         (uint appealPeriodStart, uint appealPeriodEnd) = dispute.arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
         require(now >= appealPeriodStart && now < appealPeriodEnd, "Funding must be made within the appeal period.");
 
-        dispute.crowdfundingManager.contribute(msg.sender, _side);
+        dispute.crowdfundingManager.contribute.value(msg.value)(msg.sender, _side);
     }
 
 
