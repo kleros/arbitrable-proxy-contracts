@@ -39,6 +39,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     }
 
     DisputeStruct[] public disputes;
+    mapping(uint => uint) public externalIDtoLocalID;
 
     /** @dev Calls createDispute function of the specified arbitrator to create a dispute.
      *  @param _arbitrator The arbitrator of prospective dispute.
@@ -55,6 +56,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         dispute.arbitratorExtraData = _arbitratorExtraData;
         dispute.disputeIDOnArbitratorSide = _disputeIDOnArbitratorSide;
         dispute.rounds.length++;
+
+        externalIDtoLocalID[_disputeIDOnArbitratorSide] = disputeID;
 
         emit MetaEvidence(disputes.length-1, _metaevidenceURI);
         emit Dispute(_arbitrator, _disputeIDOnArbitratorSide, disputeID, disputeID);
