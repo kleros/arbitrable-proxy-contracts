@@ -57,6 +57,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         dispute.rounds.length++;
 
         emit MetaEvidence(disputes.length-1, _metaevidenceURI);
+        emit Dispute(_arbitrator, _disputeIDOnArbitratorSide, disputeID, disputeID);
     }
 
     /** @dev Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals to be crowdfunded.
