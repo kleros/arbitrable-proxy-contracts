@@ -13,7 +13,6 @@ import "../node_modules/@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
 import "../node_modules/@kleros/erc-792/contracts/Arbitrator.sol";
 import "../node_modules/@kleros/ethereum-libraries/contracts/CappedMath.sol";
 
-
 /**
  *  @title BinaryArbitrableProxy
  *  This contract acts as a general purpose dispute creator.
@@ -58,9 +57,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         dispute.rounds.length++;
 
         emit MetaEvidence(disputes.length-1, _metaevidenceURI);
-
     }
-
 
     /** @dev Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals to be crowdfunded.
      *  @param _localDisputeID Index of the dispute on disputes array.
@@ -88,12 +85,10 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         else
             contribution = msg.value;
 
-
         msg.sender.send(msg.value - contribution);
         round.contributions[msg.sender][_side] = contribution;
         round.paidFees[_side] += contribution;
         round.totalAppealFeesCollected += contribution;
-
 
         if(round.hasPaid[1] && round.hasPaid[2]){
             dispute.arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
@@ -101,7 +96,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             round.totalAppealFeesCollected = round.totalAppealFeesCollected.subCap(appealCost);
         }
     }
-
 
     /** @dev Lets to withdraw any reimbursable fees or rewards after the dispute gets solved.
      *  @param _localDisputeID Index of the dispute on disputes array.
@@ -147,7 +141,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         _contributor.send(reward); // It is the user responsibility to accept ETH.
     }
 
-
     /** @dev To be called by the arbitrator of the dispute, to declare winning side.
      *  @param _localDisputeID Index of the dispute on disputes array.
      *  @param _ruling The side which the caller wants to contribute.
@@ -162,16 +155,13 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
         Round storage round = dispute.rounds[dispute.rounds.length-1];
 
-
         uint resultRuling = _ruling;
         if (round.hasPaid[1] == true) // If one side paid its fees, the ruling is in its favor. Note that if the other side had also paid, an appeal would have been created.
             resultRuling = 1;
         else if (round.hasPaid[2] == true)
             resultRuling = 2;
 
-
         emit Ruling(Arbitrator(msg.sender), dispute.disputeIDOnArbitratorSide, resultRuling);
-
     }
 
     /** @dev Lets to submit evidence for a given dispute.
