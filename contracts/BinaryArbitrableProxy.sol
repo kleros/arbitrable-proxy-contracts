@@ -70,9 +70,9 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         msg.sender.send(msg.value-arbitrationCost);
     }
 
-    /** @dev Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals to be crowdfunded.
-     *  @param _localDisputeID Index of the dispute on disputes array.
-     *  @param _party The side which the caller wants to contribute.
+    /** @dev Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
+     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _party The side to which the caller wants to contribute.
      */
     function appeal(uint _localDisputeID, Party _party) external payable {
         require(_party != Party.RefuseToArbitrate, "You can't appeal in favor of refusing to arbitrate.");
@@ -110,9 +110,9 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     }
 
     /** @dev Lets to withdraw any reimbursable fees or rewards after the dispute gets solved.
-     *  @param _localDisputeID Index of the dispute on disputes array.
-     *  @param _contributor The side which the caller wants to contribute.
-     *  @param _roundNumber The number of the round caller wants to withdraw of.
+     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _contributor The side to which the caller wants to contribute.
+     *  @param _roundNumber The number of the round caller wants to withdraw from.
      */
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber) external {
         DisputeStruct storage dispute = disputes[_localDisputeID];
@@ -151,8 +151,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     }
 
     /** @dev To be called by the arbitrator of the dispute, to declare winning side.
-     *  @param _localDisputeID Index of the dispute on disputes array.
-     *  @param _ruling The side which the caller wants to contribute.
+     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _ruling The side to which the caller wants to contribute.
      */
     function rule(uint _localDisputeID, uint _ruling) external {
         DisputeStruct storage dispute = disputes[_localDisputeID];
@@ -175,7 +175,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     }
 
     /** @dev Lets to submit evidence for a given dispute.
-     *  @param _localDisputeID Index of the dispute on disputes array.
+     *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _evidenceURI Link to evidence.
      */
     function submitEvidence(uint _localDisputeID, string memory _evidenceURI) public {
