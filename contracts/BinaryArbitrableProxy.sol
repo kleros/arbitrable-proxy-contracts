@@ -117,7 +117,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber) external {
         DisputeStruct storage dispute = disputes[_localDisputeID];
         Round storage round = dispute.rounds[_roundNumber];
-        uint disputeIDOnArbitratorSide = dispute.disputeIDOnArbitratorSide;
         uint8 judgment = uint8(dispute.judgment);
 
         require(dispute.isRuled, "The dispute should be solved");
