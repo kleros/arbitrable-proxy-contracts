@@ -150,10 +150,11 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     }
 
     /** @dev To be called by the arbitrator of the dispute, to declare winning side.
-     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _externalDisputeID ID of the dispute in arbitrator contract.
      *  @param _ruling The side to which the caller wants to contribute.
      */
-    function rule(uint _localDisputeID, uint _ruling) external {
+    function rule(uint _externalDisputeID, uint _ruling) external {
+        uint _localDisputeID = arbitratorExternalIDtoLocalID[msg.sender][_externalDisputeID];
         DisputeStruct storage dispute = disputes[_localDisputeID];
         require(msg.sender == address(dispute.arbitrator), "Unauthorized call.");
         require(_ruling <= NUMBER_OF_CHOICES, "Invalid ruling.");
