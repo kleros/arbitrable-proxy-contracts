@@ -114,9 +114,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _roundNumber The number of the round caller wants to withdraw of.
      */
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber) external {
-        require(_roundNumber < disputes[_localDisputeID].rounds.length, "Round number out of bounds.");
-
-
         DisputeStruct storage dispute = disputes[_localDisputeID];
         Round storage round = dispute.rounds[_roundNumber];
         uint disputeIDOnArbitratorSide = dispute.disputeIDOnArbitratorSide;
