@@ -37,6 +37,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         Arbitrator arbitrator;
         bytes arbitratorExtraData;
         bool isRuled;
+        Party judgment;
         uint disputeIDOnArbitratorSide;
         Round[] rounds;
     }
@@ -117,8 +118,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         DisputeStruct storage dispute = disputes[_localDisputeID];
         Round storage round = dispute.rounds[_roundNumber];
         uint disputeIDOnArbitratorSide = dispute.disputeIDOnArbitratorSide;
+        uint8 judgment = uint8(dispute.judgment);
 
-        uint currentRuling = dispute.arbitrator.currentRuling(disputeIDOnArbitratorSide);
         require(dispute.isRuled, "The dispute should be solved");
         uint reward;
         if (!round.hasPaid[requester] || !round.hasPaid[respondent]) {
@@ -126,7 +127,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             reward = round.contributions[_contributor][requester] + round.contributions[_contributor][respondent];
             round.contributions[_contributor][requester] = 0;
             round.contributions[_contributor][respondent] = 0;
-        } else if (currentRuling == 0) {
+        } else if (judgment == 0) {
             // Reimburse unspent fees proportionally if there is no winner and loser.
             uint rewardParty1 = round.paidFees[requester] > 0
                 ? (round.contributions[_contributor][requester] * round.totalAppealFeesCollected) / (round.paidFees[1] + round.paidFees[2])
@@ -140,10 +141,10 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             round.contributions[_contributor][respondent] = 0;
         } else {
               // Reward the winner.
-            reward = round.paidFees[currentRuling] > 0
-                ? (round.contributions[_contributor][currentRuling] * round.totalAppealFeesCollected) / round.paidFees[currentRuling]
+            reward = round.paidFees[judgment] > 0
+                ? (round.contributions[_contributor][judgment] * round.totalAppealFeesCollected) / round.paidFees[judgment]
                 : 0;
-            round.contributions[_contributor][currentRuling] = 0;
+            round.contributions[_contributor][judgment] = 0;
           }
 
         _contributor.send(reward); // It is the user responsibility to accept ETH.
@@ -159,8 +160,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         require(_ruling <= NUMBER_OF_CHOICES, "Invalid ruling.");
         require(dispute.isRuled == false, "Is ruled already.");
 
-
         dispute.isRuled = true;
+        dispute.judgment = Party(_ruling);
 
         Round storage round = dispute.rounds[dispute.rounds.length-1];
 
