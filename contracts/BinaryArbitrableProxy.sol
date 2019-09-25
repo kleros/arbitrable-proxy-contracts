@@ -22,6 +22,9 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     using CappedMath for uint;
 
     uint constant NUMBER_OF_CHOICES = 2;
+    enum Party {RefuseToArbitrate, Requester, Respondent}
+    uint8 requester = uint8(Party.Requester);
+    uint8 respondent = uint8(Party.Respondent);
 
     struct Round {
       uint[3] paidFees; // Tracks the fees paid by each side in this round.
@@ -39,7 +42,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     }
 
     DisputeStruct[] public disputes;
-    mapping(uint => uint) public externalIDtoLocalID;
+    mapping(address => mapping(uint => uint)) public arbitratorExternalIDtoLocalID;
+
 
     /** @dev Calls createDispute function of the specified arbitrator to create a dispute.
      *  @param _arbitrator The arbitrator of prospective dispute.
@@ -57,18 +61,21 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         dispute.disputeIDOnArbitratorSide = _disputeIDOnArbitratorSide;
         dispute.rounds.length++;
 
-        externalIDtoLocalID[_disputeIDOnArbitratorSide] = disputeID;
+        arbitratorExternalIDtoLocalID[address(_arbitrator)][_disputeIDOnArbitratorSide] = disputeID;
 
-        emit MetaEvidence(disputes.length-1, _metaevidenceURI);
+        emit MetaEvidence(disputes.length - 1, _metaevidenceURI);
         emit Dispute(_arbitrator, _disputeIDOnArbitratorSide, disputeID, disputeID);
+
+        msg.sender.send(msg.value-arbitrationCost);
     }
 
     /** @dev Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals to be crowdfunded.
      *  @param _localDisputeID Index of the dispute on disputes array.
-     *  @param _side The side which the caller wants to contribute.
+     *  @param _party The side which the caller wants to contribute.
      */
-    function appeal(uint _localDisputeID, uint _side) external payable {
-        require(_localDisputeID < disputes.length, "Dispute id out of bounds.");
+    function appeal(uint _localDisputeID, Party _party) external payable {
+        require(_party != Party.RefuseToArbitrate, "You can't appeal in favor of refusing to arbitrate.");
+        uint8 side = uint8(_party);
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         (uint appealPeriodStart, uint appealPeriodEnd) = dispute.arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
@@ -76,25 +83,25 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
         Round storage round = dispute.rounds[dispute.rounds.length-1];
 
-        require(!round.hasPaid[_side], "Appeal fee has already been paid");
+        require(!round.hasPaid[side], "Appeal fee has already been paid");
 
         uint appealCost = dispute.arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
 
         uint contribution;
 
-        if(round.paidFees[_side] + msg.value >= appealCost){
-          contribution = appealCost - round.paidFees[_side];
-          round.hasPaid[_side] = true;
+        if(round.paidFees[side] + msg.value >= appealCost){
+          contribution = appealCost - round.paidFees[side];
+          round.hasPaid[side] = true;
         }
         else
             contribution = msg.value;
 
         msg.sender.send(msg.value - contribution);
-        round.contributions[msg.sender][_side] = contribution;
-        round.paidFees[_side] += contribution;
+        round.contributions[msg.sender][side] += contribution;
+        round.paidFees[side] += contribution;
         round.totalAppealFeesCollected += contribution;
 
-        if(round.hasPaid[1] && round.hasPaid[2]){
+        if(round.hasPaid[requester] && round.hasPaid[respondent]){
             dispute.arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
             dispute.rounds.length++;
             round.totalAppealFeesCollected = round.totalAppealFeesCollected.subCap(appealCost);
@@ -107,33 +114,33 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _roundNumber The number of the round caller wants to withdraw of.
      */
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber) external {
-        require(_localDisputeID < disputes.length, "Dispute id out of bounds.");
         require(_roundNumber < disputes[_localDisputeID].rounds.length, "Round number out of bounds.");
+
 
         DisputeStruct storage dispute = disputes[_localDisputeID];
         Round storage round = dispute.rounds[_roundNumber];
         uint disputeIDOnArbitratorSide = dispute.disputeIDOnArbitratorSide;
 
         uint currentRuling = dispute.arbitrator.currentRuling(disputeIDOnArbitratorSide);
-        require(uint(dispute.arbitrator.disputeStatus(disputeIDOnArbitratorSide)) == uint(Arbitrator.DisputeStatus.Solved), "The dispute should be solved");
+        require(dispute.isRuled, "The dispute should be solved");
         uint reward;
-        if (!round.hasPaid[1] || !round.hasPaid[2]) {
+        if (!round.hasPaid[requester] || !round.hasPaid[respondent]) {
             // Allow to reimburse if funding was unsuccessful.
-            reward = round.contributions[_contributor][1] + round.contributions[_contributor][2];
-            round.contributions[_contributor][1] = 0;
-            round.contributions[_contributor][2] = 0;
+            reward = round.contributions[_contributor][requester] + round.contributions[_contributor][respondent];
+            round.contributions[_contributor][requester] = 0;
+            round.contributions[_contributor][respondent] = 0;
         } else if (currentRuling == 0) {
             // Reimburse unspent fees proportionally if there is no winner and loser.
-            uint rewardParty1 = round.paidFees[1] > 0
-                ? (round.contributions[_contributor][1] * round.totalAppealFeesCollected) / (round.paidFees[1] + round.paidFees[2])
+            uint rewardParty1 = round.paidFees[requester] > 0
+                ? (round.contributions[_contributor][requester] * round.totalAppealFeesCollected) / (round.paidFees[1] + round.paidFees[2])
                 : 0;
-            uint rewardParty2 = round.paidFees[2] > 0
-                ? (round.contributions[_contributor][2] * round.totalAppealFeesCollected) / (round.paidFees[1] + round.paidFees[2])
+            uint rewardParty2 = round.paidFees[respondent] > 0
+                ? (round.contributions[_contributor][respondent] * round.totalAppealFeesCollected) / (round.paidFees[1] + round.paidFees[2])
                 : 0;
 
             reward = rewardParty1 + rewardParty2;
-            round.contributions[_contributor][1] = 0;
-            round.contributions[_contributor][2] = 0;
+            round.contributions[_contributor][requester] = 0;
+            round.contributions[_contributor][respondent] = 0;
         } else {
               // Reward the winner.
             reward = round.paidFees[currentRuling] > 0
@@ -155,14 +162,15 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         require(_ruling <= NUMBER_OF_CHOICES, "Invalid ruling.");
         require(dispute.isRuled == false, "Is ruled already.");
 
+
         dispute.isRuled = true;
 
         Round storage round = dispute.rounds[dispute.rounds.length-1];
 
         uint resultRuling = _ruling;
-        if (round.hasPaid[1] == true) // If one side paid its fees, the ruling is in its favor. Note that if the other side had also paid, an appeal would have been created.
+        if (round.hasPaid[requester] == true) // If one side paid its fees, the ruling is in its favor. Note that if the other side had also paid, an appeal would have been created.
             resultRuling = 1;
-        else if (round.hasPaid[2] == true)
+        else if (round.hasPaid[respondent] == true)
             resultRuling = 2;
 
         emit Ruling(Arbitrator(msg.sender), dispute.disputeIDOnArbitratorSide, resultRuling);
