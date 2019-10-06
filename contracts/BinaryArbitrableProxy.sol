@@ -86,6 +86,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         Round storage round = dispute.rounds[dispute.rounds.length-1];
 
         require(!round.hasPaid[side], "Appeal fee has already been paid");
+        round.hasPaid[side] = true; // Temporarily assume the contribution covers the missing amount to block re-entrancy.
 
         uint appealCost = dispute.arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
 
@@ -93,11 +94,11 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
         if(round.paidFees[side] + msg.value >= appealCost){
           contribution = appealCost - round.paidFees[side];
-          round.hasPaid[side] = true;
         }
-        else
+        else{
             contribution = msg.value;
-
+            round.hasPaid[side] = false; // Rollback the temporary assumption above.
+        }
         msg.sender.send(msg.value - contribution);
         round.contributions[msg.sender][side] += contribution;
         round.paidFees[side] += contribution;
