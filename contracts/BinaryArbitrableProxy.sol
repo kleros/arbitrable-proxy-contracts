@@ -53,6 +53,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      */
     function createDispute(Arbitrator _arbitrator, bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI) external payable {
         uint arbitrationCost = _arbitrator.arbitrationCost(_arbitratorExtraData);
+        require(msg.value >= arbitrationCost, "Insufficient message value.");
         uint _disputeIDOnArbitratorSide = _arbitrator.createDispute.value(arbitrationCost)(NUMBER_OF_CHOICES, _arbitratorExtraData);
 
         uint disputeID = disputes.length++;
