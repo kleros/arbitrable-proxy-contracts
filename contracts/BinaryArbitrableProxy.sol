@@ -130,10 +130,10 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         } else if (judgment == 0) {
             // Reimburse unspent fees proportionally if there is no winner and loser.
             uint rewardParty1 = round.paidFees[requester] > 0
-                ? (round.contributions[_contributor][requester] * round.totalAppealFeesCollected) / (round.paidFees[1] + round.paidFees[2])
+                ? (round.contributions[_contributor][requester] * round.totalAppealFeesCollected) / (round.paidFees[requester] + round.paidFees[respondent])
                 : 0;
             uint rewardParty2 = round.paidFees[respondent] > 0
-                ? (round.contributions[_contributor][respondent] * round.totalAppealFeesCollected) / (round.paidFees[1] + round.paidFees[2])
+                ? (round.contributions[_contributor][respondent] * round.totalAppealFeesCollected) / (round.paidFees[requester] + round.paidFees[respondent])
                 : 0;
 
             reward = rewardParty1 + rewardParty2;
@@ -175,7 +175,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         emit Ruling(Arbitrator(msg.sender), dispute.disputeIDOnArbitratorSide, resultRuling);
     }
 
-    /** @dev Lets to submit evidence for a given dispute.
+    /** @dev Allows to submit evidence for a given dispute.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _evidenceURI Link to evidence.
      */
