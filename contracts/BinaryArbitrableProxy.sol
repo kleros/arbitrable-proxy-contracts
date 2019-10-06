@@ -54,19 +54,19 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     function createDispute(Arbitrator _arbitrator, bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI) external payable {
         uint arbitrationCost = _arbitrator.arbitrationCost(_arbitratorExtraData);
         require(msg.value >= arbitrationCost, "Insufficient message value.");
-        uint _disputeIDOnArbitratorSide = _arbitrator.createDispute.value(arbitrationCost)(NUMBER_OF_CHOICES, _arbitratorExtraData);
+        uint disputeID = _arbitrator.createDispute.value(arbitrationCost)(NUMBER_OF_CHOICES, _arbitratorExtraData);
 
-        uint disputeID = disputes.length++;
-        DisputeStruct storage dispute = disputes[disputeID];
+        uint localDisputeID = disputes.length++;
+        DisputeStruct storage dispute = disputes[localDisputeID];
         dispute.arbitrator = _arbitrator;
         dispute.arbitratorExtraData = _arbitratorExtraData;
-        dispute.disputeIDOnArbitratorSide = _disputeIDOnArbitratorSide;
+        dispute.disputeIDOnArbitratorSide = disputeID;
         dispute.rounds.length++;
 
-        arbitratorExternalIDtoLocalID[address(_arbitrator)][_disputeIDOnArbitratorSide] = disputeID;
+        arbitratorExternalIDtoLocalID[address(_arbitrator)][disputeID] = localDisputeID;
 
-        emit MetaEvidence(disputes.length - 1, _metaevidenceURI);
-        emit Dispute(_arbitrator, _disputeIDOnArbitratorSide, disputeID, disputeID);
+        emit MetaEvidence(disputeID, _metaevidenceURI);
+        emit Dispute(_arbitrator, disputeID, localDisputeID, localDisputeID);
 
         msg.sender.send(msg.value-arbitrationCost);
     }
@@ -76,7 +76,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _party The side to which the caller wants to contribute.
      */
     function appeal(uint _localDisputeID, Party _party) external payable {
-        require(_party != Party.RefuseToArbitrate, "You can't appeal in favor of refusing to arbitrate.");
+        require(_party != Party.RefuseToArbitrate, "You can't fund an appeal in favor of refusing to arbitrate.");
         uint8 side = uint8(_party);
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
@@ -182,7 +182,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     function submitEvidence(uint _localDisputeID, string memory _evidenceURI) public {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
-        require(dispute.isRuled == false, "Is ruled already.");
+        require(dispute.isRuled == false, "Cannot submit evidence to a resolved dispute.");
 
         emit Evidence(dispute.arbitrator, _localDisputeID, msg.sender, _evidenceURI);
     }
