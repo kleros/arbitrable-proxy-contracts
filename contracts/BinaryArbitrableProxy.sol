@@ -188,7 +188,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         emit Evidence(dispute.arbitrator, _localDisputeID, msg.sender, _evidenceURI);
     }
 
-    function crowdfundingStatus(uint _localDisputeID) external returns (uint[3] memory, bool[3] memory, uint, uint[3] memory){
+    function crowdfundingStatus(uint _localDisputeID) external view returns (uint[3] memory, bool[3] memory, uint, uint[3] memory){
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         Round memory lastRound = dispute.rounds[dispute.rounds.length - 1];
