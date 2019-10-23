@@ -65,7 +65,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
         arbitratorExternalIDtoLocalID[address(_arbitrator)][disputeID] = localDisputeID;
 
-        emit MetaEvidence(disputeID, _metaevidenceURI);
+        emit MetaEvidence(localDisputeID, _metaevidenceURI);
         emit Dispute(_arbitrator, disputeID, localDisputeID, localDisputeID);
 
         msg.sender.send(msg.value-arbitrationCost);
