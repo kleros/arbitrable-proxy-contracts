@@ -8,10 +8,10 @@
 
 pragma solidity >=0.5 <0.6.0;
 
-import "../node_modules/@kleros/erc-792/contracts/IArbitrable.sol";
-import "../node_modules/@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
-import "../node_modules/@kleros/erc-792/contracts/Arbitrator.sol";
-import "../node_modules/@kleros/ethereum-libraries/contracts/CappedMath.sol";
+import "@kleros/erc-792/contracts/IArbitrable.sol";
+import "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
+import "@kleros/erc-792/contracts/Arbitrator.sol";
+import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /**
@@ -71,7 +71,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
         emit MetaEvidence(localDisputeID, _metaevidenceURI);
         emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
-
     }
 
     /** @dev UNTRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
@@ -96,7 +95,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
         if(round.paidFees[side] + msg.value >= appealCost){
           contribution = appealCost - round.paidFees[side];
-          round.hasPaid[side] = true; 
+          round.hasPaid[side] = true;
 
         } else{
             contribution = msg.value;
