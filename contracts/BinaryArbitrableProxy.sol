@@ -229,6 +229,31 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         loserMultiplier = _loserMultiplier;
     }
 
+    /** @dev Gets the information of a round of a request.
+     *  @param _localDisputeID ID of the dispute.
+     *  @param _round The round to be queried.
+     *  @return The round information.
+     */
+    function getRoundInfo(uint _localDisputeID, uint _round)
+        external
+        view
+        returns (
+            bool appealed,
+            uint[3] memory paidFees,
+            bool[3] memory hasPaid,
+            uint totalAppealFeesCollected
+        )
+    {
+        DisputeStruct storage dispute = disputes[_localDisputeID];
+        Round storage round = dispute.rounds[_round];
+        return (
+            _round != (dispute.rounds.length - 1),
+            round.paidFees,
+            round.hasPaid,
+            round.totalAppealFeesCollected
+        );
+    }
+
     /** @dev Returns crowdfunding status, useful for user interface implemetations.
      *  @param _localDisputeID Dispute ID as in this contract.
      *  @param _participant Address of crowfunding participant to get details of.
