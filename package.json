@@ -9,17 +9,18 @@
   "devDependencies": {
     "@kleros/kathari": "^0.25.0",
     "@kleros/kleros-interaction": "^0.9.2",
+    "@openzeppelin/test-helpers": "^0.5.4",
     "@truffle/hdwallet-provider": "^1.0.18",
     "chai": "^4.2.0",
     "ganache": "^6.4.4",
     "ganache-cli": "^6.7.0",
-    "openzeppelin-test-helpers": "^0.4.3",
     "truffle": "^5.0.35",
     "truffle-plugin-verify": "^0.3.2"
   },
   "dependencies": {
     "@kleros/erc-792": "^1.1.0",
-    "@kleros/ethereum-libraries": "^1.0.0"
+    "@kleros/ethereum-libraries": "^1.0.0",
+    "@openzeppelin/contracts": "^2.4.0"
   },
   "files": [
     "build",

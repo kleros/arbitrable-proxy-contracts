@@ -1,4 +1,4 @@
-var HDWalletProvider = require('@truffle/hdwallet-provider')
+var HDWalletProvider = require("@truffle/hdwallet-provider");
 /**
  * Use this file to configure your truffle project. It's seeded with some
  * common settings for different networks and features like migrations,
@@ -44,10 +44,10 @@ module.exports = {
     // options below to some value.
     //
     development: {
-      host: '127.0.0.1', // Localhost (default: none)
+      host: "127.0.0.1", // Localhost (default: none)
       port: 8545, // Standard Ethereum port (default: none)
-      network_id: '*' // Any network (default: none)
-    },
+      network_id: "*" // Any network (default: none)
+    }
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port
@@ -73,15 +73,6 @@ module.exports = {
     // network_id: 2111,   // This network is yours, in the cloud.
     // production: true    // Treats this network as if it was a public net. (default: false)
     // }
-    kovan: {
-      provider: new HDWalletProvider(
-        process.env.KOVAN_MNEMONIC,
-        'https://kovan.infura.io/v3/344bdb3c652c4ce6acc12f10a7557ba6'
-      ),
-      network_id: 42,
-      gas: 6712388,
-      gasPrice: 20000000000
-    }
   },
   // Set default mocha options here, use special reporters etc.
   mocha: {
@@ -91,7 +82,7 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: '0.5.11', // Fetch exact version from solc-bin (default: truffle's version)
+      version: "0.5.11", // Fetch exact version from solc-bin (default: truffle's version)
       docker: false, // Use "0.5.1" you've installed locally with docker (default: false)
       settings: {
         // See the solidity docs for advice about optimization and evmVersion
@@ -99,12 +90,12 @@ module.exports = {
           enabled: false,
           runs: 200
         },
-        evmVersion: 'byzantium'
+        evmVersion: "byzantium"
       }
     }
   },
-  plugins: ['truffle-plugin-verify'],
+  plugins: ["truffle-plugin-verify"],
   api_keys: {
     etherscan: process.env.ETHERSCAN_API_KEY
   }
-}
+};
