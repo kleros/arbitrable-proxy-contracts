@@ -106,7 +106,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             multiplier = loserMultiplier;
         }
 
-        uint totalCost = appealCost.add((appealCost.mul(multiplier)) / NORMALIZING_CONSTANT);
+        uint totalCost = (appealCost.mul(multiplier)) / NORMALIZING_CONSTANT;
 
         uint contribution;
 
