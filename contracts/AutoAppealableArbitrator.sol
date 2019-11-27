@@ -8,14 +8,14 @@
 
 pragma solidity ^0.5;
 
-import "../node_modules/@kleros/erc-792/contracts/IArbitrable.sol";
-import "../node_modules/@kleros/erc-792/contracts/Arbitrator.sol";
-import "../node_modules/@kleros/ethereum-libraries/contracts/CappedMath.sol";
+import "@kleros/erc-792/contracts/IArbitrable.sol";
+import "@kleros/erc-792/contracts/IArbitrator.sol";
+import "/@kleros/ethereum-libraries/contracts/CappedMath.sol";
 
 /** @title Auto Appealable Arbitrator
  *  @dev This is a centralized arbitrator which either gives direct rulings or provides a time and fee for appeal.
  */
-contract AutoAppealableArbitrator is Arbitrator {
+contract AutoAppealableArbitrator is IArbitrator {
     using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
 
     address public owner = msg.sender;

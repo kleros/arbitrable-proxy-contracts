@@ -18,7 +18,7 @@
     "truffle-plugin-verify": "^0.3.2"
   },
   "dependencies": {
-    "@kleros/erc-792": "^1.1.0",
+    "@kleros/erc-792": "^3.0.0",
     "@kleros/ethereum-libraries": "^1.0.0",
     "@openzeppelin/contracts": "^2.4.0"
   },

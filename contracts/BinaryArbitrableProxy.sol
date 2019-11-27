@@ -10,7 +10,7 @@ pragma solidity >=0.5 <0.6.0;
 
 import "@kleros/erc-792/contracts/IArbitrable.sol";
 import "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
-import "@kleros/erc-792/contracts/Arbitrator.sol";
+import "@kleros/erc-792/contracts/IArbitrator.sol";
 import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -20,7 +20,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  */
 contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     address owner = msg.sender;
-    Arbitrator arbitrator;
+    IArbitrator arbitrator;
     uint winnerMultiplier = 10000; // Appeal fee share multiplier of winner side ,respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000)
     uint loserMultiplier = 10000; // Appeal fee share multiplier of loser side, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000)
     uint tieMultiplier = 10000; // Appeal fee multiplier of whne last round tied, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000)
@@ -29,7 +29,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     /** dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
      **/
-    constructor(Arbitrator _arbitrator) public {
+    constructor(IArbitrator _arbitrator) public {
         arbitrator = _arbitrator;
     }
 
@@ -190,7 +190,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         else if (round.hasPaid[respondent] == true)
             dispute.ruling = Party.Respondent;
 
-        emit Ruling(Arbitrator(msg.sender), dispute.disputeIDOnArbitratorSide, uint(dispute.ruling));
+        emit Ruling(IArbitrator(msg.sender), dispute.disputeIDOnArbitratorSide, uint(dispute.ruling));
     }
 
     /** @dev Allows to submit evidence for a given dispute.
