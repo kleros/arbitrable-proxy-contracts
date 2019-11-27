@@ -11,7 +11,6 @@ pragma solidity >=0.5 <0.6.0;
 import "@kleros/erc-792/contracts/IArbitrable.sol";
 import "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
 import "@kleros/erc-792/contracts/IArbitrator.sol";
-import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /**
