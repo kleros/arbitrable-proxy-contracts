@@ -117,7 +117,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         uint contribution;
 
         if(round.paidFees[side] + msg.value >= totalCost){
-          contribution = totalCost - round.paidFees[side];
+          contribution = totalCost.sub(round.paidFees[side]);
           round.hasPaid[side] = true;
         } else{
             contribution = msg.value;
