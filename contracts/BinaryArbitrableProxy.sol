@@ -18,12 +18,20 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  *  This contract acts as a general purpose dispute creator.
  */
 contract BinaryArbitrableProxy is IArbitrable, IEvidence {
+
+
+    using SafeMath for uint;
     address owner = msg.sender;
     IArbitrator arbitrator;
-    uint winnerMultiplier = 10000; // Appeal fee share multiplier of winner side ,respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000)
-    uint loserMultiplier = 10000; // Appeal fee share multiplier of loser side, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000)
-    uint tieMultiplier = 10000; // Appeal fee multiplier of whne last round tied, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000)
+    uint winnerMultiplier = 10000; // Appeal fee share multiplier of winner side, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000).
+    uint loserMultiplier = 10000; // Appeal fee share multiplier of loser side, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000).
+    uint tieMultiplier = 10000; // Appeal fee multiplier of when last round tied, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000).
     uint constant NORMALIZING_CONSTANT = 10000;
+
+    uint constant NUMBER_OF_CHOICES = 2;
+    enum Party {None, Requester, Respondent}
+    uint8 requester = uint8(Party.Requester);
+    uint8 respondent = uint8(Party.Respondent);
 
     /** dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
@@ -31,13 +39,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     constructor(IArbitrator _arbitrator) public {
         arbitrator = _arbitrator;
     }
-
-    using SafeMath for uint;
-
-    uint constant NUMBER_OF_CHOICES = 2;
-    enum Party {None, Requester, Respondent}
-    uint8 requester = uint8(Party.Requester);
-    uint8 respondent = uint8(Party.Respondent);
 
     struct Round {
       uint[3] paidFees; // Tracks the fees paid by each side in this round.
@@ -58,6 +59,9 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     mapping(uint => uint) public externalIDtoLocalID;
 
     /** @dev UNTRUSTED. Calls createDispute function of the specified arbitrator to create a dispute.
+        Note: Here we don't check msg.value whether if it's enough for creating a dispute.
+        Because this function serves as a proxy to arbitrator's public createDispute function and checking against invalid values is it's responsibility.
+        Please don't report this as a bug.
      *  @param _arbitratorExtraData Extra data for the arbitrator of prospective dispute.
      *  @param _metaevidenceURI Link to metaevidence of prospective dispute.
      */
@@ -77,6 +81,9 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     }
 
     /** @dev UNTRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
+        Note: Here we don't check msg.value whether if it's enough for appeal
+        Because this function serves as a proxy to arbitrator's public appeal function and checking against invalid values is it's responsibility.
+        Please don't report this as a bug.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _party The side to which the caller wants to contribute.
      */
@@ -88,7 +95,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         (uint appealPeriodStart, uint appealPeriodEnd) = arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
         require(now >= appealPeriodStart && now < appealPeriodEnd, "Funding must be made within the appeal period.");
 
-        Round storage round = dispute.rounds[dispute.rounds.length-1];
+        Round storage round = dispute.rounds[dispute.rounds.length - 1];
 
         require(!round.hasPaid[side], "Appeal fee has already been paid");
 
@@ -128,7 +135,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         }
     }
 
-    /** @dev Lets to withdraw any reimbursable fees or rewards after the dispute gets solved.
+    /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The side to which the caller wants to contribute.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
@@ -182,7 +189,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         dispute.isRuled = true;
         dispute.ruling = Party(_ruling);
 
-        Round storage round = dispute.rounds[dispute.rounds.length-1];
+        Round storage round = dispute.rounds[dispute.rounds.length - 1];
 
         if (round.hasPaid[requester] == true) // If one side paid its fees, the ruling is in its favor. Note that if the other side had also paid, an appeal would have been created.
             dispute.ruling = Party.Requester;
@@ -204,7 +211,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         emit Evidence(arbitrator, _localDisputeID, msg.sender, _evidenceURI);
     }
 
-    /** @dev Changes the proportion of appeal fees that must be added to appeal cost when there is no winner or loser.
+    /** @dev Changes the proportion of appeal fees that must be paid when there is no winner or loser.
      *  @param _tieMultiplier The new tie multiplier value respect to NORMALIZING_CONSTANT.
      */
     function changeTieMultiplier(uint _tieMultiplier) external {
@@ -212,7 +219,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         tieMultiplier = _tieMultiplier;
     }
 
-    /** @dev Changes the proportion of appeal fees that must be added to appeal cost for the winning party.
+    /** @dev Changes the proportion of appeal fees that must be paid by winner.
      *  @param _winnerMultiplier The new winner multiplier value respect to NORMALIZING_CONSTANT.
      */
     function changeWinnerMultiplier(uint _winnerMultiplier) external {
@@ -220,15 +227,15 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         winnerMultiplier = _winnerMultiplier;
     }
 
-    /** @dev Changes the proportion of appeal fees that must be added to appeal cost for the losing party.
-     *  @param _loserMultiplier The new loser multiplier value irespect to NORMALIZING_CONSTANT.
+    /** @dev Changes the proportion of appeal fees that must be paid by loser.
+     *  @param _loserMultiplier The new loser multiplier value respect to NORMALIZING_CONSTANT.
      */
     function changeLoserMultiplier(uint _loserMultiplier) external {
         require(msg.sender == owner, "Unauthorized call.");
         loserMultiplier = _loserMultiplier;
     }
 
-    /** @dev Gets the information of a round of a request.
+    /** @dev Gets the information of a round of a dispute.
      *  @param _localDisputeID ID of the dispute.
      *  @param _round The round to be queried.
      *  @return The round information.
@@ -266,7 +273,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     }
 
-    /** @dev Proxy getter for arbitration cost
+    /** @dev Proxy getter for arbitration cost.
      *  @param  _arbitratorExtraData Extra data for arbitration cost calculation. See arbitrator for details.
      */
     function getArbitrationCost(bytes calldata _arbitratorExtraData) external view returns (uint arbitrationFee) {
