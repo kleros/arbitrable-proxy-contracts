@@ -11,7 +11,7 @@ pragma solidity >=0.5 <0.6.0;
 import "@kleros/erc-792/contracts/IArbitrable.sol";
 import "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
 import "@kleros/erc-792/contracts/IArbitrator.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 
 /**
  *  @title BinaryArbitrableProxy
@@ -19,8 +19,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  */
 contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
-
-    using SafeMath for uint;
     address owner = msg.sender;
     IArbitrator arbitrator;
     uint winnerMultiplier = 10000; // Appeal fee share multiplier of winner side, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000).
@@ -32,6 +30,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     enum Party {None, Requester, Respondent}
     uint8 requester = uint8(Party.Requester);
     uint8 respondent = uint8(Party.Respondent);
+
+    bool appealCallsDisabled = false; // A flag to be set when appeal is called and to be reset as the last statement of appeal. This prevents re-entracy attack from arbitrator.
 
     /** dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
@@ -97,8 +97,10 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
         Round storage round = dispute.rounds[dispute.rounds.length - 1];
 
-        require(!round.hasPaid[side], "Appeal fee has already been paid");
 
+        require(!round.hasPaid[side], "Appeal fee has already been paid");
+        require(!appealCallsDisabled, "You can't recursively call this function, sorry.");
+        appealCallsDisabled = true; // Prevent re-entrancy.
         uint appealCost = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
 
         uint currentRuling = arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide);
@@ -112,12 +114,12 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             multiplier = loserMultiplier;
         }
 
-        uint totalCost = (appealCost.mul(multiplier)) / NORMALIZING_CONSTANT;
+        uint totalCost = (CappedMath.mulCap(appealCost, multiplier)) / NORMALIZING_CONSTANT;
 
         uint contribution;
 
         if(round.paidFees[side] + msg.value >= totalCost){
-          contribution = totalCost.sub(round.paidFees[side]);
+          contribution = CappedMath.subCap(totalCost, round.paidFees[side]);
           round.hasPaid[side] = true;
         } else{
             contribution = msg.value;
@@ -131,8 +133,10 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         if(round.hasPaid[requester] && round.hasPaid[respondent]){
             arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
             dispute.rounds.length++;
-            round.totalAppealFeesCollected = round.totalAppealFeesCollected.sub(appealCost);
+            round.totalAppealFeesCollected = CappedMath.subCap(round.totalAppealFeesCollected, appealCost);
         }
+
+        appealCallsDisabled = false; // Enables calling appeal function.
     }
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
