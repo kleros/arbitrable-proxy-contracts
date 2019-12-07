@@ -88,7 +88,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _party The side to which the caller wants to contribute.
      */
-    function appeal(uint _localDisputeID, Party _party) external payable {
+    function fundAppeal(uint _localDisputeID, Party _party) external payable {
         require(_party != Party.None, "You can't fund an appeal in favor of refusing to arbitrate.");
         uint8 side = uint8(_party);
         DisputeStruct storage dispute = disputes[_localDisputeID];
