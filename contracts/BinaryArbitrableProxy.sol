@@ -19,7 +19,7 @@ import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
  */
 contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
-    address owner = msg.sender;
+    address governor = msg.sender;
     IArbitrator arbitrator;
     uint winnerMultiplier = 10000; // Appeal fee share multiplier of winner side, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000).
     uint loserMultiplier = 10000; // Appeal fee share multiplier of loser side, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000).
@@ -214,7 +214,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _tieMultiplier The new tie multiplier value respect to NORMALIZING_CONSTANT.
      */
     function changeTieMultiplier(uint _tieMultiplier) external {
-        require(msg.sender == owner, "Unauthorized call.");
+        require(msg.sender == governor, "Unauthorized call.");
         tieMultiplier = _tieMultiplier;
     }
 
@@ -222,7 +222,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _winnerMultiplier The new winner multiplier value respect to NORMALIZING_CONSTANT.
      */
     function changeWinnerMultiplier(uint _winnerMultiplier) external {
-        require(msg.sender == owner, "Unauthorized call.");
+        require(msg.sender == governor, "Unauthorized call.");
         winnerMultiplier = _winnerMultiplier;
     }
 
@@ -230,7 +230,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _loserMultiplier The new loser multiplier value respect to NORMALIZING_CONSTANT.
      */
     function changeLoserMultiplier(uint _loserMultiplier) external {
-        require(msg.sender == owner, "Unauthorized call.");
+        require(msg.sender == governor, "Unauthorized call.");
         loserMultiplier = _loserMultiplier;
     }
 
