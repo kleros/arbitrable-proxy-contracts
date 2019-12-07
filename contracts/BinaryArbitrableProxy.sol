@@ -18,7 +18,7 @@ import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
  *  This contract acts as a general purpose dispute creator.
  */
 contract BinaryArbitrableProxy is IArbitrable, IEvidence {
-
+    using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
     address governor = msg.sender;
     IArbitrator arbitrator;
     // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
@@ -83,58 +83,82 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
     }
 
+    /** @dev Returns the contribution value and remainder from available ETH and required amount.
+     *  @param _available The amount of ETH available for the contribution.
+     *  @param _requiredAmount The amount of ETH required for the contribution.
+     *  @return taken The amount of ETH taken.
+     *  @return remainder The amount of ETH left from the contribution.
+     */
+    function calculateContribution(uint _available, uint _requiredAmount)
+        internal
+        pure
+        returns(uint taken, uint remainder)
+    {
+        if (_requiredAmount > _available)
+            return (_available, 0); // Take whatever is available, return 0 as leftover ETH.
+
+        remainder = _available - _requiredAmount;
+        return (_requiredAmount, remainder);
+    }
+
+    /** @dev Make a fee contribution.
+     *  @param _round The round to contribute.
+     *  @param _side The side for which to contribute.
+     *  @param _contributor The contributor.
+     *  @param _amount The amount contributed.
+     *  @param _totalRequired The total amount required for this side.
+     */
+    function contribute(Round storage _round, Party _side, address payable _contributor, uint _amount, uint _totalRequired) internal {
+        // Take up to the amount necessary to fund the current round at the current costs.
+        uint contribution; // Amount contributed.
+        uint remainingETH; // Remaining ETH to send back.
+        (contribution, remainingETH) = calculateContribution(_amount, _totalRequired.subCap(_round.paidFees[uint(_side)]));
+        _round.contributions[_contributor][uint(_side)] += contribution;
+        _round.paidFees[uint(_side)] += contribution;
+        _round.feeRewards += contribution;
+
+        // Reimburse leftover ETH.
+        _contributor.send(remainingETH); // Deliberate use of send in order to not block the contract in case of reverting fallback.
+    }
+
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
      *  @param _localDisputeID Index of the dispute in disputes array.
-     *  @param _party The side to which the caller wants to contribute.
+     *  @param _side The side to which the caller wants to contribute.
      */
-    function fundAppeal(uint _localDisputeID, Party _party) external payable {
-        require(_party != Party.None, "You can't fund an appeal in favor of refusing to arbitrate.");
-        uint8 side = uint8(_party);
+    function fundAppeal(uint _localDisputeID, Party _side) external payable {
+        require(_side != Party.None, "You can't fund an appeal in favor of refusing to arbitrate.");
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         (uint appealPeriodStart, uint appealPeriodEnd) = arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
         require(now >= appealPeriodStart && now < appealPeriodEnd, "Funding must be made within the appeal period.");
 
         Round storage round = dispute.rounds[dispute.rounds.length - 1];
+        Party winner = Party(arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide));
+        Party loser;
 
-
-        require(!round.hasPaid[side], "Appeal fee has already been paid");
-        uint appealCost = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
-
-        uint currentRuling = arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide);
         uint multiplier;
-        if (_party == Party(currentRuling)){
+        if (_side == winner){
             multiplier = winnerStakeMultiplier;
-        } else if (Party(currentRuling) == Party.None){
-            multiplier = sharedStakeMultiplier;
-        } else {
-            require(now - appealPeriodStart < (appealPeriodEnd - appealPeriodStart)/2, "The loser must pay during the first half of the appeal period.");
+        } else if (_side == loser){
             multiplier = loserStakeMultiplier;
+            require(now - appealPeriodStart < (appealPeriodEnd - appealPeriodStart)/2, "The loser must pay during the first half of the appeal period.");
+        } else {
+            multiplier = sharedStakeMultiplier;
         }
 
+        uint appealCost = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         uint totalCost = CappedMath.addCap(appealCost,((CappedMath.mulCap(appealCost, multiplier)) / MULTIPLIER_DIVISOR));
 
-        uint contribution;
-
-        if(round.paidFees[side] + msg.value >= totalCost){
-            contribution = CappedMath.subCap(totalCost, round.paidFees[side]);
-            round.hasPaid[side] = true;
-        } else{
-            contribution = msg.value;
-        }
-
-        msg.sender.send(msg.value - contribution);
-        round.contributions[msg.sender][side] += contribution;
-        round.paidFees[side] += contribution;
-        round.feeRewards += contribution;
+        contribute(round, _side, msg.sender, msg.value, totalCost);
+        if (round.paidFees[uint(_side)] >= totalCost)
+            round.hasPaid[uint(_side)] = true;
 
         if(round.hasPaid[uint8(Party.Requester)] && round.hasPaid[uint8(Party.Respondent)]){
             dispute.rounds.length++;
             round.feeRewards = CappedMath.subCap(round.feeRewards, appealCost);
             arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
-
     }
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
