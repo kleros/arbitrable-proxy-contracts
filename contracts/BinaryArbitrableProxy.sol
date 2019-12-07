@@ -54,10 +54,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     DisputeStruct[] public disputes;
     mapping(uint => uint) public externalIDtoLocalID;
 
-    /** @dev UNTRUSTED. Calls createDispute function of the specified arbitrator to create a dispute.
-        Note: Here we don't check msg.value whether if it's enough for creating a dispute.
-        Because this function serves as a proxy to arbitrator's public createDispute function and checking against invalid values is it's responsibility.
-        Please don't report this as a bug.
+    /** @dev TRUSTED. Calls createDispute function of the specified arbitrator to create a dispute.
+        Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
      *  @param _arbitratorExtraData Extra data for the arbitrator of prospective dispute.
      *  @param _metaevidenceURI Link to metaevidence of prospective dispute.
      */
@@ -76,10 +74,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
     }
 
-    /** @dev UNTRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
-        Note: Here we don't check msg.value whether if it's enough for appeal
-        Because this function serves as a proxy to arbitrator's public appeal function and checking against invalid values is it's responsibility.
-        Please don't report this as a bug.
+    /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
+        Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _party The side to which the caller wants to contribute.
      */
