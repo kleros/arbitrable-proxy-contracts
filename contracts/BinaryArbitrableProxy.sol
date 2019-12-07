@@ -31,8 +31,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     uint8 requester = uint8(Party.Requester);
     uint8 respondent = uint8(Party.Respondent);
 
-    bool appealCallsDisabled = false; // A flag to be set when appeal is called and to be reset as the last statement of appeal. This prevents re-entracy attack from arbitrator.
-
     /** dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
      **/
@@ -99,8 +97,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
 
         require(!round.hasPaid[side], "Appeal fee has already been paid");
-        require(!appealCallsDisabled, "You can't recursively call this function, sorry.");
-        appealCallsDisabled = true; // Prevent re-entrancy.
         uint appealCost = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
 
         uint currentRuling = arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide);
@@ -131,12 +127,11 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         round.totalAppealFeesCollected += contribution;
 
         if(round.hasPaid[requester] && round.hasPaid[respondent]){
-            arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
             dispute.rounds.length++;
             round.totalAppealFeesCollected = CappedMath.subCap(round.totalAppealFeesCollected, appealCost);
+            arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
 
-        appealCallsDisabled = false; // Enables calling appeal function.
     }
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
