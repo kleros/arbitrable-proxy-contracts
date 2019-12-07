@@ -41,10 +41,10 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     }
 
     struct Round {
-      uint[3] paidFees; // Tracks the fees paid by each side in this round.
-      bool[3] hasPaid; // True when the side has fully paid its fee. False otherwise.
-      uint totalAppealFeesCollected; // Sum of reimbursable appeal fees available to the parties that made contributions to the side that ultimately wins a dispute.
-      mapping(address => uint[3]) contributions; // Maps contributors to their contributions for each side.
+        uint[3] paidFees; // Tracks the fees paid by each side in this round.
+        bool[3] hasPaid; // True when the side has fully paid its fee. False otherwise.
+        uint totalAppealFeesCollected; // Sum of reimbursable appeal fees available to the parties that made contributions to the side that ultimately wins a dispute.
+        mapping(address => uint[3]) contributions; // Maps contributors to their contributions for each side.
     }
 
     struct DisputeStruct {
@@ -119,8 +119,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         uint contribution;
 
         if(round.paidFees[side] + msg.value >= totalCost){
-          contribution = CappedMath.subCap(totalCost, round.paidFees[side]);
-          round.hasPaid[side] = true;
+            contribution = CappedMath.subCap(totalCost, round.paidFees[side]);
+            round.hasPaid[side] = true;
         } else{
             contribution = msg.value;
         }
@@ -242,7 +242,10 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     /** @dev Gets the information of a round of a dispute.
      *  @param _localDisputeID ID of the dispute.
      *  @param _round The round to be queried.
-     *  @return The round information.
+     *  @return appealed Whether the round is appealed or not.
+     *  @return paidFees Total fees paid for each party.
+     *  @return hasPaid Whether given party paid required amount or not, for each party.
+     *  @return totalAppealFeesCollected Total fees collected for parties excluding appeal cost.
      */
     function getRoundInfo(uint _localDisputeID, uint _round)
         external
@@ -267,18 +270,22 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     /** @dev Returns crowdfunding status, useful for user interfaces.
      *  @param _localDisputeID Dispute ID as in this contract.
      *  @param _participant Address of crowfunding participant to get details of.
+     *  @return Total fees paid for each party in the last round.
+     *  @return Whether given party paid required amount or not, for each party, in the last round.
+     *  @return totalAppealFeesCollected Total fees collected for parties excluding appeal cost, in the last round.
+      * @return contributions Contributions of given participant in the last round.
      */
-    function crowdfundingStatus(uint _localDisputeID, address _participant) external view returns (uint[3] memory paidFess, bool[3] memory hasPaid, uint totalAppealFeesCollected, uint[3] memory contributions){
+    function crowdfundingStatus(uint _localDisputeID, address _participant) external view returns (uint[3] memory paidFess, bool[3] memory hasPaid, uint totalAppealFeesCollected, uint[3] memory contributions) {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         Round memory lastRound = dispute.rounds[dispute.rounds.length - 1];
 
         return (lastRound.paidFees, lastRound.hasPaid, lastRound.totalAppealFeesCollected, dispute.rounds[dispute.rounds.length - 1].contributions[_participant]);
-
     }
 
     /** @dev Proxy getter for arbitration cost.
      *  @param  _arbitratorExtraData Extra data for arbitration cost calculation. See arbitrator for details.
+     *  @return arbitrationFee Arbitration cost of the arbitrator of this contract.
      */
     function getArbitrationCost(bytes calldata _arbitratorExtraData) external view returns (uint arbitrationFee) {
         arbitrationFee = arbitrator.arbitrationCost(_arbitratorExtraData);
