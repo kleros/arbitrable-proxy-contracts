@@ -48,7 +48,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     struct Round {
         uint[3] paidFees; // Tracks the fees paid by each side in this round.
         bool[3] hasPaid; // True when the side has fully paid its fee. False otherwise.
-        uint totalAppealFeesCollected; // Sum of reimbursable appeal fees available to the parties that made contributions to the side that ultimately wins a dispute.
+        uint feeRewards; // Sum of reimbursable appeal fees available to the parties that made contributions to the side that ultimately wins a dispute.
         mapping(address => uint[3]) contributions; // Maps contributors to their contributions for each side.
     }
 
@@ -127,11 +127,11 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         msg.sender.send(msg.value - contribution);
         round.contributions[msg.sender][side] += contribution;
         round.paidFees[side] += contribution;
-        round.totalAppealFeesCollected += contribution;
+        round.feeRewards += contribution;
 
         if(round.hasPaid[uint8(Party.Requester)] && round.hasPaid[uint8(Party.Respondent)]){
             dispute.rounds.length++;
-            round.totalAppealFeesCollected = CappedMath.subCap(round.totalAppealFeesCollected, appealCost);
+            round.feeRewards = CappedMath.subCap(round.feeRewards, appealCost);
             arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
 
@@ -157,10 +157,10 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         } else if (Party(ruling) == Party.None) {
             // Reimburse unspent fees proportionally if there is no winner and loser.
             uint rewardRequester = round.paidFees[uint8(Party.Requester)] > 0
-                ? (round.contributions[_contributor][uint8(Party.Requester)] * round.totalAppealFeesCollected) / (round.paidFees[uint8(Party.Requester)] + round.paidFees[uint8(Party.Respondent)])
+                ? (round.contributions[_contributor][uint8(Party.Requester)] * round.feeRewards) / (round.paidFees[uint8(Party.Requester)] + round.paidFees[uint8(Party.Respondent)])
                 : 0;
             uint rewardRespondent = round.paidFees[uint8(Party.Respondent)] > 0
-                ? (round.contributions[_contributor][uint8(Party.Respondent)] * round.totalAppealFeesCollected) / (round.paidFees[uint8(Party.Requester)] + round.paidFees[uint8(Party.Respondent)])
+                ? (round.contributions[_contributor][uint8(Party.Respondent)] * round.feeRewards) / (round.paidFees[uint8(Party.Requester)] + round.paidFees[uint8(Party.Respondent)])
                 : 0;
 
             reward = rewardRequester + rewardRespondent;
@@ -169,7 +169,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         } else {
               // Reward the winner.
             reward = round.paidFees[ruling] > 0
-                ? (round.contributions[_contributor][ruling] * round.totalAppealFeesCollected) / round.paidFees[ruling]
+                ? (round.contributions[_contributor][ruling] * round.feeRewards) / round.paidFees[ruling]
                 : 0;
             round.contributions[_contributor][ruling] = 0;
           }
@@ -243,7 +243,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @return appealed Whether the round is appealed or not.
      *  @return paidFees Total fees paid for each party.
      *  @return hasPaid Whether given party paid required amount or not, for each party.
-     *  @return totalAppealFeesCollected Total fees collected for parties excluding appeal cost.
+     *  @return feeRewards Total fees collected for parties excluding appeal cost.
      */
     function getRoundInfo(uint _localDisputeID, uint _round)
         external
@@ -252,7 +252,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             bool appealed,
             uint[3] memory paidFees,
             bool[3] memory hasPaid,
-            uint totalAppealFeesCollected
+            uint feeRewards
         )
     {
         DisputeStruct storage dispute = disputes[_localDisputeID];
@@ -261,7 +261,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             _round != (dispute.rounds.length - 1),
             round.paidFees,
             round.hasPaid,
-            round.totalAppealFeesCollected
+            round.feeRewards
         );
     }
 
@@ -270,15 +270,15 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _participant Address of crowfunding participant to get details of.
      *  @return Total fees paid for each party in the last round.
      *  @return Whether given party paid required amount or not, for each party, in the last round.
-     *  @return totalAppealFeesCollected Total fees collected for parties excluding appeal cost, in the last round.
+     *  @return feeRewards Total fees collected for parties excluding appeal cost, in the last round.
       * @return contributions Contributions of given participant in the last round.
      */
-    function crowdfundingStatus(uint _localDisputeID, address _participant) external view returns (uint[3] memory paidFess, bool[3] memory hasPaid, uint totalAppealFeesCollected, uint[3] memory contributions) {
+    function crowdfundingStatus(uint _localDisputeID, address _participant) external view returns (uint[3] memory paidFess, bool[3] memory hasPaid, uint feeRewards, uint[3] memory contributions) {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         Round memory lastRound = dispute.rounds[dispute.rounds.length - 1];
 
-        return (lastRound.paidFees, lastRound.hasPaid, lastRound.totalAppealFeesCollected, dispute.rounds[dispute.rounds.length - 1].contributions[_participant]);
+        return (lastRound.paidFees, lastRound.hasPaid, lastRound.feeRewards, dispute.rounds[dispute.rounds.length - 1].contributions[_participant]);
     }
 
     /** @dev Proxy getter for arbitration cost.
