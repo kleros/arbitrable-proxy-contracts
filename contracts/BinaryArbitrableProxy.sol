@@ -21,19 +21,28 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     address governor = msg.sender;
     IArbitrator arbitrator;
-    uint winnerMultiplier = 10000; // Appeal fee share multiplier of winner side, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000).
-    uint loserMultiplier = 10000; // Appeal fee share multiplier of loser side, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000).
-    uint tieMultiplier = 10000; // Appeal fee multiplier of when last round tied, respect to NORMALIZING_CONSTANT, so value of 20000 actually equals to 2 (20000 / 10000).
-    uint constant NORMALIZING_CONSTANT = 10000;
+    // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
+    // Multipliers are in basis points.
+    uint public winnerStakeMultiplier; // Multiplier for calculating the fee stake paid by the party that won the previous round.
+    uint public loserStakeMultiplier; // Multiplier for calculating the fee stake paid by the party that lost the previous round.
+    uint public sharedStakeMultiplier; // Multiplier for calculating the fee stake that must be paid in the case where there isn't a winner and loser (e.g. when it's the first round or the arbitrator ruled "refused to rule"/"could not rule").
+    uint public constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
 
     uint constant NUMBER_OF_CHOICES = 2;
     enum Party {None, Requester, Respondent}
 
+
     /** dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
-     **/
-    constructor(IArbitrator _arbitrator) public {
+     *  @param _winnerStakeMultiplier Multiplier of the arbitration cost that the winner has to pay as fee stake for a round in basis points.
+     *  @param _loserStakeMultiplier Multiplier of the arbitration cost that the loser has to pay as fee stake for a round in basis points.
+     *  @param _sharedStakeMultiplier Multiplier of the arbitration cost that each party must pay as fee stake for a round when there isn't a winner/loser in the previous round (e.g. when it's the first round or the arbitrator refused to or did not rule). In basis points.
+     */
+    constructor(IArbitrator _arbitrator, uint _winnerStakeMultiplier, uint _loserStakeMultiplier, uint _sharedStakeMultiplier) public {
         arbitrator = _arbitrator;
+        winnerStakeMultiplier = _winnerStakeMultiplier;
+        loserStakeMultiplier = _loserStakeMultiplier;
+        sharedStakeMultiplier = _sharedStakeMultiplier;
     }
 
     struct Round {
@@ -96,15 +105,15 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         uint currentRuling = arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide);
         uint multiplier;
         if (_party == Party(currentRuling)){
-            multiplier = winnerMultiplier;
-        } else if (currentRuling == 0){
-            multiplier = tieMultiplier;
+            multiplier = winnerStakeMultiplier;
+        } else if (Party(currentRuling) == Party.None){
+            multiplier = sharedStakeMultiplier;
         } else {
             require(now - appealPeriodStart < (appealPeriodEnd - appealPeriodStart)/2, "The loser must pay during the first half of the appeal period.");
-            multiplier = loserMultiplier;
+            multiplier = loserStakeMultiplier;
         }
 
-        uint totalCost = (CappedMath.mulCap(appealCost, multiplier)) / NORMALIZING_CONSTANT;
+        uint totalCost = CappedMath.addCap(appealCost,((CappedMath.mulCap(appealCost, multiplier)) / MULTIPLIER_DIVISOR));
 
         uint contribution;
 
@@ -205,27 +214,27 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     }
 
     /** @dev Changes the proportion of appeal fees that must be paid when there is no winner or loser.
-     *  @param _tieMultiplier The new tie multiplier value respect to NORMALIZING_CONSTANT.
+     *  @param _sharedStakeMultiplier The new tie multiplier value respect to MULTIPLIER_DIVISOR.
      */
-    function changeTieMultiplier(uint _tieMultiplier) external {
+    function changesharedStakeMultiplier(uint _sharedStakeMultiplier) external {
         require(msg.sender == governor, "Unauthorized call.");
-        tieMultiplier = _tieMultiplier;
+        sharedStakeMultiplier = _sharedStakeMultiplier;
     }
 
     /** @dev Changes the proportion of appeal fees that must be paid by winner.
-     *  @param _winnerMultiplier The new winner multiplier value respect to NORMALIZING_CONSTANT.
+     *  @param _winnerStakeMultiplier The new winner multiplier value respect to MULTIPLIER_DIVISOR.
      */
-    function changeWinnerMultiplier(uint _winnerMultiplier) external {
+    function changewinnerStakeMultiplier(uint _winnerStakeMultiplier) external {
         require(msg.sender == governor, "Unauthorized call.");
-        winnerMultiplier = _winnerMultiplier;
+        winnerStakeMultiplier = _winnerStakeMultiplier;
     }
 
     /** @dev Changes the proportion of appeal fees that must be paid by loser.
-     *  @param _loserMultiplier The new loser multiplier value respect to NORMALIZING_CONSTANT.
+     *  @param _loserStakeMultiplier The new loser multiplier value respect to MULTIPLIER_DIVISOR.
      */
-    function changeLoserMultiplier(uint _loserMultiplier) external {
+    function changeloserStakeMultiplier(uint _loserStakeMultiplier) external {
         require(msg.sender == governor, "Unauthorized call.");
-        loserMultiplier = _loserMultiplier;
+        loserStakeMultiplier = _loserStakeMultiplier;
     }
 
     /** @dev Gets the information of a round of a dispute.
