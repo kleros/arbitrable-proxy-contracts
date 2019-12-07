@@ -20,7 +20,7 @@ contract(
   ([sender, receiver, thirdParty, fourthParty]) => {
     before(async function() {
       this.aaa = await AutoAppealableArbitrator.new(1000000000);
-      this.bap = await BAP.new(this.aaa.address);
+      this.bap = await BAP.new(this.aaa.address, 0,0,0);
     });
 
     it("creates a dispute", async function() {
@@ -36,8 +36,8 @@ contract(
 
       assert(new BN("1").eq((await this.aaa.disputes(0)).status));
 
-      await this.bap.appeal(0, 1, { value: 1000000000, from: thirdParty });
-      await this.bap.appeal(0, 2, { value: 1000000000, from: fourthParty });
+      await this.bap.fundAppeal(0, 1, { value: 1000000000, from: thirdParty });
+      await this.bap.fundAppeal(0, 2, { value: 1000000000, from: fourthParty });
 
       assert(new BN("0").eq((await this.aaa.disputes(0)).status));
     });
