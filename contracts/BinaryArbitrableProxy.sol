@@ -28,8 +28,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     uint constant NUMBER_OF_CHOICES = 2;
     enum Party {None, Requester, Respondent}
-    uint8 requester = uint8(Party.Requester);
-    uint8 respondent = uint8(Party.Respondent);
 
     /** dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
@@ -126,7 +124,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         round.paidFees[side] += contribution;
         round.totalAppealFeesCollected += contribution;
 
-        if(round.hasPaid[requester] && round.hasPaid[respondent]){
+        if(round.hasPaid[uint8(Party.Requester)] && round.hasPaid[uint8(Party.Respondent)]){
             dispute.rounds.length++;
             round.totalAppealFeesCollected = CappedMath.subCap(round.totalAppealFeesCollected, appealCost);
             arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
@@ -146,23 +144,23 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
         require(dispute.isRuled, "The dispute should be solved");
         uint reward;
-        if (!round.hasPaid[requester] || !round.hasPaid[respondent]) {
+        if (!round.hasPaid[uint8(Party.Requester)] || !round.hasPaid[uint8(Party.Respondent)]) {
             // Allow to reimburse if funding was unsuccessful.
-            reward = round.contributions[_contributor][requester] + round.contributions[_contributor][respondent];
-            round.contributions[_contributor][requester] = 0;
-            round.contributions[_contributor][respondent] = 0;
+            reward = round.contributions[_contributor][uint8(Party.Requester)] + round.contributions[_contributor][uint8(Party.Respondent)];
+            round.contributions[_contributor][uint8(Party.Requester)] = 0;
+            round.contributions[_contributor][uint8(Party.Respondent)] = 0;
         } else if (Party(ruling) == Party.None) {
             // Reimburse unspent fees proportionally if there is no winner and loser.
-            uint rewardRequester = round.paidFees[requester] > 0
-                ? (round.contributions[_contributor][requester] * round.totalAppealFeesCollected) / (round.paidFees[requester] + round.paidFees[respondent])
+            uint rewardRequester = round.paidFees[uint8(Party.Requester)] > 0
+                ? (round.contributions[_contributor][uint8(Party.Requester)] * round.totalAppealFeesCollected) / (round.paidFees[uint8(Party.Requester)] + round.paidFees[uint8(Party.Respondent)])
                 : 0;
-            uint rewardRespondent = round.paidFees[respondent] > 0
-                ? (round.contributions[_contributor][respondent] * round.totalAppealFeesCollected) / (round.paidFees[requester] + round.paidFees[respondent])
+            uint rewardRespondent = round.paidFees[uint8(Party.Respondent)] > 0
+                ? (round.contributions[_contributor][uint8(Party.Respondent)] * round.totalAppealFeesCollected) / (round.paidFees[uint8(Party.Requester)] + round.paidFees[uint8(Party.Respondent)])
                 : 0;
 
             reward = rewardRequester + rewardRespondent;
-            round.contributions[_contributor][requester] = 0;
-            round.contributions[_contributor][respondent] = 0;
+            round.contributions[_contributor][uint8(Party.Requester)] = 0;
+            round.contributions[_contributor][uint8(Party.Respondent)] = 0;
         } else {
               // Reward the winner.
             reward = round.paidFees[ruling] > 0
@@ -190,9 +188,9 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
         Round storage round = dispute.rounds[dispute.rounds.length - 1];
 
-        if (round.hasPaid[requester] == true) // If one side paid its fees, the ruling is in its favor. Note that if the other side had also paid, an appeal would have been created.
+        if (round.hasPaid[uint8(Party.Requester)] == true) // If one side paid its fees, the ruling is in its favor. Note that if the other side had also paid, an appeal would have been created.
             dispute.ruling = Party.Requester;
-        else if (round.hasPaid[respondent] == true)
+        else if (round.hasPaid[uint8(Party.Respondent)] == true)
             dispute.ruling = Party.Respondent;
 
         emit Ruling(IArbitrator(msg.sender), dispute.disputeIDOnArbitratorSide, uint(dispute.ruling));
