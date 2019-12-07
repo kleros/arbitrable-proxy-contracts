@@ -264,7 +264,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         );
     }
 
-    /** @dev Returns crowdfunding status, useful for user interface implemetations.
+    /** @dev Returns crowdfunding status, useful for user interfaces.
      *  @param _localDisputeID Dispute ID as in this contract.
      *  @param _participant Address of crowfunding participant to get details of.
      */
