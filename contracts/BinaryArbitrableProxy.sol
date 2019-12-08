@@ -133,7 +133,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         (uint appealPeriodStart, uint appealPeriodEnd) = arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
         require(now >= appealPeriodStart && now < appealPeriodEnd, "Funding must be made within the appeal period.");
 
-        Round storage round = dispute.rounds[dispute.rounds.length - 1];
         Party winner = Party(arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide));
         Party loser;
         if (winner == Party.Requester)
@@ -154,6 +153,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         uint appealCost = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         uint totalCost = appealCost.addCap(appealCost.mulCap(multiplier) / MULTIPLIER_DIVISOR);
 
+        Round storage round = dispute.rounds[dispute.rounds.length - 1];
         contribute(round, _side, msg.sender, msg.value, totalCost);
         if (round.paidFees[uint(_side)] >= totalCost)
             round.hasPaid[uint(_side)] = true;
