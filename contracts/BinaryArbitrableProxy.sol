@@ -18,9 +18,11 @@ import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
  *  This contract acts as a general purpose dispute creator.
  */
 contract BinaryArbitrableProxy is IArbitrable, IEvidence {
+
     using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
     address governor = msg.sender;
     IArbitrator arbitrator;
+    
     // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
     // Multipliers are in basis points.
     uint public winnerStakeMultiplier; // Multiplier for calculating the fee stake paid by the party that won the previous round.
@@ -30,7 +32,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     uint constant NUMBER_OF_CHOICES = 2;
     enum Party {None, Requester, Respondent}
-
 
     /** dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
@@ -316,6 +317,5 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     function getArbitrationCost(bytes calldata _arbitratorExtraData) external view returns (uint arbitrationFee) {
         arbitrationFee = arbitrator.arbitrationCost(_arbitratorExtraData);
     }
-
 
 }
