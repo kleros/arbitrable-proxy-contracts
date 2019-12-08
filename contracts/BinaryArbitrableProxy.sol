@@ -136,6 +136,10 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         Round storage round = dispute.rounds[dispute.rounds.length - 1];
         Party winner = Party(arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide));
         Party loser;
+        if (winner == Party.Requester)
+            loser = Party.Respondent;
+        else if (winner == Party.Respondent)
+            loser = Party.Requester;
 
         uint multiplier;
         if (_side == winner){
