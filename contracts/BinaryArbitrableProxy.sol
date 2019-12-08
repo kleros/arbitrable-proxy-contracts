@@ -236,7 +236,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      */
     function submitEvidence(uint _localDisputeID, string memory _evidenceURI) public {
         DisputeStruct storage dispute = disputes[_localDisputeID];
-
         require(dispute.isRuled == false, "Cannot submit evidence to a resolved dispute.");
 
         emit Evidence(arbitrator, _localDisputeID, msg.sender, _evidenceURI);
