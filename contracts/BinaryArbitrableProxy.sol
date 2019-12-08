@@ -226,7 +226,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         else if (round.hasPaid[uint8(Party.Respondent)] == true)
             dispute.ruling = Party.Respondent;
 
-        emit Ruling(IArbitrator(msg.sender), dispute.disputeIDOnArbitratorSide, uint(dispute.ruling));
+        emit Ruling(IArbitrator(msg.sender), _externalDisputeID, uint(dispute.ruling));
     }
 
     /** @dev Allows to submit evidence for a given dispute.
