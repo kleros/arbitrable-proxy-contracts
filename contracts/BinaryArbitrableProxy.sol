@@ -140,19 +140,19 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             loser = Party.Respondent;
         else if (winner == Party.Respondent)
             loser = Party.Requester;
+        require(!(_side==loser) || (now-appealPeriodStart < (appealPeriodEnd-appealPeriodStart)/2), "The loser must contribute during the first half of the appeal period.");
 
         uint multiplier;
         if (_side == winner){
             multiplier = winnerStakeMultiplier;
         } else if (_side == loser){
             multiplier = loserStakeMultiplier;
-            require(now - appealPeriodStart < (appealPeriodEnd - appealPeriodStart)/2, "The loser must pay during the first half of the appeal period.");
         } else {
             multiplier = sharedStakeMultiplier;
         }
 
         uint appealCost = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
-        uint totalCost = CappedMath.addCap(appealCost,((CappedMath.mulCap(appealCost, multiplier)) / MULTIPLIER_DIVISOR));
+        uint totalCost = appealCost.addCap(appealCost.mulCap(multiplier) / MULTIPLIER_DIVISOR);
 
         contribute(round, _side, msg.sender, msg.value, totalCost);
         if (round.paidFees[uint(_side)] >= totalCost)
@@ -160,7 +160,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
         if(round.hasPaid[uint8(Party.Requester)] && round.hasPaid[uint8(Party.Respondent)]){
             dispute.rounds.length++;
-            round.feeRewards = CappedMath.subCap(round.feeRewards, appealCost);
+            round.feeRewards = round.feeRewards.subCap(appealCost);
             arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
     }
