@@ -10,7 +10,7 @@ const {
 const { expect } = require("chai");
 
 const BAP = artifacts.require("BinaryArbitrableProxy");
-const Arbitrator = artifacts.require("Arbitrator");
+const Arbitrator = artifacts.require("IArbitrator");
 const AutoAppealableArbitrator = artifacts.require("AutoAppealableArbitrator");
 
 const ARBITRATION_COST = 1000000000;
@@ -20,11 +20,11 @@ contract(
   ([sender, receiver, thirdParty, fourthParty]) => {
     before(async function() {
       this.aaa = await AutoAppealableArbitrator.new(1000000000);
-      this.bap = await BAP.new(this.aaa.address, 0,0,0);
+      this.bap = await BAP.new(this.aaa.address, 0, 0, 0);
     });
 
     it("creates a dispute", async function() {
-      await this.bap.createDispute("0x0", "", {
+      await this.bap.createDispute("0x00000", "", {
         value: ARBITRATION_COST
       });
 
@@ -33,7 +33,6 @@ contract(
 
     it("it appeals a dispute", async function() {
       await this.aaa.giveAppealableRuling(0, 0, 1000000000, 240);
-
       assert(new BN("1").eq((await this.aaa.disputes(0)).status));
 
       await this.bap.fundAppeal(0, 1, { value: 1000000000, from: thirdParty });

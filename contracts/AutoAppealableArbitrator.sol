@@ -93,7 +93,7 @@ contract AutoAppealableArbitrator is IArbitrator {
             })); // Create the dispute and return its number.
         emit DisputeCreation(disputeID, IArbitrable(msg.sender));
 
-        disputeID = disputes.length;
+        disputeID = disputes.length -1;
     }
 
     /** @dev Give a ruling. UNTRUSTED.

@@ -58,11 +58,11 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         bool isRuled;
         Party ruling;
         uint disputeIDOnArbitratorSide;
-        Round[] rounds;
     }
 
     DisputeStruct[] public disputes;
     mapping(uint => uint) public externalIDtoLocalID;
+    mapping(uint => Round[]) public disputeIDRoundIDtoRound;
 
     /** @dev TRUSTED. Calls createDispute function of the specified arbitrator to create a dispute.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
@@ -72,12 +72,21 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     function createDispute(bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI) external payable {
         uint disputeID = arbitrator.createDispute.value(msg.value)(NUMBER_OF_CHOICES, _arbitratorExtraData);
 
-        uint localDisputeID = disputes.length + 1;
-        DisputeStruct storage dispute = disputes[localDisputeID];
-        dispute.arbitratorExtraData = _arbitratorExtraData;
-        dispute.disputeIDOnArbitratorSide = disputeID;
+        disputes.push(DisputeStruct({
+            arbitratorExtraData: _arbitratorExtraData,
+            isRuled: false,
+            ruling: Party.None,
+            disputeIDOnArbitratorSide: disputeID
+          }));
 
+        uint localDisputeID = disputes.length - 1;
         externalIDtoLocalID[disputeID] = localDisputeID;
+
+        disputeIDRoundIDtoRound[localDisputeID].push(Round({
+          paidFees: [uint256(0), uint256(0), uint256(0)],
+          hasPaid: [false, false, false],
+          feeRewards: 0
+        }));
 
         emit MetaEvidence(localDisputeID, _metaevidenceURI);
         emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
@@ -153,7 +162,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         uint appealCost = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         uint totalCost = appealCost.addCap(appealCost.mulCap(multiplier) / MULTIPLIER_DIVISOR);
 
-        Round storage round = dispute.rounds[dispute.rounds.length - 1];
+        uint lastRound = disputeIDRoundIDtoRound[_localDisputeID].length -1;
+        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][lastRound];
         contribute(round, _side, msg.sender, msg.value, totalCost);
         if (round.paidFees[uint(_side)] >= totalCost)
             round.hasPaid[uint(_side)] = true;
@@ -171,7 +181,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      */
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber) external {
         DisputeStruct storage dispute = disputes[_localDisputeID];
-        Round storage round = dispute.rounds[_roundNumber];
+
+        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][_roundNumber];
         uint8 ruling = uint8(dispute.ruling);
 
         require(dispute.isRuled, "The dispute should be solved");
@@ -218,7 +229,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         dispute.isRuled = true;
         dispute.ruling = Party(_ruling);
 
-        Round storage round = dispute.rounds[dispute.rounds.length - 1];
+        uint lastRound = disputeIDRoundIDtoRound[_localDisputeID].length -1;
+        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][lastRound];
 
         if (round.hasPaid[uint8(Party.Requester)] == true) // If one side paid its fees, the ruling is in its favor. Note that if the other side had also paid, an appeal would have been created.
             dispute.ruling = Party.Requester;
@@ -282,9 +294,9 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         )
     {
         DisputeStruct storage dispute = disputes[_localDisputeID];
-        Round storage round = dispute.rounds[_round];
+        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][_round];
         return (
-            _round != (dispute.rounds.length - 1),
+            _round != (disputeIDRoundIDtoRound[_localDisputeID].length - 1),
             round.paidFees,
             round.hasPaid,
             round.feeRewards
@@ -302,9 +314,10 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     function crowdfundingStatus(uint _localDisputeID, address _participant) external view returns (uint[3] memory paidFees, bool[3] memory hasPaid, uint feeRewards, uint[3] memory contributions) {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
-        Round memory lastRound = dispute.rounds[dispute.rounds.length - 1];
+        uint lastRound = disputeIDRoundIDtoRound[_localDisputeID].length -1;
+        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][lastRound];
 
-        return (lastRound.paidFees, lastRound.hasPaid, lastRound.feeRewards, dispute.rounds[dispute.rounds.length - 1].contributions[_participant]);
+        return (round.paidFees, round.hasPaid, round.feeRewards, round.contributions[_participant]);
     }
 
     /** @dev Proxy getter for arbitration cost.
