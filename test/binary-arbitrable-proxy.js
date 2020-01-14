@@ -41,6 +41,16 @@ contract(
       assert(new BN("0").eq((await this.aaa.disputes(0)).status));
     });
 
+    it("it appeals a dispute once more", async function() {
+      await this.aaa.giveAppealableRuling(0, 0, 1000000000, 240);
+      assert(new BN("1").eq((await this.aaa.disputes(0)).status));
+
+      await this.bap.fundAppeal(0, 1, { value: 1000000000, from: thirdParty });
+      await this.bap.fundAppeal(0, 2, { value: 1000000000, from: fourthParty });
+
+      assert(new BN("0").eq((await this.aaa.disputes(0)).status));
+    });
+
     it("withdraws fees and rewards", async function() {
       await this.aaa.giveRuling(0, 1);
 

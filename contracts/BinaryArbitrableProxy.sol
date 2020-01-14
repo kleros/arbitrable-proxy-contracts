@@ -47,9 +47,9 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     }
 
     struct Round {
-        uint[3] paidFees; // Tracks the fees paid by each side in this round.
+        uint256[3] paidFees; // Tracks the fees paid by each side in this round.
         bool[3] hasPaid; // True when the side has fully paid its fee. False otherwise.
-        uint feeRewards; // Sum of reimbursable appeal fees available to the parties that made contributions to the side that ultimately wins a dispute.
+        uint256 feeRewards; // Sum of reimbursable appeal fees available to the parties that made contributions to the side that ultimately wins a dispute.
         mapping(address => uint[3]) contributions; // Maps contributors to their contributions for each side.
     }
 
@@ -162,14 +162,21 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         uint appealCost = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         uint totalCost = appealCost.addCap(appealCost.mulCap(multiplier) / MULTIPLIER_DIVISOR);
 
-        uint lastRound = disputeIDRoundIDtoRound[_localDisputeID].length -1;
-        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][lastRound];
-        contribute(round, _side, msg.sender, msg.value, totalCost);
-        if (round.paidFees[uint(_side)] >= totalCost)
-            round.hasPaid[uint(_side)] = true;
+        Round[] storage rounds = disputeIDRoundIDtoRound[_localDisputeID];
+        Round storage lastRound = disputeIDRoundIDtoRound[_localDisputeID][rounds.length -1];
 
-        if(round.hasPaid[uint8(Party.Requester)] && round.hasPaid[uint8(Party.Respondent)]){
-            round.feeRewards = round.feeRewards.subCap(appealCost);
+        contribute(lastRound, _side, msg.sender, msg.value, totalCost);
+
+        if (lastRound.paidFees[uint(_side)] >= totalCost)
+            lastRound.hasPaid[uint(_side)] = true;
+
+        if(lastRound.hasPaid[uint8(Party.Requester)] && lastRound.hasPaid[uint8(Party.Respondent)]){
+            rounds.push(Round({
+              paidFees: [uint256(0), uint256(0), uint256(0)],
+              hasPaid: [false, false, false],
+              feeRewards: 0
+            }));
+            lastRound.feeRewards = lastRound.feeRewards.subCap(appealCost);
             arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
     }
@@ -212,7 +219,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             round.contributions[_contributor][ruling] = 0;
           }
 
-        _contributor.send(reward); // It is the user responsibility to accept ETH.
+        _contributor.send(reward); // Use is responsible for accepting the reward.
     }
 
     /** @dev To be called by the arbitrator of the dispute, to declare winning side.
@@ -293,7 +300,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             uint feeRewards
         )
     {
-        DisputeStruct storage dispute = disputes[_localDisputeID];
         Round storage round = disputeIDRoundIDtoRound[_localDisputeID][_round];
         return (
             _round != (disputeIDRoundIDtoRound[_localDisputeID].length - 1),
@@ -312,8 +318,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
       * @return contributions Contributions of given participant in the last round.
      */
     function crowdfundingStatus(uint _localDisputeID, address _participant) external view returns (uint[3] memory paidFees, bool[3] memory hasPaid, uint feeRewards, uint[3] memory contributions) {
-        DisputeStruct storage dispute = disputes[_localDisputeID];
-
         uint lastRound = disputeIDRoundIDtoRound[_localDisputeID].length -1;
         Round storage round = disputeIDRoundIDtoRound[_localDisputeID][lastRound];
 
