@@ -14,12 +14,12 @@
     "chai": "^4.2.0",
     "ganache": "^6.4.4",
     "ganache-cli": "^6.7.0",
-    "truffle": "^5.0.35",
+    "truffle": "^5.1.8",
     "truffle-plugin-verify": "^0.3.2"
   },
   "dependencies": {
-    "@kleros/erc-792": "^3.0.0",
-    "@kleros/ethereum-libraries": "^1.0.0",
+    "@kleros/erc-792": "^3.1.0",
+    "@kleros/ethereum-libraries": "^2.0.0",
     "@openzeppelin/contracts": "^2.4.0"
   },
   "files": [

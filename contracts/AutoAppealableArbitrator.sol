@@ -6,7 +6,7 @@
  *  @deployments: []
  */
 
-pragma solidity ^0.5;
+pragma solidity >=0.6;
 
 import "@kleros/erc-792/contracts/IArbitrable.sol";
 import "@kleros/erc-792/contracts/IArbitrator.sol";
@@ -55,7 +55,7 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @param _extraData Not used by this contract.
      *  @return fee Amount to be paid.
      */
-    function arbitrationCost(bytes memory _extraData) public view returns(uint fee) {
+    function arbitrationCost(bytes memory _extraData) public view override returns(uint fee) {
         return arbitrationPrice;
     }
 
@@ -64,7 +64,7 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @param _extraData Not used by this contract.
      *  @return fee Amount to be paid.
      */
-    function appealCost(uint _disputeID, bytes memory _extraData) public view returns(uint fee) {
+    function appealCost(uint _disputeID, bytes memory _extraData) public view override returns(uint fee) {
         Dispute storage dispute = disputes[_disputeID];
         if (dispute.status == DisputeStatus.Appealable)
             return dispute.appealCost;
@@ -78,10 +78,10 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @param _extraData Can be used to give additional info on the dispute to be created.
      *  @return disputeID ID of the dispute created.
      */
-    function createDispute(uint _choices, bytes memory _extraData) public payable returns(uint disputeID) {
+    function createDispute(uint _choices, bytes memory _extraData) public payable override returns(uint disputeID) {
         uint arbitrationFee = arbitrationCost(_extraData);
         require(msg.value >= arbitrationFee,"Value is less than required arbitration fee.");
-        disputeID = disputes.push(Dispute({
+        disputes.push(Dispute({
             arbitrated: IArbitrable(msg.sender),
             choices: _choices,
             fees: msg.value,
@@ -90,8 +90,10 @@ contract AutoAppealableArbitrator is IArbitrator {
             appealCost: 0,
             appealPeriodStart: 0,
             appealPeriodEnd: 0
-            })) - 1; // Create the dispute and return its number.
+            })); // Create the dispute and return its number.
         emit DisputeCreation(disputeID, IArbitrable(msg.sender));
+
+        disputeID = disputes.length;
     }
 
     /** @dev Give a ruling. UNTRUSTED.
@@ -146,7 +148,7 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @param _disputeID ID of the dispute to be appealed.
      *  @param _extraData Can be used to give extra info on the appeal.
      */
-    function appeal(uint _disputeID, bytes memory _extraData) public payable {
+    function appeal(uint _disputeID, bytes memory _extraData) public payable override {
         Dispute storage dispute = disputes[_disputeID];
         uint appealFee = appealCost(_disputeID, _extraData);
         require(dispute.status == DisputeStatus.Appealable, "The dispute must be appealable.");
@@ -175,7 +177,7 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @param _disputeID ID of the dispute to rule.
      *  @return status The status of the dispute.
      */
-    function disputeStatus(uint _disputeID) public view returns(DisputeStatus status) {
+    function disputeStatus(uint _disputeID) public view override returns(DisputeStatus status) {
         Dispute storage dispute = disputes[_disputeID];
         if (disputes[_disputeID].status==DisputeStatus.Appealable && now>=dispute.appealPeriodEnd) // If the appeal period is over, consider it solved even if rule has not been called yet.
             return DisputeStatus.Solved;
@@ -187,15 +189,16 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @param _disputeID ID of the dispute.
      *  @return ruling The ruling which have been given or which would be given if no appeals are raised.
      */
-    function currentRuling(uint _disputeID) public view returns(uint ruling) {
+    function currentRuling(uint _disputeID) public view override returns(uint ruling) {
         return disputes[_disputeID].ruling;
     }
 
     /** @dev Compute the start and end of the dispute's current or next appeal period, if possible.
      *  @param _disputeID ID of the dispute.
-     *  @return The start and end of the period.
+     *  @return start The start of the period.
+     *  @return end The End of the period.
      */
-    function appealPeriod(uint _disputeID) public view returns(uint start, uint end) {
+    function appealPeriod(uint _disputeID) public view override returns(uint start, uint end) {
         Dispute storage dispute = disputes[_disputeID];
         return (dispute.appealPeriodStart, dispute.appealPeriodEnd);
     }

@@ -6,7 +6,7 @@
  *  @deployments: []
  */
 
-pragma solidity >=0.5 <0.6.0;
+pragma solidity >=0.6;
 
 import "@kleros/erc-792/contracts/IArbitrable.sol";
 import "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
@@ -22,7 +22,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
     address governor = msg.sender;
     IArbitrator arbitrator;
-    
+
     // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
     // Multipliers are in basis points.
     uint public winnerStakeMultiplier; // Multiplier for calculating the fee stake paid by the party that won the previous round.
@@ -72,11 +72,10 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     function createDispute(bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI) external payable {
         uint disputeID = arbitrator.createDispute.value(msg.value)(NUMBER_OF_CHOICES, _arbitratorExtraData);
 
-        uint localDisputeID = disputes.length++;
+        uint localDisputeID = disputes.length + 1;
         DisputeStruct storage dispute = disputes[localDisputeID];
         dispute.arbitratorExtraData = _arbitratorExtraData;
         dispute.disputeIDOnArbitratorSide = disputeID;
-        dispute.rounds.length++;
 
         externalIDtoLocalID[disputeID] = localDisputeID;
 
@@ -160,7 +159,6 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             round.hasPaid[uint(_side)] = true;
 
         if(round.hasPaid[uint8(Party.Requester)] && round.hasPaid[uint8(Party.Respondent)]){
-            dispute.rounds.length++;
             round.feeRewards = round.feeRewards.subCap(appealCost);
             arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
@@ -210,7 +208,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _externalDisputeID ID of the dispute in arbitrator contract.
      *  @param _ruling The side to which the caller wants to contribute.
      */
-    function rule(uint _externalDisputeID, uint _ruling) external {
+    function rule(uint _externalDisputeID, uint _ruling) external override {
         uint _localDisputeID = externalIDtoLocalID[_externalDisputeID];
         DisputeStruct storage dispute = disputes[_localDisputeID];
         require(msg.sender == address(arbitrator), "Unauthorized call.");
@@ -301,7 +299,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @return feeRewards Total fees collected for parties excluding appeal cost, in the last round.
       * @return contributions Contributions of given participant in the last round.
      */
-    function crowdfundingStatus(uint _localDisputeID, address _participant) external view returns (uint[3] memory paidFess, bool[3] memory hasPaid, uint feeRewards, uint[3] memory contributions) {
+    function crowdfundingStatus(uint _localDisputeID, address _participant) external view returns (uint[3] memory paidFees, bool[3] memory hasPaid, uint feeRewards, uint[3] memory contributions) {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         Round memory lastRound = dispute.rounds[dispute.rounds.length - 1];
