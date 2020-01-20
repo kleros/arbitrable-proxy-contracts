@@ -33,7 +33,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     uint constant NUMBER_OF_CHOICES = 2;
     enum Party {None, Requester, Respondent}
 
-    /** dev Constructor
+    /** @dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
      *  @param _winnerStakeMultiplier Multiplier of the arbitration cost that the winner has to pay as fee stake for a round in basis points.
      *  @param _loserStakeMultiplier Multiplier of the arbitration cost that the loser has to pay as fee stake for a round in basis points.
@@ -163,7 +163,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         uint totalCost = appealCost.addCap(appealCost.mulCap(multiplier) / MULTIPLIER_DIVISOR);
 
         Round[] storage rounds = disputeIDRoundIDtoRound[_localDisputeID];
-        Round storage lastRound = disputeIDRoundIDtoRound[_localDisputeID][rounds.length -1];
+        Round storage lastRound = disputeIDRoundIDtoRound[_localDisputeID][rounds.length - 1];
 
         contribute(lastRound, _side, msg.sender, msg.value, totalCost);
 
@@ -183,7 +183,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
      *  @param _localDisputeID Index of the dispute in disputes array.
-     *  @param _contributor The side to which the caller wants to contribute.
+     *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      */
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber) external {
@@ -212,19 +212,19 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             round.contributions[_contributor][uint8(Party.Requester)] = 0;
             round.contributions[_contributor][uint8(Party.Respondent)] = 0;
         } else {
-              // Reward the winner.
+            // Reward the winner.
             reward = round.paidFees[ruling] > 0
                 ? (round.contributions[_contributor][ruling] * round.feeRewards) / round.paidFees[ruling]
                 : 0;
             round.contributions[_contributor][ruling] = 0;
           }
 
-        _contributor.send(reward); // Use is responsible for accepting the reward.
+        _contributor.send(reward); // User is responsible for accepting the reward.
     }
 
     /** @dev To be called by the arbitrator of the dispute, to declare winning side.
      *  @param _externalDisputeID ID of the dispute in arbitrator contract.
-     *  @param _ruling The side to which the caller wants to contribute.
+     *  @param _ruling The ruling choice of the arbitration.
      */
     function rule(uint _externalDisputeID, uint _ruling) external override {
         uint _localDisputeID = externalIDtoLocalID[_externalDisputeID];
@@ -236,7 +236,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         dispute.isRuled = true;
         dispute.ruling = Party(_ruling);
 
-        uint lastRound = disputeIDRoundIDtoRound[_localDisputeID].length -1;
+        uint lastRound = disputeIDRoundIDtoRound[_localDisputeID].length - 1;
         Round storage round = disputeIDRoundIDtoRound[_localDisputeID][lastRound];
 
         if (round.hasPaid[uint8(Party.Requester)] == true) // If one side paid its fees, the ruling is in its favor. Note that if the other side had also paid, an appeal would have been created.
@@ -311,14 +311,14 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     /** @dev Returns crowdfunding status, useful for user interfaces.
      *  @param _localDisputeID Dispute ID as in this contract.
-     *  @param _participant Address of crowfunding participant to get details of.
+     *  @param _participant Address of crowdfunding participant to get details of.
      *  @return paidFees Total fees paid for each party in the last round.
      *  @return hasPaid Whether given party paid required amount or not, for each party, in the last round.
      *  @return feeRewards Total fees collected for parties excluding appeal cost, in the last round.
       * @return contributions Contributions of given participant in the last round.
      */
     function crowdfundingStatus(uint _localDisputeID, address _participant) external view returns (uint[3] memory paidFees, bool[3] memory hasPaid, uint feeRewards, uint[3] memory contributions) {
-        uint lastRound = disputeIDRoundIDtoRound[_localDisputeID].length -1;
+        uint lastRound = disputeIDRoundIDtoRound[_localDisputeID].length - 1;
         Round storage round = disputeIDRoundIDtoRound[_localDisputeID][lastRound];
 
         return (round.paidFees, round.hasPaid, round.feeRewards, round.contributions[_participant]);
