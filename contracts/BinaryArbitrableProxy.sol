@@ -3,7 +3,7 @@
  *  @reviewers: []
  *  @auditors: []
  *  @bounties: []
- *  @deployments: [0xc7e49251807780dFBbCA72778890B80bd946590B]
+ *  @deployments: [0xeF6F9665B3aAC2894Ea4c458F93aBA5BB8f8b86d, 0xc7e49251807780dFBbCA72778890B80bd946590B]
  */
 
 pragma solidity >=0.6;
