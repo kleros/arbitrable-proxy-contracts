@@ -33,6 +33,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     uint constant NUMBER_OF_CHOICES = 2;
     enum Party {None, Requester, Respondent}
 
+
+
     /** @dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
      *  @param _winnerStakeMultiplier Multiplier of the arbitration cost that the winner has to pay as fee stake for a round in basis points.
@@ -63,6 +65,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     DisputeStruct[] public disputes;
     mapping(uint => uint) public externalIDtoLocalID;
     mapping(uint => Round[]) public disputeIDRoundIDtoRound;
+    mapping(uint => mapping (address => bool)) public withdrewAlready;
 
     /** @dev TRUSTED. Calls createDispute function of the specified arbitrator to create a dispute.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
@@ -186,7 +189,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      */
-    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber) external {
+    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber) public {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         Round storage round = disputeIDRoundIDtoRound[_localDisputeID][_roundNumber];
@@ -220,6 +223,19 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
           }
 
         _contributor.send(reward); // User is responsible for accepting the reward.
+    }
+
+    /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved, for all rounds.
+     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _contributor The address to withdraw its rewards.
+     */
+    function withdrawFeesAndRewardsForAllRounds(uint _localDisputeID, address payable _contributor) external {
+        require(withdrewAlready[_localDisputeID][_contributor] == false, "This contributor withdrew all already.");
+        for (uint roundNumber = 0; roundNumber < disputeIDRoundIDtoRound[_localDisputeID].length; roundNumber++) {
+            withdrawFeesAndRewards(_localDisputeID, _contributor, roundNumber);
+        }
+
+        withdrewAlready[_localDisputeID][_contributor] = true;
     }
 
     /** @dev To be called by the arbitrator of the dispute, to declare winning side.
@@ -307,6 +323,18 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             round.hasPaid,
             round.feeRewards
         );
+    }
+
+
+
+    /** @dev Returns stake multipliers.
+     *  @return winner Winners stake multiplier.
+     *  @return loser Losers stake multiplier.
+     *  @return shared Multiplier when it's tied.
+     *  @return divisor Multiplier divisor.
+     */
+    function getMultipliers() external view returns(uint winner, uint loser, uint shared, uint divisor){
+      return (winnerStakeMultiplier, loserStakeMultiplier, sharedStakeMultiplier, MULTIPLIER_DIVISOR);
     }
 
     /** @dev Returns crowdfunding status, useful for user interfaces.
