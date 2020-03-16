@@ -360,4 +360,32 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         arbitrationFee = arbitrator.arbitrationCost(_arbitratorExtraData);
     }
 
+    /** @dev Returns active disputes.
+     *  @param _cursor Starting point for search.
+     *  @param _count Number of items to return.
+     *  @return openDisputes Dispute identifiers of open disputes, as in arbitrator.
+     *  @return hasMore Whether the search was exhausted (has no more) or not (has more).
+     */
+    function getOpenDisputes(uint _cursor, uint _count) external view returns (uint[] memory openDisputes, bool hasMore)
+    {
+        uint noOfOpenDisputes = 0;
+        for (uint i = 0; i < disputes.length; i++) {
+            if(disputes[i].isRuled == false){
+                noOfOpenDisputes++;
+            }
+        }
+        openDisputes = new uint[](noOfOpenDisputes);
+
+        uint count = 0;
+        hasMore = true;
+        uint i;
+        for (i = _cursor; i < disputes.length && (count < _count || 0 == _count); i++) {
+            if(disputes[i].isRuled == false){
+                openDisputes[count++] = disputes[i].disputeIDOnArbitratorSide;
+            }
+        }
+
+        if(i == disputes.length) hasMore = false;
+
+    }
 }
