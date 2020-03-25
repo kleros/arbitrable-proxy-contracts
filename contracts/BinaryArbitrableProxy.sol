@@ -20,8 +20,8 @@ import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 contract BinaryArbitrableProxy is IArbitrable, IEvidence {
 
     using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
-    address governor = msg.sender;
-    IArbitrator arbitrator;
+    address public governor = msg.sender;
+    IArbitrator public arbitrator;
 
     // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
     // Multipliers are in basis points.
