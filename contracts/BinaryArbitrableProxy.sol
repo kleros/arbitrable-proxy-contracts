@@ -73,7 +73,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _metaevidenceURI Link to metaevidence of prospective dispute.
      */
     function createDispute(bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI) external payable returns(uint disputeID) {
-        disputeID = arbitrator.createDispute{value: msg.value}(NUMBER_OF_CHOICES, _arbitratorExtraData);
+        disputeID = arbitrator.createDispute.value(msg.value)(NUMBER_OF_CHOICES, _arbitratorExtraData);
 
         disputes.push(DisputeStruct({
             arbitratorExtraData: _arbitratorExtraData,
@@ -180,7 +180,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
               feeRewards: 0
             }));
             lastRound.feeRewards = lastRound.feeRewards.subCap(appealCost);
-            arbitrator.appeal{value: appealCost}(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+            arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
     }
 
