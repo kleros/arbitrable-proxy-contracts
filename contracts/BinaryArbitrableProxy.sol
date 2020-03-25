@@ -72,8 +72,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _arbitratorExtraData Extra data for the arbitrator of prospective dispute.
      *  @param _metaevidenceURI Link to metaevidence of prospective dispute.
      */
-    function createDispute(bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI) external payable {
-        uint disputeID = arbitrator.createDispute.value(msg.value)(NUMBER_OF_CHOICES, _arbitratorExtraData);
+    function createDispute(bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI) external payable returns(uint disputeID) {
+        disputeID = arbitrator.createDispute{value: msg.value}(NUMBER_OF_CHOICES, _arbitratorExtraData);
 
         disputes.push(DisputeStruct({
             arbitratorExtraData: _arbitratorExtraData,
@@ -180,7 +180,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
               feeRewards: 0
             }));
             lastRound.feeRewards = lastRound.feeRewards.subCap(appealCost);
-            arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+            arbitrator.appeal{value: appealCost}(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
     }
 
@@ -245,15 +245,15 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     function rule(uint _externalDisputeID, uint _ruling) external override {
         uint _localDisputeID = externalIDtoLocalID[_externalDisputeID];
         DisputeStruct storage dispute = disputes[_localDisputeID];
-        require(msg.sender == address(arbitrator), "Unauthorized call.");
+        require(msg.sender == address(arbitrator), "Only the arbitrator can execute this.");
         require(_ruling <= NUMBER_OF_CHOICES, "Invalid ruling.");
         require(dispute.isRuled == false, "Is ruled already.");
 
         dispute.isRuled = true;
         dispute.ruling = Party(_ruling);
 
-        uint lastRound = disputeIDRoundIDtoRound[_localDisputeID].length - 1;
-        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][lastRound];
+        Round[] storage rounds = disputeIDRoundIDtoRound[_localDisputeID];
+        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][rounds.length -1];
 
         if (round.hasPaid[uint8(Party.Requester)] == true) // If one side paid its fees, the ruling is in its favor. Note that if the other side had also paid, an appeal would have been created.
             dispute.ruling = Party.Requester;
@@ -278,7 +278,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _sharedStakeMultiplier The new tie multiplier value respect to MULTIPLIER_DIVISOR.
      */
     function changesharedStakeMultiplier(uint _sharedStakeMultiplier) external {
-        require(msg.sender == governor, "Unauthorized call.");
+        require(msg.sender == governor, "Only the governor can execute this.");
         sharedStakeMultiplier = _sharedStakeMultiplier;
     }
 
@@ -286,7 +286,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _winnerStakeMultiplier The new winner multiplier value respect to MULTIPLIER_DIVISOR.
      */
     function changewinnerStakeMultiplier(uint _winnerStakeMultiplier) external {
-        require(msg.sender == governor, "Unauthorized call.");
+        require(msg.sender == governor, "Only the governor can execute this.");
         winnerStakeMultiplier = _winnerStakeMultiplier;
     }
 
@@ -294,7 +294,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _loserStakeMultiplier The new loser multiplier value respect to MULTIPLIER_DIVISOR.
      */
     function changeloserStakeMultiplier(uint _loserStakeMultiplier) external {
-        require(msg.sender == governor, "Unauthorized call.");
+        require(msg.sender == governor, "Only the governor can execute this.");
         loserStakeMultiplier = _loserStakeMultiplier;
     }
 
@@ -346,8 +346,8 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
       * @return contributions Contributions of given participant in the last round.
      */
     function crowdfundingStatus(uint _localDisputeID, address _participant) external view returns (uint[3] memory paidFees, bool[3] memory hasPaid, uint feeRewards, uint[3] memory contributions) {
-        uint lastRound = disputeIDRoundIDtoRound[_localDisputeID].length - 1;
-        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][lastRound];
+        Round[] storage rounds = disputeIDRoundIDtoRound[_localDisputeID];
+        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][rounds.length -1];
 
         return (round.paidFees, round.hasPaid, round.feeRewards, round.contributions[_participant]);
     }
