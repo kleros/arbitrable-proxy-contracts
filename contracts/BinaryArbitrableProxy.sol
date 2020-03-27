@@ -277,7 +277,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     /** @dev Changes the proportion of appeal fees that must be paid when there is no winner or loser.
      *  @param _sharedStakeMultiplier The new tie multiplier value respect to MULTIPLIER_DIVISOR.
      */
-    function changesharedStakeMultiplier(uint _sharedStakeMultiplier) external {
+    function changeSharedStakeMultiplier(uint _sharedStakeMultiplier) external {
         require(msg.sender == governor, "Only the governor can execute this.");
         sharedStakeMultiplier = _sharedStakeMultiplier;
     }
@@ -285,7 +285,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     /** @dev Changes the proportion of appeal fees that must be paid by winner.
      *  @param _winnerStakeMultiplier The new winner multiplier value respect to MULTIPLIER_DIVISOR.
      */
-    function changewinnerStakeMultiplier(uint _winnerStakeMultiplier) external {
+    function changeWinnerStakeMultiplier(uint _winnerStakeMultiplier) external {
         require(msg.sender == governor, "Only the governor can execute this.");
         winnerStakeMultiplier = _winnerStakeMultiplier;
     }
@@ -293,7 +293,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
     /** @dev Changes the proportion of appeal fees that must be paid by loser.
      *  @param _loserStakeMultiplier The new loser multiplier value respect to MULTIPLIER_DIVISOR.
      */
-    function changeloserStakeMultiplier(uint _loserStakeMultiplier) external {
+    function changeLoserStakeMultiplier(uint _loserStakeMultiplier) external {
         require(msg.sender == governor, "Only the governor can execute this.");
         loserStakeMultiplier = _loserStakeMultiplier;
     }
