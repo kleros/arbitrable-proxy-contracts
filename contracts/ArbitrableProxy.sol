@@ -3,7 +3,7 @@
  *  @reviewers: []
  *  @auditors: []
  *  @bounties: []
- *  @deployments: [0xeF6F9665B3aAC2894Ea4c458F93aBA5BB8f8b86d, 0xc7e49251807780dFBbCA72778890B80bd946590B]
+ *  @deployments: []
  */
 
 pragma solidity >=0.6;
@@ -14,35 +14,14 @@ import "@kleros/erc-792/contracts/IArbitrator.sol";
 import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 
 /**
- *  @title BinaryArbitrableProxy
- *  This contract acts as a general purpose dispute creator.
+ *  @title ArbitrableProxy
+ *  A general purpose arbitrable contract.
  */
 contract ArbitrableProxy is IArbitrable, IEvidence {
 
+    string public constant VERSION = '1.0.0';
+
     using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
-    address public governor = msg.sender;
-    IArbitrator public arbitrator;
-
-    // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
-    // Multipliers are in basis points.
-    uint public winnerStakeMultiplier; // Multiplier for calculating the fee stake paid by the party that won the previous round.
-    uint public loserStakeMultiplier; // Multiplier for calculating the fee stake paid by the party that lost the previous round.
-    uint public sharedStakeMultiplier; // Multiplier for calculating the fee stake that must be paid in the case where there isn't a winner and loser (e.g. when it's the first round or the arbitrator ruled "refused to rule"/"could not rule").
-    uint public constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
-
-
-    /** @dev Constructor
-     *  @param _arbitrator Target global arbitrator for any disputes.
-     *  @param _winnerStakeMultiplier Multiplier of the arbitration cost that the winner has to pay as fee stake for a round in basis points.
-     *  @param _loserStakeMultiplier Multiplier of the arbitration cost that the loser has to pay as fee stake for a round in basis points.
-     *  @param _sharedStakeMultiplier Multiplier of the arbitration cost that each party must pay as fee stake for a round when there isn't a winner/loser in the previous round (e.g. when it's the first round or the arbitrator refused to or did not rule). In basis points.
-     */
-    constructor(IArbitrator _arbitrator, uint _winnerStakeMultiplier, uint _loserStakeMultiplier, uint _sharedStakeMultiplier) public {
-        arbitrator = _arbitrator;
-        winnerStakeMultiplier = _winnerStakeMultiplier;
-        loserStakeMultiplier = _loserStakeMultiplier;
-        sharedStakeMultiplier = _sharedStakeMultiplier;
-    }
 
     struct Round {
         mapping(uint => uint) paidFees; // Tracks the fees paid by each side in this round.
@@ -63,10 +42,33 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
         uint numberOfChoices;
     }
 
+    address public governor = msg.sender;
+    IArbitrator public arbitrator;
+
+    // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
+    // Multipliers are in basis points.
+    uint public winnerStakeMultiplier; // Multiplier for calculating the fee stake paid by the party that won the previous round.
+    uint public loserStakeMultiplier; // Multiplier for calculating the fee stake paid by the party that lost the previous round.
+    uint public sharedStakeMultiplier; // Multiplier for calculating the fee stake that must be paid in the case where there isn't a winner and loser (e.g. when it's the first round or the arbitrator ruled "refused to rule"/"could not rule").
+    uint public constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
+
     DisputeStruct[] public disputes;
     mapping(uint => uint) public externalIDtoLocalID;
     mapping(uint => Round[]) public disputeIDRoundIDtoRound;
     mapping(uint => mapping (address => bool)) public withdrewAlready;
+
+    /** @dev Constructor
+     *  @param _arbitrator Target global arbitrator for any disputes.
+     *  @param _winnerStakeMultiplier Multiplier of the arbitration cost that the winner has to pay as fee stake for a round in basis points.
+     *  @param _loserStakeMultiplier Multiplier of the arbitration cost that the loser has to pay as fee stake for a round in basis points.
+     *  @param _sharedStakeMultiplier Multiplier of the arbitration cost that each party must pay as fee stake for a round when there isn't a winner/loser in the previous round (e.g. when it's the first round or the arbitrator refused to or did not rule). In basis points.
+     */
+    constructor(IArbitrator _arbitrator, uint _winnerStakeMultiplier, uint _loserStakeMultiplier, uint _sharedStakeMultiplier) public {
+        arbitrator = _arbitrator;
+        winnerStakeMultiplier = _winnerStakeMultiplier;
+        loserStakeMultiplier = _loserStakeMultiplier;
+        sharedStakeMultiplier = _sharedStakeMultiplier;
+    }
 
     /** @dev TRUSTED. Calls createDispute function of the specified arbitrator to create a dispute.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
@@ -83,22 +85,22 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
             ruling: 0,
             disputeIDOnArbitratorSide: disputeID,
             numberOfChoices: _numberOfChoices
-          }));
+        }));
 
         uint localDisputeID = disputes.length - 1;
         externalIDtoLocalID[disputeID] = localDisputeID;
 
         disputeIDRoundIDtoRound[localDisputeID].push(
-          Round({
-          feeRewards: 0,
-          partiallyFundedSides: new uint[](0),
-          fundedSides: new uint[](0),
-          appealFee: 0
-        })
+            Round({
+            feeRewards: 0,
+            partiallyFundedSides: new uint[](0),
+            fundedSides: new uint[](0),
+            appealFee: 0
+            })
       );
 
-        emit MetaEvidence(localDisputeID, _metaevidenceURI);
-        emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
+      emit MetaEvidence(localDisputeID, _metaevidenceURI);
+      emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
     }
 
     /** @dev Returns the contribution value and remainder from available ETH and required amount.
