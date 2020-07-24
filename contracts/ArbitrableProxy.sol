@@ -29,7 +29,6 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
     uint public loserStakeMultiplier; // Multiplier for calculating the fee stake paid by the party that lost the previous round.
     uint public sharedStakeMultiplier; // Multiplier for calculating the fee stake that must be paid in the case where there isn't a winner and loser (e.g. when it's the first round or the arbitrator ruled "refused to rule"/"could not rule").
     uint public constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
-    uint public constant NO_SHADOW_WINNER = uint(-1); // The value that indicates that no one has successfully paid appeal fees in a current round. It's the largest integer and not 0, because 0 can be a valid ruling.
 
 
     /** @dev Constructor
@@ -62,7 +61,6 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
         uint ruling;
         uint disputeIDOnArbitratorSide;
         uint numberOfChoices;
-        uint shadowWinner; // The first side that has been funded in the last round. If it stays the only funded side, it will win regardless of the final ruling.
     }
 
     DisputeStruct[] public disputes;
@@ -84,8 +82,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
             isRuled: false,
             ruling: 0,
             disputeIDOnArbitratorSide: disputeID,
-            numberOfChoices: _numberOfChoices,
-            shadowWinner: 0
+            numberOfChoices: _numberOfChoices
           }));
 
         uint localDisputeID = disputes.length - 1;
@@ -120,29 +117,6 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
 
         remainder = _available - _requiredAmount;
         return (_requiredAmount, remainder);
-    }
-
-    /** @dev Make a fee contribution.
-     *  @param _round The round to contribute.
-     *  @param _side The side for which to contribute.
-     *  @param _contributor The contributor.
-     *  @param _amount The amount contributed.
-     *  @param _totalRequired The total amount required for this side.
-     *  @return contribution The amount contributed.
-     */
-    function contribute(Round storage _round, uint _side, address payable _contributor, uint _amount, uint _totalRequired) internal returns(uint contribution){
-        // Take up to the amount necessary to fund the current round at the current costs.
-        uint contribution; // Amount contributed.
-        uint remainingETH; // Remaining ETH to send back.
-        (contribution, remainingETH) = calculateContribution(_amount, _totalRequired.subCap(_round.paidFees[uint(_side)]));
-        _round.contributions[_contributor][uint(_side)] += contribution;
-        _round.paidFees[uint(_side)] += contribution;
-        _round.feeRewards += contribution;
-
-        // Reimburse leftover ETH.
-        _contributor.send(remainingETH); // Deliberate use of send in order to not block the contract in case of reverting fallback.
-
-        return contribution;
     }
 
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
@@ -180,36 +154,35 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
         if (lastRound.paidFees[_side] == 0)
             lastRound.partiallyFundedSides.push(_side);
 
-        uint contribution = contribute(lastRound, _side, msg.sender, msg.value, totalCost);
+        if (lastRound.contributions[msg.sender][_side] == 0)
+            lastRound.contributedTo[msg.sender].push(_side);
 
-        lastRound.contributions[msg.sender][_side] += contribution;
-        lastRound.paidFees[_side] += contribution;
+        uint contribution = totalCost.subCap(lastRound.paidFees[_side]) > msg.value ? msg.value : totalCost.subCap(lastRound.paidFees[_side]);
+
+        lastRound.contributions[msg.sender][uint(_side)] += contribution;
+        lastRound.paidFees[uint(_side)] += contribution;
+        lastRound.feeRewards += contribution;
 
         if (lastRound.paidFees[_side] >= totalCost) {
             lastRound.fundedSides.push(_side);
             lastRound.hasPaid[_side] = true;
-
-            if (dispute.shadowWinner == NO_SHADOW_WINNER)
-                dispute.shadowWinner = _side;
-
-            lastRound.feeRewards += lastRound.paidFees[_side];
         }
 
-
-
-        if (dispute.shadowWinner != NO_SHADOW_WINNER && dispute.shadowWinner != _side && lastRound.hasPaid[_side]) {
-            // Two sides are fully funded.
-            dispute.shadowWinner = NO_SHADOW_WINNER;
-            arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+        if (lastRound.fundedSides.length > 1) {
+            // At least two sides are fully funded.
             rounds.push(Round({
               feeRewards: 0,
               partiallyFundedSides: new uint[](0),
               fundedSides: new uint[](0),
               appealFee: 0
             }));
+
             lastRound.feeRewards = lastRound.feeRewards.subCap(appealCost);
             lastRound.appealFee = appealCost;
+            arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
+
+        msg.sender.send(msg.value.subCap(contribution)); // Deliberate use of send in order to not block the contract in case of reverting fallback.
     }
 
 
@@ -230,20 +203,28 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
         if (!round.hasPaid[_side]) {
             // Allow to reimburse if funding was unsuccessful.
             reward = round.contributions[_contributor][_side];
+            _contributor.send(reward); // User is responsible for accepting the reward.
+
+
         } else if (ruling == 0 || !round.hasPaid[ruling]) {
+
             // Reimburse unspent fees proportionally if there is no winner and loser.
             reward = round.appealFee > 0 // Means appeal took place.
                 ? (round.contributions[_contributor][_side] * round.feeRewards) / (round.feeRewards - round.appealFee)
                 : 0;
+
+                _contributor.send(reward); // User is responsible for accepting the reward.
+
         } else if(ruling == _side) {
+
             // Reward the winner.
             reward = round.paidFees[ruling] > 0
                 ? (round.contributions[_contributor][_side] * round.feeRewards) / round.paidFees[ruling]
                 : 0;
+                _contributor.send(reward); // User is responsible for accepting the reward.
           }
           round.contributions[_contributor][ruling] = 0;
 
-        _contributor.send(reward); // User is responsible for accepting the reward.
     }
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
@@ -254,7 +235,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber) public {
         Round storage round = disputeIDRoundIDtoRound[_localDisputeID][_roundNumber];
         for (uint contributionNumber = 0; contributionNumber < round.contributedTo[_contributor].length; contributionNumber++) {
-            withdrawFeesAndRewardsForSide(_localDisputeID, _contributor, _roundNumber, contributionNumber++);
+            withdrawFeesAndRewardsForSide(_localDisputeID, _contributor, _roundNumber, round.contributedTo[_contributor][contributionNumber]);
         }
     }
 
@@ -286,12 +267,11 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
         dispute.ruling = _ruling;
 
         Round[] storage rounds = disputeIDRoundIDtoRound[_localDisputeID];
-        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][rounds.length -1];
-
-        if (round.hasPaid[1] == true) // If one side paid its fees, the ruling is in its favor. Note that if the other side had also paid, an appeal would have been created.
-            dispute.ruling = 1;
-        else if (round.hasPaid[2] == true)
-            dispute.ruling = 2;
+        Round storage lastRound = disputeIDRoundIDtoRound[_localDisputeID][rounds.length - 1];
+        // If one side paid its fees, the ruling is in its favor. Note that if any other side had also paid, an appeal would have been created.
+        if (lastRound.fundedSides.length == 1) {
+            dispute.ruling = lastRound.fundedSides[0];
+        }
 
         emit Ruling(IArbitrator(msg.sender), _externalDisputeID, uint(dispute.ruling));
     }
