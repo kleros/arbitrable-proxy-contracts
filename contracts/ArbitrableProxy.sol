@@ -54,8 +54,8 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
     uint public constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
 
     DisputeStruct[] public disputes;
-    mapping(uint => uint) public externalIDtoLocalID;
-    mapping(uint => Round[]) public disputeIDRoundIDtoRound;
+    mapping(uint => uint) public externalIDtoLocalID; // Maps external (arbitrator side) dispute ids to local dispute ids.
+    mapping(uint => Round[]) public disputeIDtoRoundArray; // Maps dispute ids round arrays.
 
     /** @dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
@@ -75,6 +75,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
      *  @param _arbitratorExtraData Extra data for the arbitrator of prospective dispute.
      *  @param _metaevidenceURI Link to metaevidence of prospective dispute.
      *  @param _numberOfChoices Number of ruling options.
+     *  @return disputeID Dispute id (on arbitrator side) of the dispute created.
      */
     function createDispute(bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI, uint _numberOfChoices) external payable returns(uint disputeID) {
         disputeID = arbitrator.createDispute.value(msg.value)(_numberOfChoices, _arbitratorExtraData);
@@ -90,16 +91,16 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
         uint localDisputeID = disputes.length - 1;
         externalIDtoLocalID[disputeID] = localDisputeID;
 
-        disputeIDRoundIDtoRound[localDisputeID].push(
+        disputeIDtoRoundArray[localDisputeID].push(
             Round({
             feeRewards: 0,
             fundedSides: new uint[](0),
             appealFee: 0
             })
-      );
+        );
 
-      emit MetaEvidence(localDisputeID, _metaevidenceURI);
-      emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
+        emit MetaEvidence(localDisputeID, _metaevidenceURI);
+        emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
     }
 
     /** @dev Returns the contribution value and remainder from available ETH and required amount.
@@ -125,7 +126,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _ruling The side to which the caller wants to contribute.
      */
-    function fundAppeal(uint _localDisputeID, uint _ruling) external payable {
+    function fundAppeal(uint _localDisputeID, uint _ruling) external payable returns (bool fullyFunded){
         DisputeStruct storage dispute = disputes[_localDisputeID];
         require(_ruling <= dispute.numberOfChoices, "There is no such side to fund.");
 
@@ -147,8 +148,8 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
         uint appealCost = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         uint totalCost = appealCost.addCap(appealCost.mulCap(multiplier) / MULTIPLIER_DIVISOR);
 
-        Round[] storage rounds = disputeIDRoundIDtoRound[_localDisputeID];
-        Round storage lastRound = disputeIDRoundIDtoRound[_localDisputeID][rounds.length - 1];
+        Round[] storage rounds = disputeIDtoRoundArray[_localDisputeID];
+        Round storage lastRound = disputeIDtoRoundArray[_localDisputeID][rounds.length - 1];
         require(!lastRound.hasPaid[_ruling], "Appeal fee has already been paid.");
         require(msg.value > 0, "Can't contribute zero");
 
@@ -178,6 +179,8 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
         }
 
         msg.sender.send(msg.value.subCap(contribution)); // Deliberate use of send in order to not block the contract in case of reverting fallback.
+
+        return lastRound.hasPaid[_ruling];
     }
 
 
@@ -190,7 +193,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) public {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
-        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][_roundNumber];
+        Round storage round = disputeIDtoRoundArray[_localDisputeID][_roundNumber];
         uint8 ruling = uint8(dispute.ruling);
 
         require(dispute.isRuled, "The dispute should be solved");
@@ -222,29 +225,28 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
           round.contributions[_contributor][ruling] = 0;
 
           emit Withdrawal(_localDisputeID, _roundNumber, _ruling, _contributor, reward);
-
     }
 
-    /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
+    /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved. For multiple ruling options at once.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForMultipleRulings(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint[] memory _contributedTo) public {
-        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][_roundNumber];
+        Round storage round = disputeIDtoRoundArray[_localDisputeID][_roundNumber];
         for (uint contributionNumber = 0; contributionNumber < _contributedTo.length; contributionNumber++) {
             withdrawFeesAndRewards(_localDisputeID, _contributor, _roundNumber, _contributedTo[contributionNumber]);
         }
     }
 
-    /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved, for all rounds.
+    /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForAllRounds(uint _localDisputeID, address payable _contributor, uint[] memory _contributedTo) external {
-        for (uint roundNumber = 0; roundNumber < disputeIDRoundIDtoRound[_localDisputeID].length; roundNumber++) {
+        for (uint roundNumber = 0; roundNumber < disputeIDtoRoundArray[_localDisputeID].length; roundNumber++) {
             withdrawFeesAndRewardsForMultipleRulings(_localDisputeID, _contributor, roundNumber, _contributedTo);
         }
     }
@@ -263,8 +265,8 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
         dispute.isRuled = true;
         dispute.ruling = _ruling;
 
-        Round[] storage rounds = disputeIDRoundIDtoRound[_localDisputeID];
-        Round storage lastRound = disputeIDRoundIDtoRound[_localDisputeID][rounds.length - 1];
+        Round[] storage rounds = disputeIDtoRoundArray[_localDisputeID];
+        Round storage lastRound = disputeIDtoRoundArray[_localDisputeID][rounds.length - 1];
         // If one side paid its fees, the ruling is in its favor. Note that if any other side had also paid, an appeal would have been created.
         if (lastRound.fundedSides.length == 1) {
             dispute.ruling = lastRound.fundedSides[0];
@@ -326,9 +328,9 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
             uint appealFee
         )
     {
-        Round storage round = disputeIDRoundIDtoRound[_localDisputeID][_round];
+        Round storage round = disputeIDtoRoundArray[_localDisputeID][_round];
         return (
-            _round != (disputeIDRoundIDtoRound[_localDisputeID].length - 1),
+            _round != (disputeIDtoRoundArray[_localDisputeID].length - 1),
             round.feeRewards,
             round.fundedSides,
             round.appealFee
