@@ -24,7 +24,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
     using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
 
     event Contribution(uint indexed localDisputeID, uint indexed round, uint ruling, address indexed contributor, uint amount);
-    event Withdrew(uint indexed localDisputeID, uint indexed round, uint ruling, address indexed contributor, uint reward);
+    event Withdrawal(uint indexed localDisputeID, uint indexed round, uint ruling, address indexed contributor, uint reward);
 
     struct Round {
         mapping(uint => uint) paidFees; // Tracks the fees paid by each side in this round.
@@ -221,7 +221,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
           }
           round.contributions[_contributor][ruling] = 0;
 
-          emit Withdrew(_localDisputeID, _roundNumber, _ruling, _contributor, reward);
+          emit Withdrawal(_localDisputeID, _roundNumber, _ruling, _contributor, reward);
 
     }
 
@@ -379,6 +379,5 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
         }
 
         if(i == disputes.length) hasMore = false;
-
     }
 }
