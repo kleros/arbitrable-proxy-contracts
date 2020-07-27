@@ -68,8 +68,7 @@ contract(
       let previousBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
       await this.bap.withdrawFeesAndRewardsForAllRounds(0, thirdParty, [1, 2]);
       await this.bap.withdrawFeesAndRewardsForAllRounds(0, fourthParty, [1, 2]);
-      const wa = await this.bap.withdrewAlready(0, thirdParty);
-      assert(wa == true);
+
       let currentBalanceOfThirdParty = await web3.eth.getBalance(thirdParty);
       let currentBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
       console.log(currentBalanceOfThirdParty);

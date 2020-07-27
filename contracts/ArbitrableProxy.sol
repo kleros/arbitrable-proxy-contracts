@@ -24,6 +24,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
     using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
 
     event Contribution(uint indexed localDisputeID, uint indexed round, uint ruling, address indexed contributor, uint amount);
+    event Withdrew(uint indexed localDisputeID, uint indexed round, uint ruling, address indexed contributor, uint reward);
 
     struct Round {
         mapping(uint => uint) paidFees; // Tracks the fees paid by each side in this round.
@@ -55,7 +56,6 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
     DisputeStruct[] public disputes;
     mapping(uint => uint) public externalIDtoLocalID;
     mapping(uint => Round[]) public disputeIDRoundIDtoRound;
-    mapping(uint => mapping (address => bool)) public withdrewAlready;
 
     /** @dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
@@ -185,8 +185,9 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
+     *  @param _ruling A ruling option that the caller wannts to withdraw fees and rewards related to it.
      */
-    function withdrawFeesAndRewardsForSide(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) public {
+    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) public {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         Round storage round = disputeIDRoundIDtoRound[_localDisputeID][_roundNumber];
@@ -220,31 +221,32 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
           }
           round.contributions[_contributor][ruling] = 0;
 
+          emit Withdrew(_localDisputeID, _roundNumber, _ruling, _contributor, reward);
+
     }
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
+     *  @param _contributedTo Rulings that received contributions from contributor.
      */
-    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint[] memory _contributedTo) public {
+    function withdrawFeesAndRewardsForMultipleRulings(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint[] memory _contributedTo) public {
         Round storage round = disputeIDRoundIDtoRound[_localDisputeID][_roundNumber];
         for (uint contributionNumber = 0; contributionNumber < _contributedTo.length; contributionNumber++) {
-            withdrawFeesAndRewardsForSide(_localDisputeID, _contributor, _roundNumber, _contributedTo[contributionNumber]);
+            withdrawFeesAndRewards(_localDisputeID, _contributor, _roundNumber, _contributedTo[contributionNumber]);
         }
     }
 
     /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved, for all rounds.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
+     *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForAllRounds(uint _localDisputeID, address payable _contributor, uint[] memory _contributedTo) external {
-        require(withdrewAlready[_localDisputeID][_contributor] == false, "This contributor withdrew all already.");
         for (uint roundNumber = 0; roundNumber < disputeIDRoundIDtoRound[_localDisputeID].length; roundNumber++) {
-            withdrawFeesAndRewards(_localDisputeID, _contributor, roundNumber, _contributedTo);
+            withdrawFeesAndRewardsForMultipleRulings(_localDisputeID, _contributor, roundNumber, _contributedTo);
         }
-
-        withdrewAlready[_localDisputeID][_contributor] = true;
     }
 
     /** @dev To be called by the arbitrator of the dispute, to declare winning side.
