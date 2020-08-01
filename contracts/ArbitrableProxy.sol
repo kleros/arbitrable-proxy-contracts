@@ -8,16 +8,14 @@
 
 pragma solidity >=0.6;
 
-import "@kleros/erc-792/contracts/IArbitrable.sol";
-import "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
-import "@kleros/erc-792/contracts/IArbitrator.sol";
+import './IDisputeResolver.sol';
 import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 
 /**
  *  @title ArbitrableProxy
  *  A general purpose arbitrable contract.
  */
-contract ArbitrableProxy is IArbitrable, IEvidence {
+contract ArbitrableProxy is IDisputeResolver {
 
     string public constant VERSION = '1.0.0';
 
@@ -126,7 +124,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _ruling The side to which the caller wants to contribute.
      */
-    function fundAppeal(uint _localDisputeID, uint _ruling) external payable returns (bool fullyFunded){
+    function fundAppeal(uint _localDisputeID, uint _ruling) external override payable returns (bool fullyFunded){
         DisputeStruct storage dispute = disputes[_localDisputeID];
         require(_ruling <= dispute.numberOfChoices, "There is no such side to fund.");
 
@@ -190,7 +188,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _ruling A ruling option that the caller wannts to withdraw fees and rewards related to it.
      */
-    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) public {
+    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) public override {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         Round storage round = disputeIDtoRoundArray[_localDisputeID][_roundNumber];
@@ -233,7 +231,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
-    function withdrawFeesAndRewardsForMultipleRulings(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint[] memory _contributedTo) public {
+    function withdrawFeesAndRewardsForMultipleRulings(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint[] memory _contributedTo) public override {
         Round storage round = disputeIDtoRoundArray[_localDisputeID][_roundNumber];
         for (uint contributionNumber = 0; contributionNumber < _contributedTo.length; contributionNumber++) {
             withdrawFeesAndRewards(_localDisputeID, _contributor, _roundNumber, _contributedTo[contributionNumber]);
@@ -245,7 +243,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
      *  @param _contributor The address to withdraw its rewards.
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
-    function withdrawFeesAndRewardsForAllRounds(uint _localDisputeID, address payable _contributor, uint[] memory _contributedTo) external {
+    function withdrawFeesAndRewardsForAllRounds(uint _localDisputeID, address payable _contributor, uint[] memory _contributedTo) external override {
         for (uint roundNumber = 0; roundNumber < disputeIDtoRoundArray[_localDisputeID].length; roundNumber++) {
             withdrawFeesAndRewardsForMultipleRulings(_localDisputeID, _contributor, roundNumber, _contributedTo);
         }
@@ -279,7 +277,7 @@ contract ArbitrableProxy is IArbitrable, IEvidence {
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _evidenceURI Link to evidence.
      */
-    function submitEvidence(uint _localDisputeID, string calldata _evidenceURI) external {
+    function submitEvidence(uint _localDisputeID, string calldata _evidenceURI) external override {
         DisputeStruct storage dispute = disputes[_localDisputeID];
         require(dispute.isRuled == false, "Cannot submit evidence to a resolved dispute.");
 
