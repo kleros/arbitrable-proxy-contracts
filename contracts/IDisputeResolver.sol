@@ -19,6 +19,7 @@ import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
  */
 interface IDisputeResolver is IArbitrable, IEvidence {
 
+
     /** @dev To be raised inside fundAppeal function.
      *  @param localDisputeID The dispute id as in arbitrable contract.
      *  @param round Round code of the appeal. Starts from 0.
@@ -37,6 +38,12 @@ interface IDisputeResolver is IArbitrable, IEvidence {
      */
     event Withdrawal(uint indexed localDisputeID, uint indexed round, uint ruling, address indexed contributor, uint reward);
 
+
+    /** @dev Maps external (arbitrator side) dispute id to local (arbitrable) dispute id.
+     *  @param _externalDisputeID Dispute id as in arbitrator side.
+     *  @return localDisputeID Dispute id as in arbitrable contract.
+     */
+    function externalIDtoLocalID(uint _externalDisputeID) external returns (uint localDisputeID);
 
     /** @dev Allows to submit evidence for a given dispute.
      *  @param _localDisputeID Index of the dispute in disputes array.

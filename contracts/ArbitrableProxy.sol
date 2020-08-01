@@ -52,7 +52,7 @@ contract ArbitrableProxy is IDisputeResolver {
     uint public constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
 
     DisputeStruct[] public disputes;
-    mapping(uint => uint) public externalIDtoLocalID; // Maps external (arbitrator side) dispute ids to local dispute ids.
+    mapping(uint => uint) public override externalIDtoLocalID; // Maps external (arbitrator side) dispute ids to local dispute ids.
     mapping(uint => Round[]) public disputeIDtoRoundArray; // Maps dispute ids round arrays.
 
     /** @dev Constructor
