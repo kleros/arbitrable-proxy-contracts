@@ -341,7 +341,7 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @return shared Multiplier when it's tied.
      *  @return divisor Multiplier divisor.
      */
-    function getMultipliers() external view returns(uint winner, uint loser, uint shared, uint divisor){
+    function getMultipliers() external override view returns(uint winner, uint loser, uint shared, uint divisor){
       return (winnerStakeMultiplier, loserStakeMultiplier, sharedStakeMultiplier, MULTIPLIER_DIVISOR);
     }
 

@@ -58,6 +58,14 @@ interface IDisputeResolver is IArbitrable, IEvidence {
      */
     function fundAppeal(uint _localDisputeID, uint _ruling) external payable returns (bool fullyFunded);
 
+    /** @dev Returns stake multipliers.
+     *  @return winner Winners stake multiplier.
+     *  @return loser Losers stake multiplier.
+     *  @return shared Multiplier when it's tied.
+     *  @return divisor Multiplier divisor.
+     */
+    function getMultipliers() external view returns(uint winner, uint loser, uint shared, uint divisor);
+
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
