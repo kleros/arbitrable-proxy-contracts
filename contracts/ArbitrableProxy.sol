@@ -101,6 +101,13 @@ contract ArbitrableProxy is IDisputeResolver {
         emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
     }
 
+    /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
+     *  @param _localDisputeID Dispute id as in arbitrable contract.
+     */
+    function numberOfRulingOptions(uint _localDisputeID) external override returns (uint numberOfRulingOptions){
+        numberOfRulingOptions = disputes[_localDisputeID].numberOfChoices;
+    }
+
     /** @dev Returns the contribution value and remainder from available ETH and required amount.
      *  @param _available The amount of ETH available for the contribution.
      *  @param _requiredAmount The amount of ETH required for the contribution.
