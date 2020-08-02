@@ -104,7 +104,7 @@ contract ArbitrableProxy is IDisputeResolver {
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
      *  @param _localDisputeID Dispute id as in arbitrable contract.
      */
-    function numberOfRulingOptions(uint _localDisputeID) external override returns (uint numberOfRulingOptions){
+    function numberOfRulingOptions(uint _localDisputeID) external view override returns (uint numberOfRulingOptions){
         numberOfRulingOptions = disputes[_localDisputeID].numberOfChoices;
     }
 

@@ -48,7 +48,7 @@ interface IDisputeResolver is IArbitrable, IEvidence {
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
      *  @param _localDisputeID Dispute id as in arbitrable contract.
      */
-    function numberOfRulingOptions(uint _localDisputeID) external returns (uint numberOfRulingOptions);
+    function numberOfRulingOptions(uint _localDisputeID) external view returns (uint numberOfRulingOptions);
 
     /** @dev Allows to submit evidence for a given dispute.
      *  @param _localDisputeID Index of the dispute in disputes array.
