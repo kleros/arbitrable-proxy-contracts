@@ -36,7 +36,7 @@ contract ArbitrableProxy is IDisputeResolver {
     struct DisputeStruct {
         bytes arbitratorExtraData;
         bool isRuled;
-        uint ruling;
+        uint currentRuling;
         uint disputeIDOnArbitratorSide;
         uint numberOfChoices;
     }
@@ -72,7 +72,7 @@ contract ArbitrableProxy is IDisputeResolver {
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
      *  @param _arbitratorExtraData Extra data for the arbitrator of prospective dispute.
      *  @param _metaevidenceURI Link to metaevidence of prospective dispute.
-     *  @param _numberOfChoices Number of ruling options.
+     *  @param _numberOfChoices Number of currentRuling options.
      *  @return disputeID Dispute id (on arbitrator side) of the dispute created.
      */
     function createDispute(bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI, uint _numberOfChoices) external payable returns(uint disputeID) {
@@ -81,7 +81,7 @@ contract ArbitrableProxy is IDisputeResolver {
         disputes.push(DisputeStruct({
             arbitratorExtraData: _arbitratorExtraData,
             isRuled: false,
-            ruling: 0,
+            currentRuling: 0,
             disputeIDOnArbitratorSide: disputeID,
             numberOfChoices: _numberOfChoices
         }));
@@ -101,7 +101,7 @@ contract ArbitrableProxy is IDisputeResolver {
         emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
     }
 
-    /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
+    /** @dev Returns number of possible currentRuling options. Valid rulings are [0, return value].
      *  @param _localDisputeID Dispute id as in arbitrable contract.
      */
     function numberOfRulingOptions(uint _localDisputeID) external view override returns (uint numberOfRulingOptions){
@@ -114,10 +114,7 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @return taken The amount of ETH taken.
      *  @return remainder The amount of ETH left from the contribution.
      */
-    function calculateContribution(uint _available, uint _requiredAmount)
-        internal
-        pure
-        returns(uint taken, uint remainder)
+    function calculateContribution(uint _available, uint _requiredAmount) internal pure returns(uint taken, uint remainder)
     {
         if (_requiredAmount > _available)
             return (_available, 0); // Take whatever is available, return 0 as leftover ETH.
@@ -133,7 +130,7 @@ contract ArbitrableProxy is IDisputeResolver {
      */
     function fundAppeal(uint _localDisputeID, uint _ruling) external override payable returns (bool fullyFunded){
         DisputeStruct storage dispute = disputes[_localDisputeID];
-        require(_ruling <= dispute.numberOfChoices, "There is no such side to fund.");
+        require(_ruling <= dispute.numberOfChoices && _ruling != 0, "There is no such side to fund.");
 
         (uint appealPeriodStart, uint appealPeriodEnd) = arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
         require(now >= appealPeriodStart && now < appealPeriodEnd, "Funding must be made within the appeal period.");
@@ -165,7 +162,7 @@ contract ArbitrableProxy is IDisputeResolver {
         lastRound.paidFees[uint(_ruling)] += contribution;
 
         if (lastRound.paidFees[_ruling] >= totalCost) {
-            lastRound.feeRewards += contribution;
+            lastRound.feeRewards += lastRound.paidFees[_ruling];
             lastRound.fundedSides.push(_ruling);
             lastRound.hasPaid[_ruling] = true;
         }
@@ -193,13 +190,13 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
-     *  @param _ruling A ruling option that the caller wannts to withdraw fees and rewards related to it.
+     *  @param _ruling A currentRuling option that the caller wannts to withdraw fees and rewards related to it.
      */
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) public override {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         Round storage round = disputeIDtoRoundArray[_localDisputeID][_roundNumber];
-        uint8 ruling = uint8(dispute.ruling);
+        uint8 currentRuling = uint8(dispute.currentRuling);
 
         require(dispute.isRuled, "The dispute should be solved");
         uint reward;
@@ -209,9 +206,7 @@ contract ArbitrableProxy is IDisputeResolver {
             reward = round.contributions[_contributor][_ruling];
             _contributor.send(reward); // User is responsible for accepting the reward.
 
-
-        } else if (ruling == 0 || !round.hasPaid[ruling]) {
-
+        } else if (currentRuling == 0 || !round.hasPaid[currentRuling]) {
             // Reimburse unspent fees proportionally if there is no winner and loser.
             reward = round.appealFee > 0 // Means appeal took place.
                 ? (round.contributions[_contributor][_ruling] * round.feeRewards) / (round.feeRewards - round.appealFee)
@@ -219,20 +214,20 @@ contract ArbitrableProxy is IDisputeResolver {
 
                 _contributor.send(reward); // User is responsible for accepting the reward.
 
-        } else if(ruling == _ruling) {
 
+        } else if(currentRuling == _ruling) {
             // Reward the winner.
-            reward = round.paidFees[ruling] > 0
-                ? (round.contributions[_contributor][_ruling] * round.feeRewards) / round.paidFees[ruling]
+            reward = round.paidFees[currentRuling] > 0
+                ? (round.contributions[_contributor][_ruling] * round.feeRewards) / round.paidFees[currentRuling]
                 : 0;
                 _contributor.send(reward); // User is responsible for accepting the reward.
           }
-          round.contributions[_contributor][ruling] = 0;
+          round.contributions[_contributor][currentRuling] = 0;
 
           emit Withdrawal(_localDisputeID, _roundNumber, _ruling, _contributor, reward);
     }
 
-    /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved. For multiple ruling options at once.
+    /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved. For multiple currentRuling options at once.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
@@ -258,26 +253,26 @@ contract ArbitrableProxy is IDisputeResolver {
 
     /** @dev To be called by the arbitrator of the dispute, to declare winning side.
      *  @param _externalDisputeID ID of the dispute in arbitrator contract.
-     *  @param _ruling The ruling choice of the arbitration.
+     *  @param _ruling The currentRuling choice of the arbitration.
      */
     function rule(uint _externalDisputeID, uint _ruling) external override {
         uint _localDisputeID = externalIDtoLocalID[_externalDisputeID];
         DisputeStruct storage dispute = disputes[_localDisputeID];
         require(msg.sender == address(arbitrator), "Only the arbitrator can execute this.");
-        require(_ruling <= dispute.numberOfChoices, "Invalid ruling.");
+        require(_ruling <= dispute.numberOfChoices, "Invalid currentRuling.");
         require(dispute.isRuled == false, "Is ruled already.");
 
         dispute.isRuled = true;
-        dispute.ruling = _ruling;
+        dispute.currentRuling = _ruling;
 
         Round[] storage rounds = disputeIDtoRoundArray[_localDisputeID];
         Round storage lastRound = disputeIDtoRoundArray[_localDisputeID][rounds.length - 1];
-        // If one side paid its fees, the ruling is in its favor. Note that if any other side had also paid, an appeal would have been created.
+        // If one side paid its fees, the currentRuling is in its favor. Note that if any other side had also paid, an appeal would have been created.
         if (lastRound.fundedSides.length == 1) {
-            dispute.ruling = lastRound.fundedSides[0];
+            dispute.currentRuling = lastRound.fundedSides[0];
         }
 
-        emit Ruling(IArbitrator(msg.sender), _externalDisputeID, uint(dispute.ruling));
+        emit Ruling(IArbitrator(msg.sender), _externalDisputeID, uint(dispute.currentRuling));
     }
 
     /** @dev Allows to submit evidence for a given dispute.
@@ -318,28 +313,87 @@ contract ArbitrableProxy is IDisputeResolver {
     /** @dev Gets the information of a round of a dispute.
      *  @param _localDisputeID ID of the dispute.
      *  @param _round The round to be queried.
-     *  @return appealed Whether the round is appealed or not.
-     *  @return feeRewards Total fees collected for parties excluding appeal cost.
-     *  @return fundedSides Tracks ruling options that are fully funded for appeals.
-     *  @return appealFee Appeal fee of this round.
      */
     function getRoundInfo(uint _localDisputeID, uint _round)
         external
         view
         returns (
             bool appealed,
+            uint[] memory paidFees,
+            bool[] memory hasPaid,
             uint feeRewards,
             uint[] memory fundedSides,
             uint appealFee
         )
     {
         Round storage round = disputeIDtoRoundArray[_localDisputeID][_round];
-        return (
-            _round != (disputeIDtoRoundArray[_localDisputeID].length - 1),
-            round.feeRewards,
-            round.fundedSides,
-            round.appealFee
-        );
+        fundedSides = round.fundedSides;
+
+        paidFees = new uint[](round.fundedSides.length);
+        hasPaid = new bool[](round.fundedSides.length);
+
+        for (uint i = 0; i < round.fundedSides.length; i++) {
+            paidFees[i] = round.paidFees[round.fundedSides[i]];
+            hasPaid[i] = round.hasPaid[round.fundedSides[i]];
+        }
+
+        appealed = _round != (disputeIDtoRoundArray[_localDisputeID].length - 1);
+        feeRewards = round.feeRewards;
+        appealFee = round.appealFee;
+    }
+
+
+    /** @dev Gets the information of a round of a dispute.
+     *  @param _localDisputeID ID of the dispute.
+     *  @param _round The round to be queried.
+     */
+    function getContributions(
+    uint _localDisputeID,
+    uint _round,
+    address _contributor
+    ) public view returns(
+        uint[] memory fundedSides,
+        uint[] memory contributions
+        )
+    {
+        Round storage round = disputeIDtoRoundArray[_localDisputeID][_round];
+        fundedSides = round.fundedSides;
+        contributions = new uint[](round.fundedSides.length);
+        for (uint i = 0; i < contributions.length; i++) {
+            contributions[i] = round.contributions[_contributor][fundedSides[i]];
+        }
+    }
+
+
+    /** @dev Gets the crowdfunding information of a last round of a dispute.
+     *  @param _localDisputeID ID of the dispute.
+     *  @param _contributor Address of crowdfunding participant to get details of.
+     */
+    function crowdfundingStatus(
+    uint _localDisputeID,
+    address _contributor
+    ) public view returns(
+        uint[] memory paidFees,
+        bool[] memory hasPaid,
+        uint feeRewards,
+        uint[] memory contributions,
+        uint[] memory fundedSides
+        )
+    {
+        Round[] storage rounds = disputeIDtoRoundArray[_localDisputeID];
+        Round storage round = disputeIDtoRoundArray[_localDisputeID][rounds.length -1];
+        fundedSides = round.fundedSides;
+        contributions = new uint[](round.fundedSides.length);
+
+        paidFees = new uint[](round.fundedSides.length);
+        hasPaid = new bool[](round.fundedSides.length);
+        feeRewards = round.feeRewards;
+
+        for (uint i = 0; i < round.fundedSides.length; i++) {
+            paidFees[i] = round.paidFees[round.fundedSides[i]];
+            hasPaid[i] = round.hasPaid[round.fundedSides[i]];
+            contributions[i] = round.contributions[_contributor][fundedSides[i]];
+        }
     }
 
     /** @dev Returns stake multipliers.

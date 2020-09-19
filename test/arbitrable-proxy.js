@@ -45,18 +45,26 @@ contract(
       await this.aaa.giveAppealableRuling(0, 1, 1000000000, 240);
       assert(new BN("1").eq((await this.aaa.disputes(0)).status));
 
-      await this.bap.fundAppeal(0, 1, { value: 2000000000, from: thirdParty });
+      await this.bap.fundAppeal(0, 1, { value: 1000000000, from: thirdParty });
+      await this.bap.fundAppeal(0, 1, { value: 1000000000, from: thirdParty });
+
       await this.bap.fundAppeal(0, 2, {
         value: 3000000000,
         from: fourthParty
       });
+      /* Appeal fully funded */
+
       await this.bap.fundAppeal(0, 2, {
-        value: 1000000000,
-        from: fifthParty
-      }); // Not enough
+        value: 2000000000,
+        from: thirdParty
+      }); // This goes to next round
 
       const multipliers = await this.bap.getMultipliers();
       console.log(multipliers);
+
+      const feeRewards = (await this.bap.disputeIDtoRoundArray(0, 0))
+        .feeRewards;
+      console.log(feeRewards.toString());
 
       assert(new BN("0").eq((await this.aaa.disputes(0)).status));
     });
@@ -68,20 +76,20 @@ contract(
       let previousBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
       await this.bap.withdrawFeesAndRewardsForAllRounds(0, thirdParty, [1, 2]);
       await this.bap.withdrawFeesAndRewardsForAllRounds(0, fourthParty, [1, 2]);
-
       let currentBalanceOfThirdParty = await web3.eth.getBalance(thirdParty);
       let currentBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
-      console.log(currentBalanceOfThirdParty);
       console.log(previousBalanceOfThirdParty);
-      assert(
-        new BN(currentBalanceOfThirdParty).eq(
-          new BN(previousBalanceOfThirdParty).add(new BN(8000000000))
-        )
-      );
+      console.log(currentBalanceOfThirdParty);
 
       assert(
         new BN(currentBalanceOfFourthParty).eq(
           new BN(previousBalanceOfFourthParty)
+        )
+      );
+
+      assert(
+        new BN(currentBalanceOfThirdParty).eq(
+          new BN(previousBalanceOfThirdParty).add(new BN(10000000000))
         )
       );
     });
