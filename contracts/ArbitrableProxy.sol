@@ -23,6 +23,7 @@ contract ArbitrableProxy is IDisputeResolver {
 
     event Contribution(uint indexed localDisputeID, uint indexed round, uint ruling, address indexed contributor, uint amount);
     event Withdrawal(uint indexed localDisputeID, uint indexed round, uint ruling, address indexed contributor, uint reward);
+    event SideFunded(uint indexed localDisputeID, uint indexed round, uint indexed ruling);
 
     struct Round {
         mapping(uint => uint) paidFees; // Tracks the fees paid by each side in this round.
@@ -36,7 +37,7 @@ contract ArbitrableProxy is IDisputeResolver {
     struct DisputeStruct {
         bytes arbitratorExtraData;
         bool isRuled;
-        uint currentRuling;
+        uint ruling;
         uint disputeIDOnArbitratorSide;
         uint numberOfChoices;
     }
@@ -81,7 +82,7 @@ contract ArbitrableProxy is IDisputeResolver {
         disputes.push(DisputeStruct({
             arbitratorExtraData: _arbitratorExtraData,
             isRuled: false,
-            currentRuling: 0,
+            ruling: 0,
             disputeIDOnArbitratorSide: disputeID,
             numberOfChoices: _numberOfChoices
         }));
@@ -108,20 +109,6 @@ contract ArbitrableProxy is IDisputeResolver {
         numberOfRulingOptions = disputes[_localDisputeID].numberOfChoices;
     }
 
-    /** @dev Returns the contribution value and remainder from available ETH and required amount.
-     *  @param _available The amount of ETH available for the contribution.
-     *  @param _requiredAmount The amount of ETH required for the contribution.
-     *  @return taken The amount of ETH taken.
-     *  @return remainder The amount of ETH left from the contribution.
-     */
-    function calculateContribution(uint _available, uint _requiredAmount) internal pure returns(uint taken, uint remainder)
-    {
-        if (_requiredAmount > _available)
-            return (_available, 0); // Take whatever is available, return 0 as leftover ETH.
-
-        remainder = _available - _requiredAmount;
-        return (_requiredAmount, remainder);
-    }
 
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
@@ -165,6 +152,7 @@ contract ArbitrableProxy is IDisputeResolver {
             lastRound.feeRewards += lastRound.paidFees[_ruling];
             lastRound.fundedSides.push(_ruling);
             lastRound.hasPaid[_ruling] = true;
+            emit SideFunded(_localDisputeID, rounds.length - 1, _ruling);
         }
 
         if (lastRound.fundedSides.length > 1) {
@@ -180,7 +168,7 @@ contract ArbitrableProxy is IDisputeResolver {
             arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
 
-        msg.sender.send(msg.value.subCap(contribution)); // Deliberate use of send in order to not block the contract in case of reverting fallback.
+        msg.sender.transfer(msg.value.subCap(contribution)); // Sending extra value back to contributor.
 
         return lastRound.hasPaid[_ruling];
     }
@@ -196,7 +184,7 @@ contract ArbitrableProxy is IDisputeResolver {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         Round storage round = disputeIDtoRoundArray[_localDisputeID][_roundNumber];
-        uint8 currentRuling = uint8(dispute.currentRuling);
+        uint8 currentRuling = uint8(dispute.ruling);
 
         require(dispute.isRuled, "The dispute should be solved");
         uint reward;
@@ -259,20 +247,20 @@ contract ArbitrableProxy is IDisputeResolver {
         uint _localDisputeID = externalIDtoLocalID[_externalDisputeID];
         DisputeStruct storage dispute = disputes[_localDisputeID];
         require(msg.sender == address(arbitrator), "Only the arbitrator can execute this.");
-        require(_ruling <= dispute.numberOfChoices, "Invalid currentRuling.");
-        require(dispute.isRuled == false, "Is ruled already.");
+        require(_ruling <= dispute.numberOfChoices, "Invalid ruling.");
+        require(dispute.isRuled == false, "This dispute has been ruled already.");
 
         dispute.isRuled = true;
-        dispute.currentRuling = _ruling;
+        dispute.ruling = _ruling;
 
         Round[] storage rounds = disputeIDtoRoundArray[_localDisputeID];
         Round storage lastRound = disputeIDtoRoundArray[_localDisputeID][rounds.length - 1];
         // If one side paid its fees, the currentRuling is in its favor. Note that if any other side had also paid, an appeal would have been created.
         if (lastRound.fundedSides.length == 1) {
-            dispute.currentRuling = lastRound.fundedSides[0];
+            dispute.ruling = lastRound.fundedSides[0];
         }
 
-        emit Ruling(IArbitrator(msg.sender), _externalDisputeID, uint(dispute.currentRuling));
+        emit Ruling(IArbitrator(msg.sender), _externalDisputeID, uint(dispute.ruling));
     }
 
     /** @dev Allows to submit evidence for a given dispute.

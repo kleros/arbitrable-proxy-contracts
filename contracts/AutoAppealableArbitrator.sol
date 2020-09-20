@@ -155,6 +155,8 @@ contract AutoAppealableArbitrator is IArbitrator {
         require(now < dispute.appealPeriodEnd, "The appeal must occur before the end of the appeal period.");
         require(msg.value >= appealFee, "Value is less than required appeal fee");
 
+        dispute.appealPeriodStart = 0;
+        dispute.appealPeriodEnd = 0;
         dispute.fees += msg.value;
         dispute.status = DisputeStatus.Waiting;
         emit AppealDecision(_disputeID, IArbitrable(msg.sender));
