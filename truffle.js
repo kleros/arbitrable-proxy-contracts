@@ -86,6 +86,8 @@ module.exports = {
   // Set default mocha options here, use special reporters etc.
   mocha: {
     // timeout: 100000
+    reporter: "eth-gas-reporter",
+    reporterOptions: { gasPrice: 200, currency: "usd" }
   },
 
   // Configure your compilers
@@ -96,7 +98,7 @@ module.exports = {
       settings: {
         // See the solidity docs for advice about optimization and evmVersion
         optimizer: {
-          enabled: false,
+          enabled: true,
           runs: 200
         },
         evmVersion: "byzantium"
