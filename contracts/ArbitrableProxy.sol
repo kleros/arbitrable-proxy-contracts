@@ -13,7 +13,7 @@ import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 
 /**
  *  @title ArbitrableProxy
- *  A general purpose arbitrable contract.
+ *  A general purpose arbitrable contract. Supports non-binary rulings.
  */
 contract ArbitrableProxy is IDisputeResolver {
 
@@ -180,7 +180,7 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _ruling A currentRuling option that the caller wannts to withdraw fees and rewards related to it.
-     *  @return reward Reward amount that is to be withdrawn. Might be zero if arguments are not qualifying for a reward or reimbursement, or it might be withdrawn already. 
+     *  @return reward Reward amount that is to be withdrawn. Might be zero if arguments are not qualifying for a reward or reimbursement, or it might be withdrawn already.
      */
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) public override returns (uint reward) {
         DisputeStruct storage dispute = disputes[_localDisputeID];
