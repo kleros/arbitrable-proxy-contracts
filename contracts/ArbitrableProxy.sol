@@ -114,6 +114,7 @@ contract ArbitrableProxy is IDisputeResolver {
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _ruling The side to which the caller wants to contribute.
+     *  @param fullyFunded Whether _ruling was fully funded after the call.
      */
     function fundAppeal(uint _localDisputeID, uint _ruling) external override payable returns (bool fullyFunded){
         DisputeStruct storage dispute = disputes[_localDisputeID];
@@ -179,8 +180,9 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _ruling A currentRuling option that the caller wannts to withdraw fees and rewards related to it.
+     *  @return reward Reward amount that is to be withdrawn. Might be zero if arguments are not qualifying for a reward or reimbursement, or it might be withdrawn already. 
      */
-    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) public override {
+    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) public override returns (uint reward) {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         Round storage round = disputeIDtoRoundArray[_localDisputeID][_roundNumber];

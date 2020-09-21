@@ -77,7 +77,7 @@ interface IDisputeResolver is IArbitrable, IEvidence {
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _ruling A ruling option that the caller wannts to withdraw fees and rewards related to it.
      */
-    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) external;
+    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) external returns (uint reward);
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved. For multiple ruling options at once.
      *  @param _localDisputeID Index of the dispute in disputes array.
