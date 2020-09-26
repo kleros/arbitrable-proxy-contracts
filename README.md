@@ -1,1 +1,2 @@
-# binary-arbitrable-proxy-contract
+# General Purpose Arbitrable Contracts
+General purpose arbitrable contracts as defined in ERC-792
