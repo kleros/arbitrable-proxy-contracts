@@ -233,7 +233,8 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForAllRounds(uint _localDisputeID, address payable _contributor, uint[] memory _contributedTo) external override {
-        for (uint roundNumber = 0; roundNumber < disputeIDtoRoundArray[_localDisputeID].length; roundNumber++) {
+      uint8 noOfRounds = disputeIDtoRoundArray[_localDisputeID].length:
+        for (uint roundNumber = 0; roundNumber < noOfRounds; roundNumber++) {
             withdrawFeesAndRewardsForMultipleRulings(_localDisputeID, _contributor, roundNumber, _contributedTo);
         }
     }
