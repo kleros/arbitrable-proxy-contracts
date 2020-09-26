@@ -31,7 +31,7 @@ contract ArbitrableProxy is IDisputeResolver {
         mapping(address => mapping(uint => uint)) contributions; // Maps contributors to their contributions for each side.
         uint256 feeRewards; // Sum of reimbursable appeal fees available to the parties that made contributions to the side that ultimately wins a dispute.
         uint[] fundedSides; // Stores the sides that are fully funded.
-        uint appealFee; // Fee paid for appeal. Not constant even if the arbitrator is not changing because arbitrator can change this fee.
+        uint appealFee; // This is not a global constant because arbitrator can change arbitration fee.
     }
 
     struct DisputeStruct {
@@ -146,8 +146,8 @@ contract ArbitrableProxy is IDisputeResolver {
         uint contribution = totalCost.subCap(lastRound.paidFees[_ruling]) > msg.value ? msg.value : totalCost.subCap(lastRound.paidFees[_ruling]);
         emit Contribution(_localDisputeID, rounds.length - 1, _ruling, msg.sender, contribution);
 
-        lastRound.contributions[msg.sender][uint(_ruling)] += contribution;
-        lastRound.paidFees[uint(_ruling)] += contribution;
+        lastRound.contributions[msg.sender][_ruling] += contribution;
+        lastRound.paidFees[_ruling] += contribution;
 
         if (lastRound.paidFees[_ruling] >= totalCost) {
             lastRound.feeRewards += lastRound.paidFees[_ruling];
@@ -194,25 +194,22 @@ contract ArbitrableProxy is IDisputeResolver {
         if (!round.hasPaid[_ruling]) {
             // Allow to reimburse if funding was unsuccessful.
             reward = round.contributions[_contributor][_ruling];
-            _contributor.send(reward); // User is responsible for accepting the reward.
 
         } else if (currentRuling == 0 || !round.hasPaid[currentRuling]) {
             // Reimburse unspent fees proportionally if there is no winner and loser.
             reward = round.appealFee > 0 // Means appeal took place.
-                ? (round.contributions[_contributor][_ruling] * round.feeRewards) / (round.feeRewards - round.appealFee)
+                ? (round.contributions[_contributor][_ruling] * round.feeRewards) / (round.feeRewards + round.appealFee)
                 : 0;
-
-                _contributor.send(reward); // User is responsible for accepting the reward.
-
 
         } else if(currentRuling == _ruling) {
             // Reward the winner.
             reward = round.paidFees[currentRuling] > 0
                 ? (round.contributions[_contributor][_ruling] * round.feeRewards) / round.paidFees[currentRuling]
                 : 0;
-                _contributor.send(reward); // User is responsible for accepting the reward.
           }
+
           round.contributions[_contributor][currentRuling] = 0;
+          _contributor.send(reward); // User is responsible for accepting the reward.
 
           emit Withdrawal(_localDisputeID, _roundNumber, _ruling, _contributor, reward);
     }
