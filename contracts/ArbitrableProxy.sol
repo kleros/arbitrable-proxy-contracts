@@ -201,14 +201,14 @@ contract ArbitrableProxy is IDisputeResolver {
                 ? (round.contributions[_contributor][_ruling] * round.feeRewards) / (round.feeRewards + round.appealFee)
                 : 0;
 
-        } else if(currentRuling == _ruling) {
+        } else if(_ruling == currentRuling) {
             // Reward the winner.
             reward = round.paidFees[currentRuling] > 0
                 ? (round.contributions[_contributor][_ruling] * round.feeRewards) / round.paidFees[currentRuling]
                 : 0;
           }
 
-          round.contributions[_contributor][currentRuling] = 0;
+          round.contributions[_contributor][_ruling] = 0;
           _contributor.send(reward); // User is responsible for accepting the reward.
 
           emit Withdrawal(_localDisputeID, _roundNumber, _ruling, _contributor, reward);
