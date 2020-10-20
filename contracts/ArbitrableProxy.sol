@@ -187,12 +187,7 @@ contract ArbitrableProxy is IDisputeResolver {
             reward = round.fundedSides.length > 1 // Means appeal took place.
                 ? (round.contributions[_contributor][_ruling] * round.feeRewards) / (round.paidFees[round.fundedSides[0]] + round.paidFees[round.fundedSides[1]])
                 : 0;
-
-<<<<<<< HEAD
-        } else if(_ruling == currentRuling) {
-=======
         } else if(_ruling == finalRuling) {
->>>>>>> temp2
             // Reward the winner.
             reward = round.paidFees[_ruling] > 0
                 ? (round.contributions[_contributor][_ruling] * round.feeRewards) / round.paidFees[_ruling]
