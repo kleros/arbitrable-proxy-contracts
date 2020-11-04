@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 /**
  *  @authors: [@ferittuncer]
  *  @reviewers: [@remedcu]
@@ -6,7 +8,7 @@
  *  @deployments: [0xeF6F9665B3aAC2894Ea4c458F93aBA5BB8f8b86d, 0xc7e49251807780dFBbCA72778890B80bd946590B]
  */
 
-pragma solidity >=0.6;
+pragma solidity >=0.7;
 
 import "@kleros/erc-792/contracts/IArbitrable.sol";
 import "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
@@ -73,7 +75,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
      *  @param _metaevidenceURI Link to metaevidence of prospective dispute.
      */
     function createDispute(bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI) external payable returns(uint disputeID) {
-        disputeID = arbitrator.createDispute.value(msg.value)(NUMBER_OF_CHOICES, _arbitratorExtraData);
+        disputeID = arbitrator.createDispute{value: msg.value}(NUMBER_OF_CHOICES, _arbitratorExtraData);
 
         disputes.push(DisputeStruct({
             arbitratorExtraData: _arbitratorExtraData,
@@ -85,11 +87,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         uint localDisputeID = disputes.length - 1;
         externalIDtoLocalID[disputeID] = localDisputeID;
 
-        disputeIDRoundIDtoRound[localDisputeID].push(Round({
-          paidFees: [uint256(0), uint256(0), uint256(0)],
-          hasPaid: [false, false, false],
-          feeRewards: 0
-        }));
+        disputeIDRoundIDtoRound[localDisputeID].push();
 
         emit MetaEvidence(localDisputeID, _metaevidenceURI);
         emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
@@ -143,7 +141,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         (uint appealPeriodStart, uint appealPeriodEnd) = arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
-        require(now >= appealPeriodStart && now < appealPeriodEnd, "Funding must be made within the appeal period.");
+        require(block.timestamp >= appealPeriodStart && block.timestamp < appealPeriodEnd, "Funding must be made within the appeal period.");
 
         Party winner = Party(arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide));
         Party loser;
@@ -151,7 +149,7 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             loser = Party.Respondent;
         else if (winner == Party.Respondent)
             loser = Party.Requester;
-        require(!(_side==loser) || (now-appealPeriodStart < (appealPeriodEnd-appealPeriodStart)/2), "The loser must contribute during the first half of the appeal period.");
+        require(!(_side==loser) || (block.timestamp-appealPeriodStart < (appealPeriodEnd-appealPeriodStart)/2), "The loser must contribute during the first half of the appeal period.");
 
         uint multiplier;
         if (_side == winner){
@@ -174,13 +172,9 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             lastRound.hasPaid[uint(_side)] = true;
 
         if(lastRound.hasPaid[uint8(Party.Requester)] && lastRound.hasPaid[uint8(Party.Respondent)]){
-            rounds.push(Round({
-              paidFees: [uint256(0), uint256(0), uint256(0)],
-              hasPaid: [false, false, false],
-              feeRewards: 0
-            }));
+            rounds.push();
             lastRound.feeRewards = lastRound.feeRewards.subCap(appealCost);
-            arbitrator.appeal.value(appealCost)(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+            arbitrator.appeal{value: appealCost}(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
     }
 

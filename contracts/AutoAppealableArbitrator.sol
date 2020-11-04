@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 /**
  *  @authors: [@clesaege]
  *  @reviewers: []
@@ -6,7 +8,7 @@
  *  @deployments: []
  */
 
-pragma solidity >=0.6;
+pragma solidity >=0.7;
 
 import "@kleros/erc-792/contracts/IArbitrable.sol";
 import "@kleros/erc-792/contracts/IArbitrator.sol";
@@ -52,19 +54,17 @@ contract AutoAppealableArbitrator is IArbitrator {
     }
 
     /** @dev Cost of arbitration. Accessor to arbitrationPrice.
-     *  @param _extraData Not used by this contract.
      *  @return fee Amount to be paid.
      */
-    function arbitrationCost(bytes memory _extraData) public view override returns(uint fee) {
+    function arbitrationCost(bytes memory) public view override returns(uint fee) {
         return arbitrationPrice;
     }
 
     /** @dev Cost of appeal. If appeal is not possible, it's a high value which can never be paid.
      *  @param _disputeID ID of the dispute to be appealed.
-     *  @param _extraData Not used by this contract.
      *  @return fee Amount to be paid.
      */
-    function appealCost(uint _disputeID, bytes memory _extraData) public view override returns(uint fee) {
+    function appealCost(uint _disputeID, bytes memory) public view override returns(uint fee) {
         Dispute storage dispute = disputes[_disputeID];
         if (dispute.status == DisputeStatus.Appealable)
             return dispute.appealCost;
@@ -126,8 +126,8 @@ contract AutoAppealableArbitrator is IArbitrator {
         dispute.ruling = _ruling;
         dispute.status = DisputeStatus.Appealable;
         dispute.appealCost = _appealCost;
-        dispute.appealPeriodStart = now;
-        dispute.appealPeriodEnd = now.addCap(_timeToAppeal);
+        dispute.appealPeriodStart = block.timestamp;
+        dispute.appealPeriodEnd = block.timestamp.addCap(_timeToAppeal);
 
         emit AppealPossible(_disputeID, dispute.arbitrated);
     }
@@ -152,7 +152,7 @@ contract AutoAppealableArbitrator is IArbitrator {
         Dispute storage dispute = disputes[_disputeID];
         uint appealFee = appealCost(_disputeID, _extraData);
         require(dispute.status == DisputeStatus.Appealable, "The dispute must be appealable.");
-        require(now < dispute.appealPeriodEnd, "The appeal must occur before the end of the appeal period.");
+        require(block.timestamp < dispute.appealPeriodEnd, "The appeal must occur before the end of the appeal period.");
         require(msg.value >= appealFee, "Value is less than required appeal fee");
 
         dispute.appealPeriodStart = 0;
@@ -168,7 +168,7 @@ contract AutoAppealableArbitrator is IArbitrator {
     function executeRuling(uint _disputeID) external {
         Dispute storage dispute = disputes[_disputeID];
         require(dispute.status == DisputeStatus.Appealable, "The dispute must be appealable.");
-        require(now >= dispute.appealPeriodEnd, "The dispute must be executed after its appeal period has ended.");
+        require(block.timestamp >= dispute.appealPeriodEnd, "The dispute must be executed after its appeal period has ended.");
 
         dispute.status = DisputeStatus.Solved;
         msg.sender.send(dispute.fees); // Avoid blocking.
@@ -181,7 +181,7 @@ contract AutoAppealableArbitrator is IArbitrator {
      */
     function disputeStatus(uint _disputeID) public view override returns(DisputeStatus status) {
         Dispute storage dispute = disputes[_disputeID];
-        if (disputes[_disputeID].status==DisputeStatus.Appealable && now>=dispute.appealPeriodEnd) // If the appeal period is over, consider it solved even if rule has not been called yet.
+        if (disputes[_disputeID].status==DisputeStatus.Appealable && block.timestamp>=dispute.appealPeriodEnd) // If the appeal period is over, consider it solved even if rule has not been called yet.
             return DisputeStatus.Solved;
         else
             return disputes[_disputeID].status;

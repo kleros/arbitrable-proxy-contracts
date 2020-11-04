@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+
+
 /**
  *  @authors: [@ferittuncer]
  *  @reviewers: []
@@ -6,12 +9,11 @@
  *  @deployments: []
  */
 
-pragma solidity >=0.6;
+pragma solidity >=0.7;
 
 import "@kleros/erc-792/contracts/IArbitrable.sol";
 import "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
 import "@kleros/erc-792/contracts/IArbitrator.sol";
-import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 
 /**
  *  @title Interface that is implemented on resolve.kleros.io
@@ -32,11 +34,19 @@ interface IDisputeResolver is IArbitrable, IEvidence {
     /** @dev To be raised inside withdrawFeesAndRewards function.
      *  @param localDisputeID The dispute id as in arbitrable contract.
      *  @param round Round code of the appeal. Starts from 0.
-     *  @param ruling Indicates the ruling option which got the contribution.
-     *  @param contributor Caller of fundAppeal function.
+     *  @param ruling Indicates the ruling option which contributor gets rewards from.
+     *  @param contributor The beneficiary of withdrawal.
      *  @param reward Total amount of deposits reimbursed plus rewards. This amount will be sent to contributor as an effect of calling withdrawFeesAndRewards function.
      */
     event Withdrawal(uint indexed localDisputeID, uint indexed round, uint ruling, address indexed contributor, uint reward);
+
+
+    /** @dev To be raised when a ruling option is fully funded for appeal.
+     *  @param localDisputeID The dispute id as in arbitrable contract.
+     *  @param round Round code of the appeal. Starts from 0.
+     *  @param ruling THe ruling option which just got fully funded.
+     */
+    event RulingFunded(uint indexed localDisputeID, uint indexed round, uint indexed ruling);
 
 
     /** @dev Maps external (arbitrator side) dispute id to local (arbitrable) dispute id.
@@ -47,8 +57,9 @@ interface IDisputeResolver is IArbitrable, IEvidence {
 
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
      *  @param _localDisputeID Dispute id as in arbitrable contract.
+     *  @return count The number of ruling options.
      */
-    function numberOfRulingOptions(uint _localDisputeID) external view returns (uint numberOfRulingOptions);
+    function numberOfRulingOptions(uint _localDisputeID) external view returns (uint count);
 
     /** @dev Allows to submit evidence for a given dispute.
      *  @param _localDisputeID Index of the dispute in disputes array.
@@ -60,6 +71,7 @@ interface IDisputeResolver is IArbitrable, IEvidence {
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _ruling The side to which the caller wants to contribute.
+     *  @return fullyFunded True if the ruling option got fully funded as a result of this contribution.
      */
     function fundAppeal(uint _localDisputeID, uint _ruling) external payable returns (bool fullyFunded);
 
@@ -75,7 +87,8 @@ interface IDisputeResolver is IArbitrable, IEvidence {
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
-     *  @param _ruling A ruling option that the caller wannts to withdraw fees and rewards related to it.
+     *  @param _ruling A ruling option that the caller wants to withdraw fees and rewards related to it.
+     *  @return reward The reward that is going to be paid as a result of this function call, if it's not zero.
      */
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) external returns (uint reward);
 
