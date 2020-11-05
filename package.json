@@ -1,8 +1,8 @@
 {
-  "name": "@kleros/binary-arbitrable-proxy-contract",
-  "version": "7.0.0",
+  "name": "@kleros/arbitrable-proxy-contracts",
+  "version": "1.0.1",
   "main": "index.js",
-  "repository": "https://github.com/kleros/binary-arbitrable-proxy-contract",
+  "repository": "https://github.com/kleros/arbitrable-proxy-contracts",
   "author": "Kleros",
   "license": "MIT",
   "private": false,
@@ -23,6 +23,9 @@
     "@kleros/erc-792": "7.0.0",
     "@kleros/ethereum-libraries": "^2.0.0",
     "@openzeppelin/contracts": "^2.4.0"
+  },
+  "scripts": {
+    "prepublish": "truffle compile"
   },
   "files": [
     "build",
