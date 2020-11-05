@@ -1,8 +1,8 @@
 {
-  "name": "@kleros/binary-arbitrable-proxy-contract",
+  "name": "@kleros/arbitrable-proxy-contracts",
   "version": "7.0.0",
   "main": "index.js",
-  "repository": "https://github.com/kleros/binary-arbitrable-proxy-contract",
+  "repository": "https://github.com/kleros/arbitrable-proxy-contracts",
   "author": "Kleros",
   "license": "MIT",
   "private": false,
