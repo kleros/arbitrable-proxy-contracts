@@ -23,6 +23,7 @@ contract ArbitrableProxy is IDisputeResolver {
 
     using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
 
+    uint public constant MAX_NO_OF_CHOICES = (2 ** 256) - 1;
 
     struct Round {
         mapping(uint => uint) paidFees; // Tracks the fees paid for each ruling option in this round.
@@ -74,6 +75,9 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @return disputeID Dispute id (on arbitrator side) of the dispute created.
      */
     function createDispute(bytes calldata _arbitratorExtraData, string calldata _metaevidenceURI, uint _numberOfChoices) external payable returns(uint disputeID) {
+        if(_numberOfChoices == 0)
+            _numberOfChoices = MAX_NO_OF_CHOICES;
+
         disputeID = arbitrator.createDispute{value: msg.value}(_numberOfChoices, _arbitratorExtraData);
 
         disputes.push(DisputeStruct({
