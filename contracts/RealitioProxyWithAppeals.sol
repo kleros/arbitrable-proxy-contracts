@@ -100,7 +100,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     uint64 private loserMultiplier; // Multiplier for calculating the appeal fee that must be paid for the answer that the arbitrator didn't rule for in the previous round.
 
     mapping(uint => bytes32) public disputeIDToQuestionID; // Maps a dispute ID to the ID of the disputed question. disputeIDToQuestionID[disputeID].
-    mapping (bytes32 => Question) public questions; // Maps a question ID to its data. questions[questionID].
+    mapping(bytes32 => Question) public questions; // Maps a question ID to its data. questions[questionID].
 
     /* Modifiers */
 
@@ -122,7 +122,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
      *  @param _winnerMultiplier Multiplier for calculating the appeal cost of the winning answer.
      *  @param _loserMultiplier Multiplier for calculation the appeal cost of the losing answer..
      */
-    constructor(
+    constructor (
         IArbitrator _arbitrator,
         bytes memory _arbitratorExtraData,
         RealitioInterface _realitio,
@@ -275,16 +275,16 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         Question storage question = questions[disputeIDToQuestionID[_disputeID]];
         Round storage round = question.rounds[_round];
         require(question.status > Status.Disputed, "Dispute not resolved");
-        uint finalRuling = uint(question.answer) + 1;
+        uint finalAnswer = uint(question.answer);
         // Allow to reimburse if funding of the round was unsuccessful.
         if (!round.hasPaid[_answer]) {
             reward = round.contributions[_beneficiary][_answer];
-        } else if (finalRuling == 0 || !round.hasPaid[finalRuling]) {
+        } else if (finalAnswer == 0 || !round.hasPaid[finalAnswer]) {
             // Reimburse unspent fees proportionally if there is no winner and loser. Also applies to the situation where the ultimate winner didn't pay appeal fees fully.
             reward = round.fundedAnswers.length > 1
                 ? (round.contributions[_beneficiary][_answer] * round.feeRewards) / (round.paidFees[round.fundedAnswers[0]] + round.paidFees[round.fundedAnswers[1]])
                 : 0;
-        } else if (finalRuling == _answer + 1) {
+        } else if (finalAnswer == _answer) {
             // Reward the winner.
             reward = round.paidFees[_answer] > 0
                 ? (round.contributions[_beneficiary][_answer] * round.feeRewards) / round.paidFees[_answer]
@@ -338,11 +338,11 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         bool _isCommitment
     ) external {
         Question storage question = questions[_questionID];
+        require(question.status == Status.Ruled, "The status should be Ruled.");
         require(
             realitio.getHistoryHash(_questionID) == keccak256(abi.encodePacked(_lastHistoryHash, _lastAnswerOrCommitmentID, _lastBond, _lastAnswerer, _isCommitment)),
-            "The hash of the history parameters supplied does not match the one stored in the Realitio contract."
+            "The hash does not match."
         );
-        require(question.status == Status.Ruled, "The status should be Ruled.");
 
         question.status = Status.Reported;
 
@@ -361,7 +361,8 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         bytes32 questionID = disputeIDToQuestionID[_disputeID];
         Question storage question = questions[questionID];
         require(question.status == Status.Disputed, "The status should be Disputed.");
-        emit Evidence(arbitrator, uint(questionID), msg.sender, _evidenceURI);
+        if (bytes(_evidenceURI).length > 0)
+            emit Evidence(arbitrator, uint(questionID), msg.sender, _evidenceURI);
     }
 
     /** @dev Give a ruling for a dispute. Can only be called by the arbitrator.
@@ -372,13 +373,13 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     function rule(uint _disputeID, uint _ruling) external override {
         Question storage question = questions[disputeIDToQuestionID[_disputeID]];
         require(msg.sender == address(arbitrator), "Must be called by the arbitrator.");
-        require(question.status == Status.Ruled, "The dispute has already been ruled.");
+        require(question.status == Status.Disputed, "The dispute has already been ruled.");
         uint finalRuling = _ruling;
 
         // If one side paid its fees, the ruling is in its favor. Note that if the other side had also paid, an appeal would have been created.
         Round storage round = question.rounds[question.rounds.length - 1];
         if (round.fundedAnswers.length == 1)
-            finalRuling = round.fundedAnswers[0];
+            finalRuling = round.fundedAnswers[0] + 1;
 
         emit Ruling(IArbitrator(msg.sender), _disputeID, finalRuling);
         executeRuling(_disputeID, finalRuling);
@@ -402,6 +403,14 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
      */
     function numberOfRulingOptions(uint _disputeID) external override pure returns (uint) {
         return NUMBER_OF_CHOICES;
+    }
+
+    /** @dev Gets the number of rounds of the specific dispute.
+     *  @param _disputeID ID of the dispute in arbitrator contract.
+     *  @return The number of rounds.
+     */
+    function getNumberOfRounds(uint _disputeID) public view returns (uint) {
+        return questions[disputeIDToQuestionID[_disputeID]].rounds.length;
     }
 
     /** @dev Gets the information of a round of a dispute.
@@ -514,7 +523,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
                 lastAnswer = revealedAnswer;
                 isAnswered = true;
             } else {
-                require(revealTS <= uint32(block.timestamp), "Arbitration cannot be done until the last answerer has had time to reveal its commitment.");
+                require(revealTS <= uint32(block.timestamp), "Still has time to reveal.");
                 isAnswered = false;
             }
         } else {
