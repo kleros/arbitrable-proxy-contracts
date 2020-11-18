@@ -1538,7 +1538,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     assert.equal(
       (await proxy.metaEvidenceUpdates()).toNumber(),
       1,
-      'Incorrect metaevideupdates value'
+      'Incorrect metaEvidenceUpdates value'
     )
   })
 })
