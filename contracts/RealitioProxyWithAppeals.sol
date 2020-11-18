@@ -50,7 +50,7 @@ interface RealitioInterface {
  *  @dev A Realitio arbitrator that is just a proxy for an ERC792 arbitrator.
  *  This version of the contract supports the appeal crowdfunding and evidence submission.
  *  In order to fund an appeal only two possible answers have to be funded.
- *  The answer has a uint type to match the arbitrator's ruling and is capped with 2**256 - 2.
+ *  The answer has a uint type to match the arbitrator's ruling.
  *  NOTE: This contract trusts that the Arbitrator is honest and will not reenter or modify its costs during a call.
  *  The arbitrator must support appeal period.
  */
@@ -99,20 +99,14 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     uint64 private winnerMultiplier; // Multiplier for calculating the appeal fee that must be paid for the answer that was chosen by the arbitrator in the previous round.
     uint64 private loserMultiplier; // Multiplier for calculating the appeal fee that must be paid for the answer that the arbitrator didn't rule for in the previous round.
 
-    mapping(uint => bytes32) public disputeIDToQuestionID; // Maps a dispute ID to the ID of the disputed question. disputeIDToQuestionID[disputeID].
-    mapping(bytes32 => Question) public questions; // Maps a question ID to its data. questions[questionID].
+    mapping(uint => Question) public questions; // Maps a question ID to its data. questions[questionID].
+    mapping(uint => uint) public override externalIDtoLocalID; // Maps external (arbitrator side) dispute ids to local dispute(question) ids.
 
     /* Modifiers */
 
     modifier onlyGovernor {require(msg.sender == governor, "The caller must be the governor."); _;}
 
     /* Events */
-
-    /** @dev Emitted when arbitration is requested, to link dispute ID to question ID for UIs.
-     *  @param _disputeID The ID of the dispute in the ERC792 arbitrator.
-     *  @param _questionID The ID of the question.
-     */
-    event DisputeIDToQuestionID(uint indexed _disputeID, bytes32 _questionID);
 
     /** @dev Constructor.
      *  @param _arbitrator The address of the ERC792 arbitrator.
@@ -172,14 +166,14 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         loserMultiplier = _loserMultiplier;
     }
 
-    /** @dev Change the governor of the contract.
+    /** @dev Changes the governor of the contract.
      *  @param _governor The address of the new governor.
      */
     function changeGovernor(address _governor) external onlyGovernor {
         governor = _governor;
     }
 
-    /** @dev Update the meta evidence used for disputes.
+    /** @dev Updates the meta evidence used for disputes.
      *  @param _metaEvidence URI to the new meta evidence file.
      */
     function changeMetaEvidence(string calldata _metaEvidence) external onlyGovernor {
@@ -188,12 +182,13 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         emit MetaEvidence(metaEvidenceUpdates, _metaEvidence);
     }
 
-    /** @dev Raise a dispute from a specified question.
-     *  @param _questionID The ID of the question.
+    /** @dev Raises a dispute from a specified question.
+     *  @param _questionID The ID of the question, as in Realitio.
      *  @param _maxPrevious If specified, reverts if a bond higher than this was submitted after you sent your transaction.
      */
     function requestArbitration(bytes32 _questionID, uint _maxPrevious) external payable {
-        Question storage question = questions[_questionID];
+        uint questionID = uint(_questionID);
+        Question storage question = questions[questionID];
         require(question.status == Status.None, "The arbitration has already been requested for this question.");
         uint disputeID = arbitrator.createDispute{value: msg.value}(NUMBER_OF_CHOICES, arbitratorExtraData);
 
@@ -201,19 +196,18 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         question.status = Status.Disputed;
         question.disputeID = disputeID;
         question.rounds.push();
-        disputeIDToQuestionID[disputeID] = _questionID;
+        externalIDtoLocalID[disputeID] = questionID;
 
         realitio.notifyOfArbitrationRequest(_questionID, msg.sender, _maxPrevious);
-        emit Dispute(arbitrator, disputeID, metaEvidenceUpdates, uint(_questionID));
-        emit DisputeIDToQuestionID(disputeID, _questionID);
+        emit Dispute(arbitrator, disputeID, metaEvidenceUpdates, questionID);
     }
 
-    /** @dev Takes up to the total amount required to fund an answer. Reimburses the rest. Creates an appeal if at least two answers are funded. TRUSTED.
-     *  @param _disputeID The ID of the dispute raised by the arbitrator for the particular question.
+    /** @dev Takes up to the total amount required to fund an answer. Reimburses the rest. Creates an appeal if at least two answers are funded.
+     *  @param _questionID The ID of the question
      *  @param _answer One of the possible rulings the arbitrator can give that the funder considers to be the correct answer to the question.
      */
-    function fundAppeal(uint _disputeID, uint _answer) external override payable returns (bool fullyFunded) {
-        Question storage question = questions[disputeIDToQuestionID[_disputeID]];
+    function fundAppeal(uint _questionID, uint _answer) external override payable returns (bool fullyFunded) {
+        Question storage question = questions[_questionID];
         require(question.status == Status.Disputed, "No dispute to appeal.");
         // The "-1" answer is reserved for "Refuse to arbitrate" in Realitio, thus it can not be funded.
         require(_answer != uint(-1), "The answer is out of bounds.");
@@ -242,7 +236,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
 
         // Take up to the amount necessary to fund the current round at the current costs.
         uint contribution = totalCost.subCap(round.paidFees[_answer]) > msg.value ? msg.value : totalCost.subCap(round.paidFees[_answer]);
-        emit Contribution(question.disputeID, question.rounds.length - 1, _answer + 1, msg.sender, contribution);
+        emit Contribution(_questionID, question.rounds.length - 1, _answer + 1, msg.sender, contribution);
 
         round.contributions[msg.sender][_answer] += contribution;
         round.paidFees[_answer] += contribution;
@@ -250,7 +244,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
             round.feeRewards += round.paidFees[_answer];
             round.fundedAnswers.push(_answer);
             round.hasPaid[_answer] = true;
-            emit RulingFunded(_disputeID, question.rounds.length - 1, _answer + 1);
+            emit RulingFunded(_questionID, question.rounds.length - 1, _answer + 1);
         }
 
         if (round.fundedAnswers.length > 1) {
@@ -266,13 +260,13 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     }
 
     /** @dev Sends the fee stake rewards and reimbursements proportional to the contributions made to the winner of a dispute. Reimburses contributions if there is no winner.
-     *  @param _disputeID The ID of the dispute raised by the arbitrator for the particular question.
+     *  @param _questionID The ID of the question.
      *  @param _beneficiary The address that made contributions.
      *  @param _round The round from which to withdraw.
      *  @param _answer The answer the beneficiary contributed to.
      */
-    function withdrawFeesAndRewards(uint _disputeID, address payable _beneficiary, uint _round, uint _answer) public override returns (uint reward) {
-        Question storage question = questions[disputeIDToQuestionID[_disputeID]];
+    function withdrawFeesAndRewards(uint _questionID, address payable _beneficiary, uint _round, uint _answer) public override returns (uint reward) {
+        Question storage question = questions[_questionID];
         Round storage round = question.rounds[_round];
         require(question.status > Status.Disputed, "Dispute not resolved");
         uint finalAnswer = uint(question.answer);
@@ -294,34 +288,34 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         if (reward != 0) {
             round.contributions[_beneficiary][_answer] = 0;
             _beneficiary.transfer(reward);
-            emit Withdrawal(_disputeID, _round, _answer + 1, _beneficiary, reward);
+            emit Withdrawal(_questionID, _round, _answer + 1, _beneficiary, reward);
         }
     }
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved for multiple ruling options (answers) at once.
-     *  @param _disputeID The ID of the dispute raised by the arbitrator for the particular question.
+     *  @param _questionID The ID of the question.
      *  @param _beneficiary The address that made contributions.
      *  @param _round The round from which to withdraw.
      *  @param _contributedTo Answers that received contributions from contributor.
      */
-    function withdrawFeesAndRewardsForMultipleRulings(uint _disputeID, address payable _beneficiary, uint _round, uint[] memory _contributedTo) public override {
+    function withdrawFeesAndRewardsForMultipleRulings(uint _questionID, address payable _beneficiary, uint _round, uint[] memory _contributedTo) public override {
         for (uint contributionNumber = 0; contributionNumber < _contributedTo.length; contributionNumber++) {
-            withdrawFeesAndRewards(_disputeID, _beneficiary, _round, _contributedTo[contributionNumber]);
+            withdrawFeesAndRewards(_questionID, _beneficiary, _round, _contributedTo[contributionNumber]);
         }
     }
 
     /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options (answers) and for all rounds at once.
-     *  @param _disputeID The ID of the dispute raised by the arbitrator for the particular question.
+     *  @param _questionID The ID of the question.
      *  @param _beneficiary The address that made contributions.
      *  @param _contributedTo Answers that received contributions from contributor.
      */
-    function withdrawFeesAndRewardsForAllRounds(uint _disputeID, address payable _beneficiary, uint[] memory _contributedTo) external override {
-        for (uint roundNumber = 0; roundNumber < questions[disputeIDToQuestionID[_disputeID]].rounds.length; roundNumber++) {
-            withdrawFeesAndRewardsForMultipleRulings(_disputeID, _beneficiary, roundNumber, _contributedTo);
+    function withdrawFeesAndRewardsForAllRounds(uint _questionID, address payable _beneficiary, uint[] memory _contributedTo) external override {
+        for (uint roundNumber = 0; roundNumber < questions[_questionID].rounds.length; roundNumber++) {
+            withdrawFeesAndRewardsForMultipleRulings(_questionID, _beneficiary, roundNumber, _contributedTo);
         }
     }
 
-    /** @dev Report the answer to a specified question from the ERC792 arbitrator to the Realitio contract.
+    /** @dev Reports the answer to a specified question from the ERC792 arbitrator to the Realitio contract.
      *  @param _questionID The ID of the question.
      *  @param _lastHistoryHash The history hash given with the last answer to the question in the Realitio contract.
      *  @param _lastAnswerOrCommitmentID The last answer given, or its commitment ID if it was a commitment, to the question in the Realitio contract.
@@ -330,7 +324,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
      *  @param _isCommitment Whether the last answer to the question in the Realitio contract used commit or reveal or not. True if it did, false otherwise.
      */
     function reportAnswer(
-        bytes32 _questionID,
+        uint _questionID,
         bytes32 _lastHistoryHash,
         bytes32 _lastAnswerOrCommitmentID,
         uint _lastBond,
@@ -340,38 +334,38 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         Question storage question = questions[_questionID];
         require(question.status == Status.Ruled, "The status should be Ruled.");
         require(
-            realitio.getHistoryHash(_questionID) == keccak256(abi.encodePacked(_lastHistoryHash, _lastAnswerOrCommitmentID, _lastBond, _lastAnswerer, _isCommitment)),
+            realitio.getHistoryHash(bytes32(_questionID)) == keccak256(abi.encodePacked(_lastHistoryHash, _lastAnswerOrCommitmentID, _lastBond, _lastAnswerer, _isCommitment)),
             "The hash does not match."
         );
 
         question.status = Status.Reported;
 
         realitio.submitAnswerByArbitrator(
-            _questionID,
+            bytes32(_questionID),
             question.answer,
             computeWinner(_questionID, _lastAnswerOrCommitmentID, _lastBond, _lastAnswerer, _isCommitment)
         );
     }
 
     /** @dev Allows to submit evidence for a given dispute.
-     *  @param _disputeID The ID of the dispute raised by the arbitrator for the particular question.
+     *  @param _questionID The ID of the question.
      *  @param _evidenceURI Link to evidence.
      */
-    function submitEvidence(uint _disputeID, string calldata _evidenceURI) external override {
-        bytes32 questionID = disputeIDToQuestionID[_disputeID];
-        Question storage question = questions[questionID];
+    function submitEvidence(uint _questionID, string calldata _evidenceURI) external override {
+        Question storage question = questions[_questionID];
         require(question.status == Status.Disputed, "The status should be Disputed.");
         if (bytes(_evidenceURI).length > 0)
-            emit Evidence(arbitrator, uint(questionID), msg.sender, _evidenceURI);
+            emit Evidence(arbitrator, _questionID, msg.sender, _evidenceURI);
     }
 
-    /** @dev Give a ruling for a dispute. Can only be called by the arbitrator.
-     *  Account for the situation where the winner loses a case due to paying less appeal fees than expected.
+    /** @dev Gives a ruling for a dispute. Can only be called by the arbitrator.
+     *  Accounts for the situation where the winner loses a case due to paying less appeal fees than expected.
      *  @param _disputeID ID of the dispute in the Arbitrator contract.
      *  @param _ruling Ruling given by the arbitrator. Note that 0 is reserved for "Refuse to arbitrate".
      */
     function rule(uint _disputeID, uint _ruling) external override {
-        Question storage question = questions[disputeIDToQuestionID[_disputeID]];
+        uint questionID = externalIDtoLocalID[_disputeID];
+        Question storage question = questions[questionID];
         require(msg.sender == address(arbitrator), "Must be called by the arbitrator.");
         require(question.status == Status.Disputed, "The dispute has already been ruled.");
         uint finalRuling = _ruling;
@@ -382,7 +376,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
             finalRuling = round.fundedAnswers[0] + 1;
 
         emit Ruling(IArbitrator(msg.sender), _disputeID, finalRuling);
-        executeRuling(_disputeID, finalRuling);
+        executeRuling(questionID, finalRuling);
     }
 
     /* External Views */
@@ -398,36 +392,36 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     }
 
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
-     *  @param _disputeID The ID of the dispute created in arbitrator contract.
+     *  @param _questionID The ID of the question.
      *  @return count The number of ruling options.
      */
-    function numberOfRulingOptions(uint _disputeID) external override pure returns (uint) {
+    function numberOfRulingOptions(uint _questionID) external override pure returns (uint) {
         return NUMBER_OF_CHOICES;
     }
 
-    /** @dev Gets the number of rounds of the specific dispute.
-     *  @param _disputeID ID of the dispute in arbitrator contract.
+    /** @dev Gets the number of rounds of the specific question.
+     *  @param _questionID The ID of the question.
      *  @return The number of rounds.
      */
-    function getNumberOfRounds(uint _disputeID) public view returns (uint) {
-        return questions[disputeIDToQuestionID[_disputeID]].rounds.length;
+    function getNumberOfRounds(uint _questionID) public view returns (uint) {
+        return questions[_questionID].rounds.length;
     }
 
-    /** @dev Gets the information of a round of a dispute.
-     *  @param _disputeID ID of the dispute.
+    /** @dev Gets the information of a round of a question.
+     *  @param _questionID The ID of the question.
      *  @param _round The round to query.
      *  @return paidFees The amount of fees paid for each fully funded answer.
      *  @return feeRewards The amount of fees that will be use as rewards.
      *  @return fundedAnswers IDs of fully funded answers.
      */
-    function getRoundInfo(uint _disputeID, uint _round) external view
+    function getRoundInfo(uint _questionID, uint _round) external view
     returns (
         uint[] memory paidFees,
         uint feeRewards,
         uint[] memory fundedAnswers
     )
     {
-        Round storage round = questions[disputeIDToQuestionID[_disputeID]].rounds[_round];
+        Round storage round = questions[_questionID].rounds[_round];
         fundedAnswers = round.fundedAnswers;
 
         paidFees = new uint[](round.fundedAnswers.length);
@@ -439,29 +433,29 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         feeRewards = round.feeRewards;
     }
 
-    /** @dev Gets the information of a round of a dispute for a specific answer choice.
-     *  @param _disputeID ID of the dispute.
-     *  @param _round The round to be queried.
+    /** @dev Gets the information of a round of a question for a specific answer choice.
+     *  @param _questionID The ID of the question.
+     *  @param _round The round to query.
      *  @param _answer The answer choice to get funding status.
-     *  @return raised The amound paid for this answer.
+     *  @return raised The amount paid for this answer.
      *  @return fullyFunded Whether the answer is fully funded or not.
      */
-    function getFundingStatus(uint _disputeID, uint _round, uint _answer) external view returns (uint raised, bool fullyFunded)
+    function getFundingStatus(uint _questionID, uint _round, uint _answer) external view returns (uint raised, bool fullyFunded)
     {
-        Round storage round = questions[disputeIDToQuestionID[_disputeID]].rounds[_round];
+        Round storage round = questions[_questionID].rounds[_round];
         raised = round.paidFees[_answer];
         fullyFunded = round.hasPaid[_answer];
     }
 
     /** @dev Gets contributions to the answers that are fully funded.
-     *  @param _disputeID ID of the dispute.
+     *  @param _questionID The ID of the question.
      *  @param _round The round to query.
      *  @param _contributor The address whose contributions to query.
      *  @return fundedAnswers IDs of the answers that are fully funded.
      *  @return contributions The amount contributed to each funded answer by the contributor.
      */
     function getContributionsToSuccessfulFundings(
-        uint _disputeID,
+        uint _questionID,
         uint _round,
         address _contributor
     ) public view returns(
@@ -469,7 +463,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         uint[] memory contributions
         )
     {
-        Round storage round = questions[disputeIDToQuestionID[_disputeID]].rounds[_round];
+        Round storage round = questions[_questionID].rounds[_round];
         fundedAnswers = round.fundedAnswers;
         contributions = new uint[](round.fundedAnswers.length);
         for (uint i = 0; i < contributions.length; i++) {
@@ -477,20 +471,14 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         }
     }
 
-    /** @dev Maps external (arbitrator side) dispute id to local (arbitrable) dispute id. Is not used in this contract.
-     *  @param _externalDisputeID Dispute id as in arbitrator side.
-     *  @return localDisputeID Dispute id as in arbitrable contract.
-     */
-    function externalIDtoLocalID(uint _externalDisputeID) external override view returns (uint localDisputeID) {}
-
     /* Internal */
 
     /** @dev Execute the ruling of a specified dispute.
-     *  @param _disputeID The ID of the dispute in the ERC792 arbitrator.
+     *  @param _questionID The ID of the disputed question.
      *  @param _ruling The ruling given by the ERC792 arbitrator. Note that 0 is reserved for "Refuse to arbitrate" and we map it to `bytes32(-1)` which has a similar connotation in Realitio.
      */
-    function executeRuling(uint _disputeID, uint _ruling) internal {
-        Question storage question = questions[disputeIDToQuestionID[_disputeID]];
+    function executeRuling(uint _questionID, uint _ruling) internal {
+        Question storage question = questions[_questionID];
         question.answer = bytes32(_ruling == 0 ? uint(-1) : _ruling - 1);
         question.status = Status.Ruled;
     }
@@ -506,7 +494,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
      *  @return winner The computed winner.
      */
     function computeWinner(
-        bytes32 _questionID,
+        uint _questionID,
         bytes32 _lastAnswerOrCommitmentID,
         uint _lastBond,
         address _lastAnswerer,

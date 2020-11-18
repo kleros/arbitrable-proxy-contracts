@@ -4,6 +4,7 @@ contract RealitioMock {
 
     address public arbitrator;
     bool public is_pending_arbitration;
+    bytes32 public question_id;
     bytes32 public answer;
     bool private isRevealed;
     uint32 private reveal_ts;
@@ -15,15 +16,18 @@ contract RealitioMock {
         _;
     }
 
-    function setArbitrator(address _arbitrator) external {
+    function setArbitratorAndQuestion(address _arbitrator, bytes32 _question_id) external {
         arbitrator = _arbitrator;
+        question_id = _question_id;
     }
 
     function notifyOfArbitrationRequest(bytes32 _question_id, address _requester, uint256 _max_previous) external onlyArbitrator() {
+        require(_question_id == question_id, "ID of the question not match.");
         is_pending_arbitration = true;
     }
 
     function submitAnswerByArbitrator(bytes32 _question_id, bytes32 _answer, address _answerer) external onlyArbitrator() {
+        require(_question_id == question_id, "ID of the question not match.");
         is_pending_arbitration = false;
         history_hash = keccak256(abi.encodePacked(history_hash, _answer, uint256(0), _answerer, false));
         answer = _answer;

@@ -23,7 +23,9 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
   const winnerMultiplier = 3000
   const loserMultiplier = 7000
 
-  const questionID = soliditySha3('question')
+  const questionHashed = soliditySha3('question')
+  const questionID =
+    '37982889683569963184062620292954163810666454706822743503198502129467053274669' // Question's hash in uint.
   const MAX_NUMBER = 2 ** 256 - 1
   const gasPrice = 8000000
 
@@ -54,7 +56,9 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       loserMultiplier,
       { from: governor }
     )
-    await realitio.setArbitrator(proxy.address, { from: governor })
+    await realitio.setArbitratorAndQuestion(proxy.address, questionHashed, {
+      from: governor
+    })
   })
 
   it('Should set correct values in constructor', async () => {
@@ -91,13 +95,13 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
   it('Should set correct values when requesting arbitration and fire the event', async () => {
     // Check that can't pay less.
     await expectRevert(
-      proxy.requestArbitration(questionID, 0, {
+      proxy.requestArbitration(questionHashed, 0, {
         from: requester,
         value: arbitrationCost - 1
       }),
       'Value is less than required arbitration fee.'
     )
-    const txRequest = await proxy.requestArbitration(questionID, 0, {
+    const txRequest = await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
@@ -112,12 +116,12 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'Answer should not be set'
     )
     assert.equal(
-      (await proxy.getNumberOfRounds(2)).toNumber(),
+      (await proxy.getNumberOfRounds(questionID)).toNumber(),
       1,
       'Incorrect number of rounds'
     )
 
-    const nbRulings = (await proxy.numberOfRulingOptions(2)).toString()
+    const nbRulings = (await proxy.numberOfRulingOptions(questionID)).toString()
 
     const dispute = await arbitrator.disputes(2)
     assert.equal(dispute[0], proxy.address, 'Arbitrable not set up properly')
@@ -132,9 +136,9 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'Arbitration fee not set up properly'
     )
     assert.equal(
-      await proxy.disputeIDToQuestionID(2),
+      await proxy.externalIDtoLocalID(2),
       questionID,
-      'Incorrect disputeIDToQuestionID value'
+      'Incorrect externalIDtoLocalID value'
     )
     assert.equal(
       await realitio.is_pending_arbitration(),
@@ -165,29 +169,13 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     )
     assert.equal(
       parseInt(txRequest.logs[0].args._evidenceGroupID, 10),
-      parseInt(questionID, 16),
-      'Event Dispute has wrong evidence group ID'
-    )
-
-    assert.equal(
-      txRequest.logs[1].event,
-      'DisputeIDToQuestionID',
-      'Event DisputeIDToQuestionID has not been created'
-    )
-    assert.equal(
-      txRequest.logs[1].args._disputeID.toNumber(),
-      2,
-      'Event DisputeIDToQuestionID has wrong dispute ID'
-    )
-    assert.equal(
-      txRequest.logs[1].args._questionID,
       questionID,
-      'Event DisputeIDToQuestionID has wrong question ID'
+      'Event Dispute has wrong evidence group ID'
     )
 
     // Check that can't make a request the 2nd time.
     await expectRevert(
-      proxy.requestArbitration(questionID, 0, {
+      proxy.requestArbitration(questionHashed, 0, {
         from: requester,
         value: arbitrationCost
       }),
@@ -203,11 +191,14 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     let txFundAppeal
     let txFee
     await expectRevert(
-      proxy.fundAppeal(2, 75, { from: crowdfunder1, value: arbitrationCost }),
+      proxy.fundAppeal(questionID, 75, {
+        from: crowdfunder1,
+        value: arbitrationCost
+      }),
       'No dispute to appeal.'
     )
 
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
@@ -219,7 +210,10 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     // Check that can't fund the dispute that is not appealable.
     await expectRevert(
-      proxy.fundAppeal(2, 75, { from: crowdfunder1, value: arbitrationCost }),
+      proxy.fundAppeal(questionID, 75, {
+        from: crowdfunder1,
+        value: arbitrationCost
+      }),
       'Appeal fees must be paid within the appeal period.'
     )
 
@@ -227,17 +221,20 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       from: governor
     })
 
-    const nbRulings = await proxy.numberOfRulingOptions(2) // The answer ID that is equal to the number of ruling can't be funded.
+    const nbRulings = await proxy.numberOfRulingOptions(questionID) // The answer ID that is equal to the number of ruling can't be funded.
 
     await expectRevert(
-      proxy.fundAppeal(2, nbRulings, { from: crowdfunder1, value: appealCost }),
+      proxy.fundAppeal(questionID, nbRulings, {
+        from: crowdfunder1,
+        value: appealCost
+      }),
       'The answer is out of bounds.'
     )
 
     // loserFee = appealCost + (appealCost * loserMultiplier / 10000) // 5000 + 5000 * 7/10 = 8500
     // 1st Funding ////////////////////////////////////
     oldBalance = await web3.eth.getBalance(crowdfunder1)
-    txFundAppeal = await proxy.fundAppeal(2, 533, {
+    txFundAppeal = await proxy.fundAppeal(questionID, 533, {
       from: crowdfunder1,
       gasPrice: gasPrice,
       value: appealCost
@@ -252,13 +249,13 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'The crowdfunder has incorrect balance after the first funding'
     )
 
-    roundInfo = await proxy.getRoundInfo(2, 0)
+    roundInfo = await proxy.getRoundInfo(questionID, 0)
     assert.equal(
       roundInfo[1].toNumber(),
       0,
       'feeRewards value should be 0 after partial funding'
     )
-    fundingStatus = await proxy.getFundingStatus(2, 0, 533)
+    fundingStatus = await proxy.getFundingStatus(questionID, 0, 533)
     assert.equal(
       fundingStatus[0].toNumber(),
       5000,
@@ -277,8 +274,8 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'Event Contribution has not been created'
     )
     assert.equal(
-      txFundAppeal.logs[0].args.localDisputeID.toNumber(),
-      2,
+      parseInt(txFundAppeal.logs[0].args.localDisputeID, 10),
+      questionID,
       'Event Contribution has wrong dispute ID'
     )
     assert.equal(
@@ -304,7 +301,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     // 2nd Funding ////////////////////////////////////
     oldBalance = newBalance
-    txFundAppeal = await proxy.fundAppeal(2, 533, {
+    txFundAppeal = await proxy.fundAppeal(questionID, 533, {
       from: crowdfunder1,
       gasPrice: gasPrice,
       value: 1e18
@@ -318,7 +315,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'The crowdfunder has incorrect balance after the second funding'
     )
 
-    roundInfo = await proxy.getRoundInfo(2, 0)
+    roundInfo = await proxy.getRoundInfo(questionID, 0)
     assert.equal(
       roundInfo[0][0].toNumber(),
       8500,
@@ -335,7 +332,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'Incorrect funded answer stored'
     )
 
-    fundingStatus = await proxy.getFundingStatus(2, 0, 533)
+    fundingStatus = await proxy.getFundingStatus(questionID, 0, 533)
     assert.equal(
       fundingStatus[0].toNumber(),
       8500,
@@ -348,7 +345,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     )
 
     const contributionInfo = await proxy.getContributionsToSuccessfulFundings(
-      2,
+      questionID,
       0,
       crowdfunder1
     )
@@ -364,7 +361,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     )
 
     assert.equal(
-      (await proxy.getNumberOfRounds(2)).toNumber(),
+      (await proxy.getNumberOfRounds(questionID)).toNumber(),
       1,
       'Number of rounds should not increase'
     )
@@ -376,8 +373,8 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'Event Contribution has not been created after 2nd funding'
     )
     assert.equal(
-      txFundAppeal.logs[0].args.localDisputeID.toNumber(),
-      2,
+      parseInt(txFundAppeal.logs[0].args.localDisputeID, 10),
+      questionID,
       'Event Contribution has wrong dispute ID after 2nd funding'
     )
     assert.equal(
@@ -407,8 +404,8 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'Event RulingFunded has not been created'
     )
     assert.equal(
-      txFundAppeal.logs[1].args.localDisputeID.toNumber(),
-      2,
+      parseInt(txFundAppeal.logs[1].args.localDisputeID, 10),
+      questionID,
       'Event RulingFunded has wrong dispute ID'
     )
     assert.equal(
@@ -423,14 +420,14 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     )
 
     await expectRevert(
-      proxy.fundAppeal(2, 533, { from: crowdfunder1, value: 1e18 }),
+      proxy.fundAppeal(questionID, 533, { from: crowdfunder1, value: 1e18 }),
       'Appeal fee has already been paid.'
     )
   })
 
   it('Should correctly create and fund subsequent appeal rounds', async () => {
     let roundInfo
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
@@ -438,24 +435,24 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       from: governor
     })
 
-    await proxy.fundAppeal(2, 14, { from: crowdfunder1, value: 8500 })
-    await proxy.fundAppeal(2, 20, { from: crowdfunder2, value: 5000 }) // Winner appeal fee is 6500 full.
+    await proxy.fundAppeal(questionID, 14, { from: crowdfunder1, value: 8500 })
+    await proxy.fundAppeal(questionID, 20, { from: crowdfunder2, value: 5000 }) // Winner appeal fee is 6500 full.
 
     assert.equal(
-      (await proxy.getNumberOfRounds(2)).toNumber(),
+      (await proxy.getNumberOfRounds(questionID)).toNumber(),
       1,
       'Number of rounds should not increase'
     )
 
-    await proxy.fundAppeal(2, 20, { from: crowdfunder3, value: 1500 })
+    await proxy.fundAppeal(questionID, 20, { from: crowdfunder3, value: 1500 })
 
     assert.equal(
-      (await proxy.getNumberOfRounds(2)).toNumber(),
+      (await proxy.getNumberOfRounds(questionID)).toNumber(),
       2,
       'Number of rounds should increase after two sides are fully funded'
     )
 
-    roundInfo = await proxy.getRoundInfo(2, 0)
+    roundInfo = await proxy.getRoundInfo(questionID, 0)
     assert.equal(
       roundInfo[1].toNumber(),
       10000, // 8500 + 6500 - 5000.
@@ -466,9 +463,9 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       from: governor
     })
     // Fund 0 answer to make sure it's not treated as 0 ruling, which as a winning ruling in this case.
-    await proxy.fundAppeal(2, 0, { from: crowdfunder1, value: 7500 })
+    await proxy.fundAppeal(questionID, 0, { from: crowdfunder1, value: 7500 })
 
-    roundInfo = await proxy.getRoundInfo(2, 1)
+    roundInfo = await proxy.getRoundInfo(questionID, 1)
     assert.equal(
       roundInfo[0][0].toNumber(),
       7500,
@@ -480,8 +477,8 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       '0 answer was not stored correctly'
     )
 
-    await proxy.fundAppeal(2, 100, { from: crowdfunder1, value: 1e18 })
-    roundInfo = await proxy.getRoundInfo(2, 1)
+    await proxy.fundAppeal(questionID, 100, { from: crowdfunder1, value: 1e18 })
+    roundInfo = await proxy.getRoundInfo(questionID, 1)
     assert.equal(
       roundInfo[0][1].toNumber(),
       7500,
@@ -499,13 +496,13 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     )
 
     assert.equal(
-      (await proxy.getNumberOfRounds(2)).toNumber(),
+      (await proxy.getNumberOfRounds(questionID)).toNumber(),
       3,
       'Number of rounds should increase to 3'
     )
 
     // Check that newly created round is empty.
-    roundInfo = await proxy.getRoundInfo(2, 2)
+    roundInfo = await proxy.getRoundInfo(questionID, 2)
     assert.equal(
       roundInfo[1].toNumber(),
       0,
@@ -514,7 +511,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
   })
 
   it('Should not fund the appeal after the timeout', async () => {
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
@@ -526,7 +523,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     // Loser.
     await expectRevert(
-      proxy.fundAppeal(2, 5, { from: crowdfunder1, value: 1e18 }),
+      proxy.fundAppeal(questionID, 5, { from: crowdfunder1, value: 1e18 }),
       'The loser must pay during the first half of the appeal period.'
     )
 
@@ -535,7 +532,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     // Winner.
     await expectRevert(
-      proxy.fundAppeal(2, 440, { from: crowdfunder2, value: 1e18 }),
+      proxy.fundAppeal(questionID, 440, { from: crowdfunder2, value: 1e18 }),
       'Appeal fees must be paid within the appeal period.'
     )
   })
@@ -547,7 +544,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     let newBalance1
     let newBalance2
 
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
@@ -557,21 +554,21 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     // LoserFee = 8500, WinnerFee = 6500. AppealCost = 5000.
     // 0 Round.
-    await proxy.fundAppeal(2, 50, { from: requester, value: 4000 })
-    await proxy.fundAppeal(2, 50, { from: crowdfunder1, value: 1e18 })
+    await proxy.fundAppeal(questionID, 50, { from: requester, value: 4000 })
+    await proxy.fundAppeal(questionID, 50, { from: crowdfunder1, value: 1e18 })
 
-    await proxy.fundAppeal(2, 4, { from: crowdfunder2, value: 6000 })
-    await proxy.fundAppeal(2, 4, { from: crowdfunder1, value: 500 })
+    await proxy.fundAppeal(questionID, 4, { from: crowdfunder2, value: 6000 })
+    await proxy.fundAppeal(questionID, 4, { from: crowdfunder1, value: 500 })
 
     await arbitrator.giveAppealableRuling(2, 5, appealCost, appealTimeOut, {
       from: governor
     })
 
     // 1 Round.
-    await proxy.fundAppeal(2, 44, { from: requester, value: 500 })
-    await proxy.fundAppeal(2, 44, { from: crowdfunder1, value: 8000 })
+    await proxy.fundAppeal(questionID, 44, { from: requester, value: 500 })
+    await proxy.fundAppeal(questionID, 44, { from: crowdfunder1, value: 8000 })
 
-    await proxy.fundAppeal(2, 4, { from: crowdfunder2, value: 20000 })
+    await proxy.fundAppeal(questionID, 4, { from: crowdfunder2, value: 20000 })
 
     await arbitrator.giveAppealableRuling(2, 5, appealCost, appealTimeOut, {
       from: governor
@@ -579,14 +576,16 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     // 2 Round.
     // Partially funded side should be reimbursed.
-    await proxy.fundAppeal(2, 41, { from: requester, value: 8499 })
+    await proxy.fundAppeal(questionID, 41, { from: requester, value: 8499 })
     // Winner doesn't have to fund appeal in this case but let's check if it causes unexpected behaviour.
-    await proxy.fundAppeal(2, 4, { from: crowdfunder2, value: 1e18 })
+    await proxy.fundAppeal(questionID, 4, { from: crowdfunder2, value: 1e18 })
 
     await time.increase(appealTimeOut + 1)
 
     await expectRevert(
-      proxy.withdrawFeesAndRewards(2, requester, 0, 50, { from: governor }),
+      proxy.withdrawFeesAndRewards(questionID, requester, 0, 50, {
+        from: governor
+      }),
       'Dispute not resolved.'
     )
 
@@ -606,20 +605,24 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     oldBalance2 = await web3.eth.getBalance(crowdfunder2)
 
     // Withdraw 0 round.
-    await proxy.withdrawFeesAndRewards(2, requester, 0, 50, { from: governor })
+    await proxy.withdrawFeesAndRewards(questionID, requester, 0, 50, {
+      from: governor
+    })
     newBalance = await web3.eth.getBalance(requester)
     assert(
       new BN(newBalance).eq(new BN(oldBalance)),
       'The balance of the requester should stay the same (withdraw 0 round)'
     )
-    await proxy.withdrawFeesAndRewards(2, requester, 0, 4, { from: governor })
+    await proxy.withdrawFeesAndRewards(questionID, requester, 0, 4, {
+      from: governor
+    })
     newBalance = await web3.eth.getBalance(requester)
     assert(
       new BN(newBalance).eq(new BN(oldBalance)),
       'The balance of the requester should stay the same (withdraw 0 round from winning ruling)'
     )
 
-    await proxy.withdrawFeesAndRewards(2, crowdfunder1, 0, 50, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 0, 50, {
       from: governor
     })
     newBalance1 = await web3.eth.getBalance(crowdfunder1)
@@ -628,7 +631,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'The balance of the crowdfunder1 should stay the same (withdraw 0 round)'
     )
     const txWithdraw = await proxy.withdrawFeesAndRewards(
-      2,
+      questionID,
       crowdfunder1,
       0,
       4,
@@ -649,8 +652,8 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'Event Withdrawal has not been created'
     )
     assert.equal(
-      txWithdraw.logs[0].args.localDisputeID.toNumber(),
-      2,
+      parseInt(txWithdraw.logs[0].args.localDisputeID, 10),
+      questionID,
       'Event Withdrawal has wrong dispute ID'
     )
     assert.equal(
@@ -674,7 +677,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'Event Withdrawal has incorrect reward value'
     )
 
-    await proxy.withdrawFeesAndRewards(2, crowdfunder1, 0, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 0, 4, {
       from: governor
     })
     newBalance1 = await web3.eth.getBalance(crowdfunder1)
@@ -683,7 +686,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'The balance of the crowdfunder1 should stay the same after withdrawing the 2nd time'
     )
 
-    await proxy.withdrawFeesAndRewards(2, crowdfunder2, 0, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder2, 0, 4, {
       from: governor
     })
     newBalance2 = await web3.eth.getBalance(crowdfunder2)
@@ -696,7 +699,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     oldBalance2 = newBalance2
 
     let contributionInfo = await proxy.getContributionsToSuccessfulFundings(
-      2,
+      questionID,
       0,
       crowdfunder1
     )
@@ -706,7 +709,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'Contribution of crowdfunder1 should be 0'
     )
     contributionInfo = await proxy.getContributionsToSuccessfulFundings(
-      2,
+      questionID,
       0,
       crowdfunder2
     )
@@ -717,15 +720,19 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     )
 
     // Withdraw 1 round.
-    await proxy.withdrawFeesAndRewards(2, requester, 1, 4, { from: governor })
-    await proxy.withdrawFeesAndRewards(2, requester, 1, 44, { from: governor })
-    await proxy.withdrawFeesAndRewards(2, crowdfunder1, 1, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, requester, 1, 4, {
       from: governor
     })
-    await proxy.withdrawFeesAndRewards(2, crowdfunder1, 1, 44, {
+    await proxy.withdrawFeesAndRewards(questionID, requester, 1, 44, {
       from: governor
     })
-    await proxy.withdrawFeesAndRewards(2, crowdfunder2, 1, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 1, 4, {
+      from: governor
+    })
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 1, 44, {
+      from: governor
+    })
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder2, 1, 4, {
       from: governor
     })
     newBalance = await web3.eth.getBalance(requester)
@@ -746,7 +753,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'The balance of the crowdfunder2 is incorrect (withdraw 1 round)'
     )
     contributionInfo = await proxy.getContributionsToSuccessfulFundings(
-      2,
+      questionID,
       1,
       crowdfunder2
     )
@@ -758,8 +765,10 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     oldBalance2 = newBalance2
 
     // Withdraw 2 round.
-    await proxy.withdrawFeesAndRewards(2, requester, 2, 41, { from: governor })
-    await proxy.withdrawFeesAndRewards(2, crowdfunder2, 2, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, requester, 2, 41, {
+      from: governor
+    })
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder2, 2, 4, {
       from: governor
     })
     newBalance = await web3.eth.getBalance(requester)
@@ -775,7 +784,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       'The balance of the crowdfunder2 is incorrect (withdraw 2 round)'
     )
     contributionInfo = await proxy.getContributionsToSuccessfulFundings(
-      2,
+      questionID,
       2,
       crowdfunder2
     )
@@ -790,7 +799,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     let oldBalance
     let newBalance
 
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
@@ -799,11 +808,11 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     })
 
     // SharedFee = 7500. AppealCost = 5000.
-    await proxy.fundAppeal(2, 1, { from: requester, value: 5000 })
-    await proxy.fundAppeal(2, 1, { from: crowdfunder1, value: 2500 })
+    await proxy.fundAppeal(questionID, 1, { from: requester, value: 5000 })
+    await proxy.fundAppeal(questionID, 1, { from: crowdfunder1, value: 2500 })
 
-    await proxy.fundAppeal(2, 4, { from: crowdfunder2, value: 1000 })
-    await proxy.fundAppeal(2, 4, { from: crowdfunder1, value: 10000 })
+    await proxy.fundAppeal(questionID, 4, { from: crowdfunder2, value: 1000 })
+    await proxy.fundAppeal(questionID, 4, { from: crowdfunder1, value: 10000 })
 
     await arbitrator.giveAppealableRuling(2, 0, appealCost, appealTimeOut, {
       from: governor
@@ -813,7 +822,9 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     await arbitrator.executeRuling(2, { from: governor })
 
     oldBalance = await web3.eth.getBalance(requester)
-    await proxy.withdrawFeesAndRewards(2, requester, 0, 1, { from: governor })
+    await proxy.withdrawFeesAndRewards(questionID, requester, 0, 1, {
+      from: governor
+    })
     newBalance = await web3.eth.getBalance(requester)
     assert(
       new BN(newBalance).eq(
@@ -823,7 +834,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     )
 
     oldBalance = await web3.eth.getBalance(crowdfunder1)
-    await proxy.withdrawFeesAndRewards(2, crowdfunder1, 0, 1, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 0, 1, {
       from: governor
     })
     newBalance = await web3.eth.getBalance(crowdfunder1)
@@ -835,7 +846,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     )
     oldBalance = newBalance
 
-    await proxy.withdrawFeesAndRewards(2, crowdfunder1, 0, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 0, 4, {
       from: governor
     })
     newBalance = await web3.eth.getBalance(crowdfunder1)
@@ -847,7 +858,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     )
 
     oldBalance = await web3.eth.getBalance(crowdfunder2)
-    await proxy.withdrawFeesAndRewards(2, crowdfunder2, 0, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder2, 0, 4, {
       from: governor
     })
     newBalance = await web3.eth.getBalance(crowdfunder2)
@@ -863,7 +874,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     let oldBalance
     let newBalance
 
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
@@ -872,16 +883,16 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     })
 
     // SharedFee = 7500. AppealCost = 5000.
-    await proxy.fundAppeal(2, 1, { from: requester, value: 5000 })
-    await proxy.fundAppeal(2, 1, { from: crowdfunder1, value: 2500 })
+    await proxy.fundAppeal(questionID, 1, { from: requester, value: 5000 })
+    await proxy.fundAppeal(questionID, 1, { from: crowdfunder1, value: 2500 })
 
     // Not fully funded answers.
-    await proxy.fundAppeal(2, 41, { from: requester, value: 17 })
-    await proxy.fundAppeal(2, 45, { from: requester, value: 22 })
+    await proxy.fundAppeal(questionID, 41, { from: requester, value: 17 })
+    await proxy.fundAppeal(questionID, 45, { from: requester, value: 22 })
     //
 
-    await proxy.fundAppeal(2, 2, { from: requester, value: 1000 })
-    await proxy.fundAppeal(2, 2, { from: crowdfunder1, value: 10000 })
+    await proxy.fundAppeal(questionID, 2, { from: requester, value: 1000 })
+    await proxy.fundAppeal(questionID, 2, { from: crowdfunder1, value: 10000 })
 
     // Final answer was not funded so the behavior should be identical to 0 ruling.
     await arbitrator.giveAppealableRuling(2, 17, appealCost, appealTimeOut, {
@@ -893,7 +904,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     oldBalance = await web3.eth.getBalance(requester)
     await proxy.withdrawFeesAndRewardsForMultipleRulings(
-      2,
+      questionID,
       requester,
       0,
       [1, 2],
@@ -909,7 +920,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     oldBalance = await web3.eth.getBalance(requester)
     await proxy.withdrawFeesAndRewardsForMultipleRulings(
-      2,
+      questionID,
       requester,
       0,
       [41, 45],
@@ -923,7 +934,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     oldBalance = await web3.eth.getBalance(crowdfunder1)
     await proxy.withdrawFeesAndRewardsForMultipleRulings(
-      2,
+      questionID,
       crowdfunder1,
       0,
       [1, 2],
@@ -939,7 +950,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     oldBalance = await web3.eth.getBalance(crowdfunder1)
     await proxy.withdrawFeesAndRewardsForMultipleRulings(
-      2,
+      questionID,
       crowdfunder1,
       0,
       [1, 2],
@@ -956,7 +967,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     let oldBalance
     let newBalance
 
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
@@ -965,28 +976,33 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     })
 
     // SharedFee = 7500. AppealCost = 5000.
-    await proxy.fundAppeal(2, 1, { from: requester, value: 5000 })
-    await proxy.fundAppeal(2, 1, { from: crowdfunder1, value: 2500 })
+    await proxy.fundAppeal(questionID, 1, { from: requester, value: 5000 })
+    await proxy.fundAppeal(questionID, 1, { from: crowdfunder1, value: 2500 })
 
-    await proxy.fundAppeal(2, 2, { from: requester, value: 1000 })
-    await proxy.fundAppeal(2, 2, { from: crowdfunder1, value: 10000 })
+    await proxy.fundAppeal(questionID, 2, { from: requester, value: 1000 })
+    await proxy.fundAppeal(questionID, 2, { from: crowdfunder1, value: 10000 })
 
     // Final answer was not funded so the behavior should be identical to 0 ruling.
     await arbitrator.giveAppealableRuling(2, 0, appealCost, appealTimeOut, {
       from: governor
     })
 
-    await proxy.fundAppeal(2, 41, { from: requester, value: 17 })
-    await proxy.fundAppeal(2, 45, { from: crowdfunder1, value: 22 })
+    await proxy.fundAppeal(questionID, 41, { from: requester, value: 17 })
+    await proxy.fundAppeal(questionID, 45, { from: crowdfunder1, value: 22 })
 
     await time.increase(appealTimeOut + 1)
 
     await arbitrator.executeRuling(2, { from: governor })
 
     oldBalance = await web3.eth.getBalance(requester)
-    await proxy.withdrawFeesAndRewardsForAllRounds(2, requester, [1, 2, 41], {
-      from: governor
-    })
+    await proxy.withdrawFeesAndRewardsForAllRounds(
+      questionID,
+      requester,
+      [1, 2, 41],
+      {
+        from: governor
+      }
+    )
     newBalance = await web3.eth.getBalance(requester)
     assert(
       new BN(newBalance).eq(
@@ -997,7 +1013,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     oldBalance = await web3.eth.getBalance(crowdfunder1)
     await proxy.withdrawFeesAndRewardsForAllRounds(
-      2,
+      questionID,
       crowdfunder1,
       [1, 2, 45],
       { from: governor }
@@ -1012,7 +1028,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
   })
 
   it('Should store correct ruling when dispute had winner/loser', async () => {
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
@@ -1028,7 +1044,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
   })
 
   it('Should store correct ruling when arbitrator refused to rule', async () => {
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
@@ -1040,7 +1056,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
   })
 
   it('Should switch the ruling if the loser paid appeal fees while winner did not', async () => {
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
@@ -1049,7 +1065,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       from: governor
     })
 
-    await proxy.fundAppeal(2, 50, { from: crowdfunder1, value: 1e18 })
+    await proxy.fundAppeal(questionID, 50, { from: crowdfunder1, value: 1e18 })
     await time.increase(appealTimeOut + 1)
     await arbitrator.executeRuling(2, { from: governor })
 
@@ -1059,14 +1075,14 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
   })
 
   it('Should set correct values when answer is reported to Realitio', async () => {
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
 
     const realitioAnswer = await realitio.toBytes(22)
     const badAnswer = await realitio.toBytes(23)
-    const lastHistoryHash = await realitio.getHistoryHash(questionID)
+    const lastHistoryHash = await realitio.getHistoryHash(questionHashed)
     await realitio.addAnswerToHistory(realitioAnswer, answerer, 2000, false)
 
     const currentHash = soliditySha3(
@@ -1077,7 +1093,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       false
     )
     assert.equal(
-      await realitio.getHistoryHash(questionID),
+      await realitio.getHistoryHash(questionHashed),
       currentHash,
       'Realitio hash is incorrect'
     )
@@ -1098,7 +1114,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     await arbitrator.giveAppealableRuling(2, 23, appealCost, appealTimeOut, {
       from: governor
     }) // Arbitrator's ruling matches the answer in this case.
-    await proxy.fundAppeal(2, 81, { from: crowdfunder1, value: 500 })
+    await proxy.fundAppeal(questionID, 81, { from: crowdfunder1, value: 500 })
     await time.increase(appealTimeOut + 1)
     await arbitrator.executeRuling(2, { from: governor })
 
@@ -1193,7 +1209,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     // Check that withdrawal works with the updated status.
     const oldBalance = await web3.eth.getBalance(crowdfunder1)
-    await proxy.withdrawFeesAndRewards(2, crowdfunder1, 0, 81, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 0, 81, {
       from: governor
     })
     newBalance = await web3.eth.getBalance(crowdfunder1)
@@ -1216,7 +1232,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       false
     )
     assert.equal(
-      await realitio.getHistoryHash(questionID),
+      await realitio.getHistoryHash(questionHashed),
       newHash,
       'Realitio hash is incorrect after arbitration'
     )
@@ -1228,13 +1244,13 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
   })
 
   it('Should report answer correctly if Realitio had incorrect answer', async () => {
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
 
     const realitioAnswer = await realitio.toBytes(22)
-    const lastHistoryHash = await realitio.getHistoryHash(questionID)
+    const lastHistoryHash = await realitio.getHistoryHash(questionHashed)
     await realitio.addAnswerToHistory(realitioAnswer, answerer, 2000, false)
 
     const currentHash = soliditySha3(
@@ -1265,20 +1281,20 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       false
     ) // In this case requester gets the reward.
     assert.equal(
-      await realitio.getHistoryHash(questionID),
+      await realitio.getHistoryHash(questionHashed),
       newHash,
       'Realitio hash is incorrect after arbitration (requester wins - incorrect answer)'
     )
   })
 
   it('Should report answer correctly if lastBond = 0', async () => {
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
 
     const realitioAnswer = await realitio.toBytes(22)
-    const lastHistoryHash = await realitio.getHistoryHash(questionID)
+    const lastHistoryHash = await realitio.getHistoryHash(questionHashed)
     await realitio.addAnswerToHistory(realitioAnswer, answerer, 0, false)
 
     const currentHash = soliditySha3(
@@ -1309,20 +1325,20 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       false
     ) // In this case requester gets the reward.
     assert.equal(
-      await realitio.getHistoryHash(questionID),
+      await realitio.getHistoryHash(questionHashed),
       newHash,
       'Realitio hash is incorrect after arbitration (requester wins - last bond = 0)'
     )
   })
 
   it('Should correctly report committed answer', async () => {
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
 
     const commitment = soliditySha3('answer')
-    const lastHistoryHash = await realitio.getHistoryHash(questionID)
+    const lastHistoryHash = await realitio.getHistoryHash(questionHashed)
     await realitio.addAnswerToHistory(commitment, answerer, 2000, true)
 
     const currentHash = soliditySha3(
@@ -1355,20 +1371,20 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       false
     )
     assert.equal(
-      await realitio.getHistoryHash(questionID),
+      await realitio.getHistoryHash(questionHashed),
       newHash,
       'Realitio hash is incorrect after arbitration (commitment)'
     )
   })
 
   it('Should make a correct report if the answer was not revealed', async () => {
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
 
     const commitment = soliditySha3('answer')
-    const lastHistoryHash = await realitio.getHistoryHash(questionID)
+    const lastHistoryHash = await realitio.getHistoryHash(questionHashed)
     await realitio.addAnswerToHistory(commitment, answerer, 2000, true)
 
     const currentHash = soliditySha3(
@@ -1416,7 +1432,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
       false
     )
     assert.equal(
-      await realitio.getHistoryHash(questionID),
+      await realitio.getHistoryHash(questionHashed),
       newHash,
       'Realitio hash is incorrect after arbitration (commitment not revealed)'
     )
@@ -1424,15 +1440,15 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
   it('Should submit evidence and fire the event', async () => {
     await expectRevert(
-      proxy.submitEvidence(2, 'Evidence.json', { from: requester }),
+      proxy.submitEvidence(questionID, 'Evidence.json', { from: requester }),
       'The status should be Disputed.'
     )
-    await proxy.requestArbitration(questionID, 0, {
+    await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost
     })
 
-    txEvidence = await proxy.submitEvidence(2, 'Evidence.json', {
+    txEvidence = await proxy.submitEvidence(questionID, 'Evidence.json', {
       from: requester
     })
 
@@ -1448,7 +1464,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
     )
     assert.equal(
       parseInt(txEvidence.logs[0].args._evidenceGroupID, 10),
-      parseInt(questionID, 16),
+      questionID,
       'Event Evidence has wrong evidence group ID'
     )
     assert.equal(
@@ -1464,7 +1480,7 @@ contract('RealitioArbitratorProxyWithAppeals', function(accounts) {
 
     await arbitrator.giveRuling(2, 15, { from: governor })
     await expectRevert(
-      proxy.submitEvidence(2, 'Evidence.json', { from: requester }),
+      proxy.submitEvidence(questionID, 'Evidence.json', { from: requester }),
       'The status should be Disputed.'
     )
   })
