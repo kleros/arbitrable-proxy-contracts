@@ -114,7 +114,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
      *  @param _realitio The address of the Realitio contract.
      *  @param _sharedMultiplier Multiplier of the appeal cost in the case when there was no winner/loser in the previous round.
      *  @param _winnerMultiplier Multiplier for calculating the appeal cost of the winning answer.
-     *  @param _loserMultiplier Multiplier for calculation the appeal cost of the losing answer..
+     *  @param _loserMultiplier Multiplier for calculation the appeal cost of the losing answer.
      */
     constructor (
         IArbitrator _arbitrator,
