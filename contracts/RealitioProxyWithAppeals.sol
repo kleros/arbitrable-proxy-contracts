@@ -205,8 +205,9 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     /** @dev Takes up to the total amount required to fund an answer. Reimburses the rest. Creates an appeal if at least two answers are funded.
      *  @param _questionID The ID of the question
      *  @param _answer One of the possible rulings the arbitrator can give that the funder considers to be the correct answer to the question.
+     *  @return Whether the answer was fully funded or not.
      */
-    function fundAppeal(uint _questionID, uint _answer) external override payable returns (bool fullyFunded) {
+    function fundAppeal(uint _questionID, uint _answer) external override payable returns (bool) {
         Question storage question = questions[_questionID];
         require(question.status == Status.Disputed, "No dispute to appeal.");
         // The "-1" answer is reserved for "Refuse to arbitrate" in Realitio, thus it can not be funded.
@@ -264,6 +265,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
      *  @param _beneficiary The address that made contributions.
      *  @param _round The round from which to withdraw.
      *  @param _answer The answer the beneficiary contributed to.
+     *  @return reward The withdrawn amount.
      */
     function withdrawFeesAndRewards(uint _questionID, address payable _beneficiary, uint _round, uint _answer) public override returns (uint reward) {
         Question storage question = questions[_questionID];
