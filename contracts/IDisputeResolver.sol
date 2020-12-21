@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-
 /**
  *  @authors: [@ferittuncer]
  *  @reviewers: []
@@ -19,8 +18,9 @@ import "@kleros/erc-792/contracts/IArbitrator.sol";
  *  @title Interface that is implemented on resolve.kleros.io
  *  Sets a standard arbitrable contract implementation to provide a general purpose user interface.
  */
-interface IDisputeResolver is IArbitrable, IEvidence {
+abstract contract IDisputeResolver is IArbitrable, IEvidence {
 
+    string public constant VERSION = '1.0.0';
 
     /** @dev To be raised inside fundAppeal function.
      *  @param localDisputeID The dispute id as in arbitrable contract.
@@ -53,19 +53,19 @@ interface IDisputeResolver is IArbitrable, IEvidence {
      *  @param _externalDisputeID Dispute id as in arbitrator side.
      *  @return localDisputeID Dispute id as in arbitrable contract.
      */
-    function externalIDtoLocalID(uint _externalDisputeID) external returns (uint localDisputeID);
+    function externalIDtoLocalID(uint _externalDisputeID) external virtual returns (uint localDisputeID);
 
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
      *  @param _localDisputeID Dispute id as in arbitrable contract.
      *  @return count The number of ruling options.
      */
-    function numberOfRulingOptions(uint _localDisputeID) external view returns (uint count);
+    function numberOfRulingOptions(uint _localDisputeID) external view virtual returns (uint count);
 
     /** @dev Allows to submit evidence for a given dispute.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _evidenceURI Link to evidence.
      */
-    function submitEvidence(uint _localDisputeID, string calldata _evidenceURI) external;
+    function submitEvidence(uint _localDisputeID, string calldata _evidenceURI) virtual external;
 
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
@@ -73,7 +73,7 @@ interface IDisputeResolver is IArbitrable, IEvidence {
      *  @param _ruling The side to which the caller wants to contribute.
      *  @return fullyFunded True if the ruling option got fully funded as a result of this contribution.
      */
-    function fundAppeal(uint _localDisputeID, uint _ruling) external payable returns (bool fullyFunded);
+    function fundAppeal(uint _localDisputeID, uint _ruling) external payable virtual returns (bool fullyFunded);
 
     /** @dev Returns stake multipliers.
      *  @return winner Winners stake multiplier.
@@ -81,7 +81,7 @@ interface IDisputeResolver is IArbitrable, IEvidence {
      *  @return shared Multiplier when it's tied.
      *  @return divisor Multiplier divisor.
      */
-    function getMultipliers() external view returns(uint winner, uint loser, uint shared, uint divisor);
+    function getMultipliers() external view virtual returns(uint winner, uint loser, uint shared, uint divisor);
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
      *  @param _localDisputeID Index of the dispute in disputes array.
@@ -90,7 +90,7 @@ interface IDisputeResolver is IArbitrable, IEvidence {
      *  @param _ruling A ruling option that the caller wants to withdraw fees and rewards related to it.
      *  @return reward The reward that is going to be paid as a result of this function call, if it's not zero.
      */
-    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) external returns (uint reward);
+    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) external virtual returns (uint reward);
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved. For multiple ruling options at once.
      *  @param _localDisputeID Index of the dispute in disputes array.
@@ -98,7 +98,7 @@ interface IDisputeResolver is IArbitrable, IEvidence {
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
-    function withdrawFeesAndRewardsForMultipleRulings(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint[] memory _contributedTo) external;
+    function withdrawFeesAndRewardsForMultipleRulings(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint[] memory _contributedTo) external virtual;
 
 
     /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.
@@ -106,6 +106,6 @@ interface IDisputeResolver is IArbitrable, IEvidence {
      *  @param _contributor The address to withdraw its rewards.
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
-    function withdrawFeesAndRewardsForAllRounds(uint _localDisputeID, address payable _contributor, uint[] memory _contributedTo) external;
+    function withdrawFeesAndRewardsForAllRounds(uint _localDisputeID, address payable _contributor, uint[] memory _contributedTo) external virtual;
 
 }

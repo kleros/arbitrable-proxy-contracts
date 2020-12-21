@@ -19,8 +19,6 @@ import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
  */
 contract ArbitrableProxy is IDisputeResolver {
 
-    string public constant VERSION = '1.0.0'; // Non functional, might be usable for interfaces.
-
     using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
 
     uint public constant MAX_NO_OF_CHOICES = (2 ** 256) - 1;
