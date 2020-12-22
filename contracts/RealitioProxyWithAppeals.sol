@@ -74,7 +74,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         address disputer; // The address that requested the arbitration.
         Status status; // The current status of the question.
         uint disputeID; // The ID of the dispute raised in the arbitrator contract.
-        bytes32 answer; // The answer given by the arbitrator converted to bytes32.
+        uint answer; // The answer given by the arbitrator with "-1" offset to match Realitio format.
         Round[] rounds; // Tracks each appeal round of a dispute.
     }
 
@@ -95,7 +95,6 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     uint public metaEvidenceUpdates; // The number of times the meta evidence has been updated. Used to track the latest meta evidence ID.
 
     // Multipliers are in basis points.
-    uint64 private sharedMultiplier; // Multiplier for calculating the appeal fee that must be paid in the case where there is no winner/loser (e.g. when the arbitrator refused to rule).
     uint64 private winnerMultiplier; // Multiplier for calculating the appeal fee that must be paid for the answer that was chosen by the arbitrator in the previous round.
     uint64 private loserMultiplier; // Multiplier for calculating the appeal fee that must be paid for the answer that the arbitrator didn't rule for in the previous round.
 
@@ -112,7 +111,6 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
      *  @param _arbitrator The address of the ERC792 arbitrator.
      *  @param _arbitratorExtraData The extra data used to raise a dispute in the ERC792 arbitrator.
      *  @param _realitio The address of the Realitio contract.
-     *  @param _sharedMultiplier Multiplier of the appeal cost in the case when there was no winner/loser in the previous round.
      *  @param _winnerMultiplier Multiplier for calculating the appeal cost of the winning answer.
      *  @param _loserMultiplier Multiplier for calculation the appeal cost of the losing answer.
      */
@@ -120,7 +118,6 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         IArbitrator _arbitrator,
         bytes memory _arbitratorExtraData,
         RealitioInterface _realitio,
-        uint64 _sharedMultiplier,
         uint64 _winnerMultiplier,
         uint64 _loserMultiplier
     ) public {
@@ -129,7 +126,6 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         deployer = msg.sender;
         governor = msg.sender;
         realitio = _realitio;
-        sharedMultiplier = _sharedMultiplier;
         winnerMultiplier = _winnerMultiplier;
         loserMultiplier = _loserMultiplier;
     }
@@ -143,13 +139,6 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         require(msg.sender == deployer, "The caller must be the deployer.");
         deployer = address(0);
         emit MetaEvidence(0, _metaEvidence);
-    }
-
-    /** @dev Changes the proportion of appeal fees that must be paid when there is no winner or loser.
-     *  @param _sharedMultiplier The new shared multiplier value in basis points.
-     */
-    function changeSharedMultiplier(uint64 _sharedMultiplier) external onlyGovernor {
-        sharedMultiplier = _sharedMultiplier;
     }
 
     /** @dev Changes the proportion of appeal fees that must be added to appeal cost for the winning party.
@@ -210,8 +199,6 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     function fundAppeal(uint _questionID, uint _answer) external override payable returns (bool) {
         Question storage question = questions[_questionID];
         require(question.status == Status.Disputed, "No dispute to appeal.");
-        // The "-1" answer is reserved for "Refuse to arbitrate" in Realitio, thus it can not be funded.
-        require(_answer != uint(-1), "The answer is out of bounds.");
         (uint appealPeriodStart, uint appealPeriodEnd) = arbitrator.appealPeriod(question.disputeID);
         require(
             block.timestamp >= appealPeriodStart && block.timestamp < appealPeriodEnd,
@@ -223,8 +210,6 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         uint multiplier;
         if (winner == _answer + 1) {
             multiplier = winnerMultiplier;
-        } else if (winner == 0) {
-            multiplier = sharedMultiplier;
         } else {
             require(block.timestamp-appealPeriodStart < (appealPeriodEnd-appealPeriodStart)/2, "The loser must pay during the first half of the appeal period.");
             multiplier = loserMultiplier;
@@ -271,16 +256,16 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         Question storage question = questions[_questionID];
         Round storage round = question.rounds[_round];
         require(question.status > Status.Disputed, "Dispute not resolved");
-        uint finalAnswer = uint(question.answer);
         // Allow to reimburse if funding of the round was unsuccessful.
         if (!round.hasPaid[_answer]) {
             reward = round.contributions[_beneficiary][_answer];
-        } else if (finalAnswer == 0 || !round.hasPaid[finalAnswer]) {
-            // Reimburse unspent fees proportionally if there is no winner and loser. Also applies to the situation where the ultimate winner didn't pay appeal fees fully.
+        } else if (!round.hasPaid[question.answer]) {
+            // Reimburse unspent fees proportionally if the ultimate winner didn't pay appeal fees fully.
+            // Note that if only one side is funded it will become a winner and this part of the condition won't be reached.
             reward = round.fundedAnswers.length > 1
                 ? (round.contributions[_beneficiary][_answer] * round.feeRewards) / (round.paidFees[round.fundedAnswers[0]] + round.paidFees[round.fundedAnswers[1]])
                 : 0;
-        } else if (finalAnswer == _answer) {
+        } else if (question.answer == _answer) {
             // Reward the winner.
             reward = round.paidFees[_answer] > 0
                 ? (round.contributions[_beneficiary][_answer] * round.feeRewards) / round.paidFees[_answer]
@@ -320,7 +305,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     /** @dev Reports the answer to a specified question from the ERC792 arbitrator to the Realitio contract.
      *  @param _questionID The ID of the question.
      *  @param _lastHistoryHash The history hash given with the last answer to the question in the Realitio contract.
-     *  @param _lastAnswerOrCommitmentID The last answer given, or its commitment ID if it was a commitment, to the question in the Realitio contract.
+     *  @param _lastAnswerOrCommitmentID The last answer given, or its commitment ID if it was a commitment, to the question in the Realitio contract, in bytes32.
      *  @param _lastBond The bond paid for the last answer to the question in the Realitio contract.
      *  @param _lastAnswerer The last answerer to the question in the Realitio contract.
      *  @param _isCommitment Whether the last answer to the question in the Realitio contract used commit or reveal or not. True if it did, false otherwise.
@@ -344,7 +329,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
 
         realitio.submitAnswerByArbitrator(
             bytes32(_questionID),
-            question.answer,
+            bytes32(question.answer),
             computeWinner(_questionID, _lastAnswerOrCommitmentID, _lastBond, _lastAnswerer, _isCommitment)
         );
     }
@@ -386,11 +371,11 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     /** @dev Returns stake multipliers.
      *  @return winner Winners stake multiplier.
      *  @return loser Losers stake multiplier.
-     *  @return shared Multiplier when it's a tie.
+     *  @return shared Multiplier when it's a tie. Is not used in this contract.
      *  @return divisor Multiplier divisor.
      */
     function getMultipliers() external override view returns(uint winner, uint loser, uint shared, uint divisor){
-        return (winnerMultiplier, loserMultiplier, sharedMultiplier, MULTIPLIER_DIVISOR);
+        return (winnerMultiplier, loserMultiplier, 0, MULTIPLIER_DIVISOR);
     }
 
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
@@ -481,7 +466,8 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
      */
     function executeRuling(uint _questionID, uint _ruling) internal {
         Question storage question = questions[_questionID];
-        question.answer = bytes32(_ruling == 0 ? uint(-1) : _ruling - 1);
+        // Realitio ruling is shifted by 1 compared to Kleros.
+        question.answer = _ruling - 1;
         question.status = Status.Ruled;
     }
 
@@ -520,6 +506,6 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
             lastAnswer = _lastAnswerOrCommitmentID;
             isAnswered = true;
         }
-        return isAnswered && lastAnswer == question.answer ? _lastAnswerer : question.disputer;
+        return isAnswered && lastAnswer == bytes32(question.answer) ? _lastAnswerer : question.disputer;
     }
 }
