@@ -260,6 +260,24 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         return round.hasPaid[_answer];
     }
 
+    /** @dev Retrieves appeal period for each ruling. It extends the function with the same name on the arbitrator side by adding
+     *  _ruling parameter because in practice we don't give losers of previous round as much time as the winner.
+     *  @param _questionID The ID of the question
+     *  @param _ruling The ruling option which the caller wants to learn about its appeal period.
+     */
+    function appealPeriod(uint _questionID, uint _ruling) public override view returns (uint start, uint end){
+        Question storage question = questions[_questionID];
+
+        uint winner = arbitrator.currentRuling(question.disputeID);
+
+        (uint originalStart, uint originalEnd) = arbitrator.appealPeriod(question.disputeID);
+
+        if(winner == _ruling)
+            return (originalStart, originalEnd);
+        else return (originalStart, (originalStart + originalEnd)/2);
+    }
+
+
     /** @dev Sends the fee stake rewards and reimbursements proportional to the contributions made to the winner of a dispute. Reimburses contributions if there is no winner.
      *  @param _questionID The ID of the question.
      *  @param _beneficiary The address that made contributions.

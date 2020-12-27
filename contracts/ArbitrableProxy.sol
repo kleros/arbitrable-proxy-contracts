@@ -2,7 +2,7 @@
 
 /**
  *  @authors: [@ferittuncer]
- *  @reviewers: [@fnanni-0, @unknownunknown1]
+ *  @reviewers: [@fnanni-0*, @unknownunknown1*]
  *  @auditors: []
  *  @bounties: []
  *  @deployments: []
@@ -161,6 +161,23 @@ contract ArbitrableProxy is IDisputeResolver {
         msg.sender.transfer(msg.value.subCap(contribution)); // Sending extra value back to contributor.
 
         return lastRound.hasPaid[_ruling];
+    }
+
+    /** @dev Retrieves appeal period for each ruling. It extends the function with the same name on the arbitrator side by adding
+     *  _ruling parameter because in practice we don't give losers of previous round as much time as the winner.
+     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _ruling The ruling option which the caller wants to learn about its appeal period.
+     */
+    function appealPeriod(uint _localDisputeID, uint _ruling) public override view returns (uint start, uint end){
+        DisputeStruct storage dispute = disputes[_localDisputeID];
+
+        uint winner = arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide);
+
+        (uint originalStart, uint originalEnd) = arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
+
+        if(winner == _ruling)
+            return (originalStart, originalEnd);
+        else return (originalStart, (originalStart + originalEnd)/2);
     }
 
 

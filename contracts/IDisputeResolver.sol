@@ -70,10 +70,18 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
      *  @param _localDisputeID Index of the dispute in disputes array.
-     *  @param _ruling The side to which the caller wants to contribute.
+     *  @param _ruling The ruling option to which the caller wants to contribute.
      *  @return fullyFunded True if the ruling option got fully funded as a result of this contribution.
      */
     function fundAppeal(uint _localDisputeID, uint _ruling) external payable virtual returns (bool fullyFunded);
+
+
+    /** @dev Retrieves appeal period for each ruling. It extends the function with the same name on the arbitrator side by adding
+     *  _ruling parameter because in practice we don't give losers of previous round as much time as the winner.
+     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _ruling The ruling option which the caller wants to learn about its appeal period.
+     */
+     function appealPeriod(uint _localDisputeID, uint _ruling) public view virtual returns (uint, uint);
 
     /** @dev Returns stake multipliers.
      *  @return winner Winners stake multiplier.
@@ -107,5 +115,8 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForAllRounds(uint _localDisputeID, address payable _contributor, uint[] memory _contributedTo) external virtual;
+
+
+
 
 }
