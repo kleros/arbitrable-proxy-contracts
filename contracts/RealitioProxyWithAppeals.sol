@@ -320,6 +320,12 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         }
     }
 
+    /** @dev Returns the sum of withdrawable amount. TO DO
+     */
+    function getTotalWithdrawableAmount(uint, address payable, uint[] memory) public override view returns (uint256){
+        return 0;
+    }
+
     /** @dev Reports the answer to a specified question from the ERC792 arbitrator to the Realitio contract.
      *  @param _questionID The ID of the question.
      *  @param _lastHistoryHash The history hash given with the last answer to the question in the Realitio contract.

@@ -19,9 +19,9 @@ import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
  */
 contract ArbitrableProxy is IDisputeResolver {
 
-    using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
+    using CappedMath for uint; // Operations bounded between 0 and 2**256 - 2. Note the 0 is reserver for invalid / refused to rule.
 
-    uint public constant MAX_NO_OF_CHOICES = (2 ** 256) - 1;
+    uint public constant MAX_NO_OF_CHOICES = (2 ** 256) - 2;
 
     struct Round {
         mapping(uint => uint) paidFees; // Tracks the fees paid for each ruling option in this round.
@@ -186,9 +186,9 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _ruling The ruling option that the caller wants to withdraw fees and rewards related to it.
-     *  @return reward Reward amount that is to be withdrawn. Might be zero if arguments are not qualifying for a reward or reimbursement, or it might be withdrawn already.
+     *  @return sum Reward amount that is to be withdrawn. Might be zero if arguments are not qualifying for a reward or reimbursement, or it might be withdrawn already.
      */
-    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) public override returns (uint reward) {
+    function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) public override returns (uint sum) {
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         Round storage round = disputeIDtoRoundArray[_localDisputeID][_roundNumber];
@@ -198,24 +198,24 @@ contract ArbitrableProxy is IDisputeResolver {
 
         if (!round.hasPaid[_ruling]) {
             // Allow to reimburse if funding was unsuccessful.
-            reward = round.contributions[_contributor][_ruling];
+            sum = round.contributions[_contributor][_ruling];
 
         } else if (finalRuling == 0 || !round.hasPaid[finalRuling]) {
             // Reimburse unspent fees proportionally if there is no winner and loser.
-            reward = round.fundedRulings.length > 1 // Means appeal took place.
+            sum = round.fundedRulings.length > 1 // Means appeal took place.
                 ? (round.contributions[_contributor][_ruling] * round.feeRewards) / (round.paidFees[round.fundedRulings[0]] + round.paidFees[round.fundedRulings[1]])
                 : 0;
         } else if(_ruling == finalRuling) {
             // Reward the winner.
-            reward = round.paidFees[_ruling] > 0
+            sum = round.paidFees[_ruling] > 0
                 ? (round.contributions[_contributor][_ruling] * round.feeRewards) / round.paidFees[_ruling]
                 : 0;
         }
 
-        if(reward != 0) {
+        if(sum != 0) {
             round.contributions[_contributor][_ruling] = 0;
-            _contributor.send(reward); // User is responsible for accepting the reward.
-            emit Withdrawal(_localDisputeID, _roundNumber, _ruling, _contributor, reward);
+            _contributor.send(sum); // User is responsible for accepting the reward.
+            emit Withdrawal(_localDisputeID, _roundNumber, _ruling, _contributor, sum);
         }
     }
 
@@ -237,10 +237,50 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForAllRounds(uint _localDisputeID, address payable _contributor, uint[] memory _contributedTo) external override {
-      uint8 noOfRounds = uint8(disputeIDtoRoundArray[_localDisputeID].length);
+      uint noOfRounds = disputeIDtoRoundArray[_localDisputeID].length;
         for (uint roundNumber = 0; roundNumber < noOfRounds; roundNumber++) {
             withdrawFeesAndRewardsForMultipleRulings(_localDisputeID, _contributor, roundNumber, _contributedTo);
         }
+    }
+
+
+    /** @dev Returns the sum of withdrawable amount. Although it's a nested loop, total iterations will be almost always less than 10. (Max number of rounds is 7 and it's very unlikely to have a contributor to contribute to more than 1 ruling option per round). Alternatively you can use Contribution events to calculate this off-chain.
+     *  @param _localDisputeID The ID of the associated question.
+     *  @param _contributor The contributor for which to query.
+     *  @param _contributedTo The array which includes ruling options to search for potential withdrawal. Caller can obtain this information using Contribution events.
+     *  @return sum The total amount available to withdraw.
+     */
+    function getTotalWithdrawableAmount(uint _localDisputeID, address payable _contributor, uint[] memory _contributedTo) public override view returns (uint sum) {
+      uint noOfRounds = disputeIDtoRoundArray[_localDisputeID].length;
+      for (uint roundNumber = 0; roundNumber < noOfRounds; roundNumber++) {
+        for (uint contributionNumber = 0; contributionNumber < _contributedTo.length; contributionNumber++) {
+
+          DisputeStruct storage dispute = disputes[_localDisputeID];
+
+          Round storage round = disputeIDtoRoundArray[_localDisputeID][roundNumber];
+          uint finalRuling = dispute.ruling;
+          uint ruling = _contributedTo[contributionNumber];
+          require(dispute.isRuled, "The dispute should be solved");
+
+          if (!round.hasPaid[ruling]) {
+              // Allow to reimburse if funding was unsuccessful.
+              sum = round.contributions[_contributor][ruling];
+
+          } else if (finalRuling == 0 || !round.hasPaid[finalRuling]) {
+              // Reimburse unspent fees proportionally if there is no winner and loser.
+              sum = round.fundedRulings.length > 1 // Means appeal took place.
+                  ? (round.contributions[_contributor][ruling] * round.feeRewards) / (round.paidFees[round.fundedRulings[0]] + round.paidFees[round.fundedRulings[1]])
+                  : 0;
+          } else if(ruling == finalRuling) {
+              // Reward the winner.
+              sum = round.paidFees[ruling] > 0
+                  ? (round.contributions[_contributor][ruling] * round.feeRewards) / round.paidFees[ruling]
+                  : 0;
+          }
+
+          return sum;
+        }
+      }
     }
 
     /** @dev To be called by the arbitrator of the dispute, to declare winning ruling.
@@ -312,14 +352,6 @@ contract ArbitrableProxy is IDisputeResolver {
       return (winnerStakeMultiplier, loserStakeMultiplier, sharedStakeMultiplier, MULTIPLIER_DIVISOR);
     }
 
-    /** @dev Proxy getter for arbitration cost.
-     *  @param  _arbitratorExtraData Extra data for arbitration cost calculation. See arbitrator for details.
-     *  @return arbitrationFee Arbitration cost of the arbitrator of this contract.
-     */
-    function getArbitrationCost(bytes calldata _arbitratorExtraData) external view returns (uint arbitrationFee) {
-        arbitrationFee = arbitrator.arbitrationCost(_arbitratorExtraData);
-    }
-
     /** @dev Gets the information of a round of a dispute.
      *  @param _localDisputeID ID of the dispute.
      *  @param _round The round to be queried.
@@ -378,8 +410,6 @@ contract ArbitrableProxy is IDisputeResolver {
             contributions[i] = round.contributions[_contributor][fundedRulings[i]];
         }
     }
-
-
 
 
     /** @dev Returns active disputes.

@@ -17,7 +17,7 @@
     "ganache-cli": "^6.7.0",
     "surya": "^0.4.0",
     "truffle": "^5.1.17",
-    "truffle-plugin-verify": "^0.3.2"
+    "truffle-plugin-verify": "^0.5.4"
   },
   "dependencies": {
     "@kleros/erc-792": "7.0.0",
