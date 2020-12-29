@@ -112,7 +112,7 @@ contract ArbitrableProxy is IDisputeResolver {
      */
     function fundAppeal(uint _localDisputeID, uint _ruling) external override payable returns (bool fullyFunded){
         DisputeStruct storage dispute = disputes[_localDisputeID];
-        require(_ruling <= dispute.numberOfChoices && _ruling != 0, "There is no such ruling to fund.");
+        require(_ruling <= dispute.numberOfChoices, "There is no such ruling to fund.");
 
         (uint appealPeriodStart, uint appealPeriodEnd) = arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
         require(block.timestamp >= appealPeriodStart && block.timestamp < appealPeriodEnd, "Funding must be made within the appeal period.");

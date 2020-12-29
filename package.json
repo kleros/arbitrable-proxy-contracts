@@ -25,7 +25,8 @@
     "@openzeppelin/contracts": "^2.4.0"
   },
   "scripts": {
-    "prepare": "truffle compile"
+    "prepare": "truffle compile",
+    "deploy": "truffle migrate --reset --network $NETWORK && truffle run verify ArbitrableProxy --network $NETWORK"
   },
   "files": [
     "build",
