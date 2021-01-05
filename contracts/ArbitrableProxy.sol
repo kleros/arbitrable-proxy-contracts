@@ -58,7 +58,7 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _loserStakeMultiplier Multiplier of the arbitration cost that the loser has to pay as fee stake for a round in basis points.
      *  @param _sharedStakeMultiplier Multiplier for calculating the fee stake that must be paid in the case where there isn't a winner and loser in basis points.
      */
-    constructor(IArbitrator _arbitrator, uint _winnerStakeMultiplier, uint _loserStakeMultiplier, uint _sharedStakeMultiplier) public {
+    constructor(IArbitrator _arbitrator, uint _winnerStakeMultiplier, uint _loserStakeMultiplier, uint _sharedStakeMultiplier) {
         arbitrator = _arbitrator;
         winnerStakeMultiplier = _winnerStakeMultiplier;
         loserStakeMultiplier = _loserStakeMultiplier;
@@ -103,7 +103,6 @@ contract ArbitrableProxy is IDisputeResolver {
         count = disputes[_localDisputeID].numberOfChoices;
     }
 
-
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
      *  @param _localDisputeID Index of the dispute in disputes array.
@@ -114,23 +113,10 @@ contract ArbitrableProxy is IDisputeResolver {
         DisputeStruct storage dispute = disputes[_localDisputeID];
         require(_ruling <= dispute.numberOfChoices, "There is no such ruling to fund.");
 
-        (uint appealPeriodStart, uint appealPeriodEnd) = arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
+        (uint appealPeriodStart, uint appealPeriodEnd) = appealPeriod(_localDisputeID, _ruling);
         require(block.timestamp >= appealPeriodStart && block.timestamp < appealPeriodEnd, "Funding must be made within the appeal period.");
 
-        uint winner = arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide);
-        uint multiplier;
-
-        if (winner == _ruling){
-            multiplier = winnerStakeMultiplier;
-        } else if (winner == 0){
-            multiplier = sharedStakeMultiplier;
-        } else {
-            multiplier = loserStakeMultiplier;
-            require(block.timestamp-appealPeriodStart < (appealPeriodEnd-appealPeriodStart)/2, "The loser must contribute during the first half of the appeal period.");
-        }
-
-        uint appealCost = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
-        uint totalCost = appealCost.addCap(appealCost.mulCap(multiplier) / MULTIPLIER_DIVISOR);
+        uint totalCost = appealCost(_localDisputeID, _ruling);
 
         Round[] storage rounds = disputeIDtoRoundArray[_localDisputeID];
         Round storage lastRound = rounds[rounds.length - 1];
@@ -150,12 +136,14 @@ contract ArbitrableProxy is IDisputeResolver {
             emit RulingFunded(_localDisputeID, rounds.length - 1, _ruling);
         }
 
+        uint appealFee = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+
         if (lastRound.fundedRulings.length > 1) {
             // At least two sides are fully funded.
             rounds.push();
 
-            lastRound.feeRewards = lastRound.feeRewards.subCap(appealCost);
-            arbitrator.appeal{value: appealCost}(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+            lastRound.feeRewards = lastRound.feeRewards.subCap(appealFee);
+            arbitrator.appeal{value: appealFee}(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
 
         msg.sender.transfer(msg.value.subCap(contribution)); // Sending extra value back to contributor.
@@ -175,9 +163,32 @@ contract ArbitrableProxy is IDisputeResolver {
 
         (uint originalStart, uint originalEnd) = arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
 
-        if(winner == _ruling)
-            return (originalStart, originalEnd);
+        if(winner == _ruling) return (originalStart, originalEnd);
         else return (originalStart, (originalStart + originalEnd)/2);
+    }
+
+
+    /** @dev Retrieves appeal cost for each ruling. It extends the function with the same name on the arbitrator side by adding
+     *  _ruling parameter because total to be raised depends on multipliers.
+     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _ruling The ruling option which the caller wants to learn about its appeal cost.
+     */
+    function appealCost(uint _localDisputeID, uint _ruling) public override view returns (uint){
+        DisputeStruct storage dispute = disputes[_localDisputeID];
+
+        uint winner = arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide);
+        uint multiplier;
+
+        if (winner == _ruling){
+            multiplier = winnerStakeMultiplier;
+        } else if (winner == 0){
+            multiplier = sharedStakeMultiplier;
+        } else {
+            multiplier = loserStakeMultiplier;
+        }
+
+        uint appealFee = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+        return appealFee.addCap(appealFee.mulCap(multiplier) / MULTIPLIER_DIVISOR);
     }
 
 
@@ -243,7 +254,6 @@ contract ArbitrableProxy is IDisputeResolver {
         }
     }
 
-
     /** @dev Returns the sum of withdrawable amount. Although it's a nested loop, total iterations will be almost always less than 10. (Max number of rounds is 7 and it's very unlikely to have a contributor to contribute to more than 1 ruling option per round). Alternatively you can use Contribution events to calculate this off-chain.
      *  @param _localDisputeID The ID of the associated question.
      *  @param _contributor The contributor for which to query.
@@ -278,9 +288,9 @@ contract ArbitrableProxy is IDisputeResolver {
                   : 0;
           }
 
-          return sum;
         }
       }
+      return sum;
     }
 
     /** @dev To be called by the arbitrator of the dispute, to declare winning ruling.
@@ -388,7 +398,6 @@ contract ArbitrableProxy is IDisputeResolver {
         fullyFunded = round.hasPaid[_rulingOption];
     }
 
-
     /** @dev Gets contributions to ruling options that are fully funded.
      *  @param _localDisputeID ID of the dispute.
      *  @param _round The round to be queried.
@@ -411,7 +420,6 @@ contract ArbitrableProxy is IDisputeResolver {
         }
     }
 
-
     /** @dev Returns active disputes.
      *  @param _cursor Starting point for search.
      *  @param _count Number of items to return.
@@ -421,7 +429,8 @@ contract ArbitrableProxy is IDisputeResolver {
     function getOpenDisputes(uint _cursor, uint _count) external view returns (uint[] memory openDisputes, bool hasMore)
     {
         uint noOfOpenDisputes = 0;
-        for (uint i = _cursor; i < disputes.length && (noOfOpenDisputes < _count || _count == 0); i++) {
+        uint i;
+        for (i = _cursor; i < disputes.length && (noOfOpenDisputes < _count || _count == 0); i++) {
             if(disputes[i].isRuled == false){
                 noOfOpenDisputes++;
             }
@@ -430,7 +439,6 @@ contract ArbitrableProxy is IDisputeResolver {
 
         uint count = 0;
         hasMore = true;
-        uint i;
         for (i = _cursor; i < disputes.length && (count < _count || _count == 0); i++) {
             if(disputes[i].isRuled == false){
                 openDisputes[count++] = disputes[i].disputeIDOnArbitratorSide;

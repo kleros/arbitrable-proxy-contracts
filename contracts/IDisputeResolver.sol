@@ -31,6 +31,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      */
     event Contribution(uint indexed localDisputeID, uint indexed round, uint ruling, address indexed contributor, uint amount);
 
+
     /** @dev Raised when a contributor withdraws non-zero value.
      *  @param localDisputeID The dispute id as in arbitrable contract.
      *  @param round The round number the withdrawal was made from.
@@ -40,6 +41,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      */
     event Withdrawal(uint indexed localDisputeID, uint indexed round, uint ruling, address indexed contributor, uint reward);
 
+
     /** @dev To be raised when a ruling option is fully funded for appeal.
      *  @param localDisputeID The dispute id as in arbitrable contract.
      *  @param round Round code of the appeal. Starts from 0.
@@ -47,11 +49,13 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      */
     event RulingFunded(uint indexed localDisputeID, uint indexed round, uint indexed ruling);
 
+
     /** @dev Maps external (arbitrator side) dispute id to local (arbitrable) dispute id. This is necessary to obtain local dispute data by arbitrators id.
      *  @param _externalDisputeID Dispute id as in arbitrator side.
      *  @return localDisputeID Dispute id as in arbitrable contract.
      */
     function externalIDtoLocalID(uint _externalDisputeID) external virtual returns (uint localDisputeID);
+
 
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
      *  @param _localDisputeID Dispute id as in arbitrable contract.
@@ -59,11 +63,13 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      */
     function numberOfRulingOptions(uint _localDisputeID) external view virtual returns (uint count);
 
+
     /** @dev Allows to submit evidence for a given dispute.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _evidenceURI Link to evidence.
      */
     function submitEvidence(uint _localDisputeID, string calldata _evidenceURI) virtual external;
+
 
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
@@ -73,12 +79,22 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      */
     function fundAppeal(uint _localDisputeID, uint _ruling) external payable virtual returns (bool fullyFunded);
 
+
     /** @dev Retrieves appeal period for each ruling. It extends the function with the same name on the arbitrator side by adding
      *  _ruling parameter because in practice we don't give losers of previous round as much time as the winner.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _ruling The ruling option which the caller wants to learn about its appeal period.
      */
      function appealPeriod(uint _localDisputeID, uint _ruling) public view virtual returns (uint start, uint end);
+
+
+    /** @dev Retrieves appeal cost for each ruling. It extends the function with the same name on the arbitrator side by adding
+     *  _ruling parameter because total to be raised depends on multipliers.
+     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _ruling The ruling option which the caller wants to learn about its appeal cost.
+     */
+    function appealCost(uint _localDisputeID, uint _ruling) public view virtual returns (uint);
+
 
     /** @dev Returns stake multipliers.
      *  @return winner Winners stake multiplier.
@@ -88,6 +104,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      */
     function getMultipliers() external view virtual returns(uint winner, uint loser, uint shared, uint divisor);
 
+
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
@@ -96,6 +113,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      *  @return sum The reward that is going to be paid as a result of this function call, if it's not zero.
      */
     function withdrawFeesAndRewards(uint _localDisputeID, address payable _contributor, uint _roundNumber, uint _ruling) external virtual returns (uint sum);
+
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved. For multiple ruling options at once.
      *  @param _localDisputeID Index of the dispute in disputes array.

@@ -263,6 +263,13 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     }
 
 
+    /** @dev TODO
+     */
+    function appealCost(uint _localDisputeID, uint _ruling) public override view returns (uint){
+      return 0;
+    }
+
+
     /** @dev Sends the fee stake rewards and reimbursements proportional to the contributions made to the winner of a dispute. Reimburses contributions if there is no winner.
      *  @param _questionID The ID of the question.
      *  @param _beneficiary The address that made contributions.
