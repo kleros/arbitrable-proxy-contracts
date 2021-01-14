@@ -20,7 +20,7 @@ contract(
   ([sender, receiver, thirdParty, fourthParty, fifthParty]) => {
     before(async function() {
       this.aaa = await AutoAppealableArbitrator.new(1000000000);
-      this.bap = await BAP.new(this.aaa.address, 10000, 20000, 10000);
+      this.bap = await BAP.new(this.aaa.address);
     });
 
     it("creates a dispute", async function() {
@@ -67,7 +67,7 @@ contract(
       /* Appeal fully funded */
 
       const multipliers = await this.bap.getMultipliers();
-      console.log(multipliers);
+      assert(multipliers[1] != 0);
 
       assert(new BN("0").eq((await this.aaa.disputes(0)).status));
     });
@@ -75,8 +75,6 @@ contract(
     it("batch withdraws fees and rewards", async function() {
       await this.aaa.giveRuling(0, 1);
       console.log((await this.bap.disputes(0)).ruling.words[0]);
-      console.log("here");
-      console.log(await this.bap.getRoundInfo(0, 2));
 
       let previousBalanceOfThirdParty = await web3.eth.getBalance(thirdParty);
       let previousBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
@@ -84,8 +82,6 @@ contract(
       await this.bap.withdrawFeesAndRewardsForAllRounds(0, fourthParty, [1, 2]);
       let currentBalanceOfThirdParty = await web3.eth.getBalance(thirdParty);
       let currentBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
-      console.log(previousBalanceOfThirdParty);
-      console.log(currentBalanceOfThirdParty);
 
       assert(
         new BN(currentBalanceOfFourthParty).eq(

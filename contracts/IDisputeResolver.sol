@@ -80,29 +80,13 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
     function fundAppeal(uint _localDisputeID, uint _ruling) external payable virtual returns (bool fullyFunded);
 
 
-    /** @dev Retrieves appeal period for each ruling. It extends the function with the same name on the arbitrator side by adding
-     *  _ruling parameter because in practice we don't give losers of previous round as much time as the winner.
-     *  @param _localDisputeID Index of the dispute in disputes array.
-     *  @param _ruling The ruling option which the caller wants to learn about its appeal period.
-     */
-     function appealPeriod(uint _localDisputeID, uint _ruling) public view virtual returns (uint start, uint end);
-
-
-    /** @dev Retrieves appeal cost for each ruling. It extends the function with the same name on the arbitrator side by adding
-     *  _ruling parameter because total to be raised depends on multipliers.
-     *  @param _localDisputeID Index of the dispute in disputes array.
-     *  @param _ruling The ruling option which the caller wants to learn about its appeal cost.
-     */
-    function appealCost(uint _localDisputeID, uint _ruling) public view virtual returns (uint);
-
-
     /** @dev Returns stake multipliers.
-     *  @return winner Winners stake multiplier.
-     *  @return loser Losers stake multiplier.
-     *  @return shared Multiplier when it's tied.
+     *  @return winnerStakeMultiplier Winners stake multiplier.
+     *  @return loserStakeMultiplier Losers stake multiplier.
+     *  @return loserAppealPeriodMultiplier Losers appeal period multiplier. It is common to give less time for losers.
      *  @return divisor Multiplier divisor.
      */
-    function getMultipliers() external view virtual returns(uint winner, uint loser, uint shared, uint divisor);
+    function getMultipliers() external view virtual returns(uint winnerStakeMultiplier, uint loserStakeMultiplier, uint loserAppealPeriodMultiplier, uint divisor);
 
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.

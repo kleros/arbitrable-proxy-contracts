@@ -43,9 +43,9 @@ contract ArbitrableProxy is IDisputeResolver {
     IArbitrator public arbitrator;
 
     // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
-    uint public winnerStakeMultiplier; // Multiplier of the arbitration cost that the winner has to pay as fee stake for a round in basis points.
-    uint public loserStakeMultiplier; // Multiplier of the arbitration cost that the loser has to pay as fee stake for a round in basis points.
-    uint public sharedStakeMultiplier; // Multiplier for calculating the fee stake that must be paid in the case where there isn't a winner and loser in basis points.
+    uint public winnerStakeMultiplier = 10000; // Multiplier of the arbitration cost that the winner has to pay as fee stake for a round in basis points. Default is 1x of appeal fee.
+    uint public loserStakeMultiplier = 20000; // Multiplier of the arbitration cost that the loser has to pay as fee stake for a round in basis points. Default is 2x of appeal fee.
+    uint public loserAppealPeriodMultiplier = 5000; // Multiplier of the appeal period for losers (any other ruling options) in basis points. Default is 1/2 of original appeal period.
     uint public constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
 
     DisputeStruct[] public disputes;
@@ -54,15 +54,9 @@ contract ArbitrableProxy is IDisputeResolver {
 
     /** @dev Constructor
      *  @param _arbitrator Target global arbitrator for any disputes.
-     *  @param _winnerStakeMultiplier Multiplier of the arbitration cost that the winner has to pay as fee stake for a round in basis points.
-     *  @param _loserStakeMultiplier Multiplier of the arbitration cost that the loser has to pay as fee stake for a round in basis points.
-     *  @param _sharedStakeMultiplier Multiplier for calculating the fee stake that must be paid in the case where there isn't a winner and loser in basis points.
      */
-    constructor(IArbitrator _arbitrator, uint _winnerStakeMultiplier, uint _loserStakeMultiplier, uint _sharedStakeMultiplier) {
+    constructor(IArbitrator _arbitrator) {
         arbitrator = _arbitrator;
-        winnerStakeMultiplier = _winnerStakeMultiplier;
-        loserStakeMultiplier = _loserStakeMultiplier;
-        sharedStakeMultiplier = _sharedStakeMultiplier;
     }
 
     /** @dev TRUSTED. Calls createDispute function of the specified arbitrator to create a dispute.
@@ -156,7 +150,7 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _ruling The ruling option which the caller wants to learn about its appeal period.
      */
-    function appealPeriod(uint _localDisputeID, uint _ruling) public override view returns (uint start, uint end){
+    function appealPeriod(uint _localDisputeID, uint _ruling) internal view returns (uint start, uint end){
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         uint winner = arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide);
@@ -164,7 +158,7 @@ contract ArbitrableProxy is IDisputeResolver {
         (uint originalStart, uint originalEnd) = arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
 
         if(winner == _ruling) return (originalStart, originalEnd);
-        else return (originalStart, (originalStart + originalEnd)/2);
+        else return (originalStart, (originalStart + originalEnd) * MULTIPLIER_DIVISOR / loserAppealPeriodMultiplier);
     }
 
 
@@ -173,19 +167,15 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _ruling The ruling option which the caller wants to learn about its appeal cost.
      */
-    function appealCost(uint _localDisputeID, uint _ruling) public override view returns (uint){
+    function appealCost(uint _localDisputeID, uint _ruling) internal view returns (uint){
         DisputeStruct storage dispute = disputes[_localDisputeID];
 
         uint winner = arbitrator.currentRuling(dispute.disputeIDOnArbitratorSide);
         uint multiplier;
 
-        if (winner == _ruling){
-            multiplier = winnerStakeMultiplier;
-        } else if (winner == 0){
-            multiplier = sharedStakeMultiplier;
-        } else {
-            multiplier = loserStakeMultiplier;
-        }
+        if (winner == _ruling) multiplier = winnerStakeMultiplier;
+        else multiplier = loserStakeMultiplier;
+
 
         uint appealFee = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         return appealFee.addCap(appealFee.mulCap(multiplier) / MULTIPLIER_DIVISOR);
@@ -274,16 +264,16 @@ contract ArbitrableProxy is IDisputeResolver {
 
           if (!round.hasPaid[ruling]) {
               // Allow to reimburse if funding was unsuccessful.
-              sum = round.contributions[_contributor][ruling];
+              sum += round.contributions[_contributor][ruling];
 
           } else if (finalRuling == 0 || !round.hasPaid[finalRuling]) {
               // Reimburse unspent fees proportionally if there is no winner and loser.
-              sum = round.fundedRulings.length > 1 // Means appeal took place.
+              sum += round.fundedRulings.length > 1 // Means appeal took place.
                   ? (round.contributions[_contributor][ruling] * round.feeRewards) / (round.paidFees[round.fundedRulings[0]] + round.paidFees[round.fundedRulings[1]])
                   : 0;
           } else if(ruling == finalRuling) {
               // Reward the winner.
-              sum = round.paidFees[ruling] > 0
+              sum += round.paidFees[ruling] > 0
                   ? (round.contributions[_contributor][ruling] * round.feeRewards) / round.paidFees[ruling]
                   : 0;
           }
@@ -328,123 +318,28 @@ contract ArbitrableProxy is IDisputeResolver {
         emit Evidence(arbitrator, _localDisputeID, msg.sender, _evidenceURI);
     }
 
-    /** @dev Changes the proportion of appeal fees that must be paid when there is no winner or loser.
-     *  @param _sharedStakeMultiplier The new tie multiplier value respect to MULTIPLIER_DIVISOR.
-     */
-    function changeSharedStakeMultiplier(uint _sharedStakeMultiplier) external {
-        require(msg.sender == governor, "Only the governor can execute this.");
-        sharedStakeMultiplier = _sharedStakeMultiplier;
-    }
 
     /** @dev Changes the proportion of appeal fees that must be paid by winner.
-     *  @param _winnerStakeMultiplier The new winner multiplier value respect to MULTIPLIER_DIVISOR.
+     *  @param _winnerStakeMultiplier The new winner stake multiplier value respect to MULTIPLIER_DIVISOR.
+     *  @param _loserStakeMultiplier The new loser stake multiplier value respect to MULTIPLIER_DIVISOR.
+     *  @param _loserAppealPeriodMultiplier The new loser appeal period multiplier respect to MULTIPLIER_DIVISOR.
      */
-    function changeWinnerStakeMultiplier(uint _winnerStakeMultiplier) external {
+    function changeMultipliers(uint _winnerStakeMultiplier, uint _loserStakeMultiplier, uint _loserAppealPeriodMultiplier) external {
         require(msg.sender == governor, "Only the governor can execute this.");
         winnerStakeMultiplier = _winnerStakeMultiplier;
+        loserStakeMultiplier = _loserStakeMultiplier;
+        loserAppealPeriodMultiplier = _loserAppealPeriodMultiplier;
     }
 
-    /** @dev Changes the proportion of appeal fees that must be paid by loser.
-     *  @param _loserStakeMultiplier The new loser multiplier value respect to MULTIPLIER_DIVISOR.
-     */
-    function changeLoserStakeMultiplier(uint _loserStakeMultiplier) external {
-        require(msg.sender == governor, "Only the governor can execute this.");
-        loserStakeMultiplier = _loserStakeMultiplier;
-    }
 
     /** @dev Returns stake multipliers.
-     *  @return winner Winners stake multiplier.
-     *  @return loser Losers stake multiplier.
-     *  @return shared Multiplier when it's tied.
+     *  @return _winnerStakeMultiplier Winners stake multiplier.
+     *  @return _loserStakeMultiplier Losers stake multiplier.
+     *  @return _loserAppealPeriodMultiplier Multiplier for losers appeal period. We give less time to loser.
      *  @return divisor Multiplier divisor.
      */
-    function getMultipliers() external override view returns(uint winner, uint loser, uint shared, uint divisor){
-      return (winnerStakeMultiplier, loserStakeMultiplier, sharedStakeMultiplier, MULTIPLIER_DIVISOR);
+    function getMultipliers() external override view returns(uint _winnerStakeMultiplier, uint _loserStakeMultiplier, uint _loserAppealPeriodMultiplier, uint divisor){
+      return (winnerStakeMultiplier, loserStakeMultiplier, loserAppealPeriodMultiplier, MULTIPLIER_DIVISOR);
     }
 
-    /** @dev Gets the information of a round of a dispute.
-     *  @param _localDisputeID ID of the dispute.
-     *  @param _round The round to be queried.
-     */
-    function getRoundInfo(uint _localDisputeID, uint _round) external view
-    returns (
-        uint[] memory paidFees,
-        uint feeRewards,
-        uint[] memory fundedRulings
-    )
-    {
-        Round storage round = disputeIDtoRoundArray[_localDisputeID][_round];
-        fundedRulings = round.fundedRulings;
-
-        paidFees = new uint[](round.fundedRulings.length);
-
-        for (uint i = 0; i < round.fundedRulings.length; i++) {
-            paidFees[i] = round.paidFees[round.fundedRulings[i]];
-        }
-
-        feeRewards = round.feeRewards;
-    }
-
-    /** @dev Gets the information of a round of a dispute for a specific ruling option.
-     *  @param _localDisputeID ID of the dispute.
-     *  @param _round The round to be queried.
-     *  @param _rulingOption The ruling option to get funding status.
-     */
-    function getFundingStatus(uint _localDisputeID, uint _round, uint _rulingOption) external view returns(uint raised, bool fullyFunded)
-    {
-        Round storage round = disputeIDtoRoundArray[_localDisputeID][_round];
-
-        raised = round.paidFees[_rulingOption];
-        fullyFunded = round.hasPaid[_rulingOption];
-    }
-
-    /** @dev Gets contributions to ruling options that are fully funded.
-     *  @param _localDisputeID ID of the dispute.
-     *  @param _round The round to be queried.
-     *  @param _contributor The address this function queries contributions of.
-     */
-    function getContributionsToSuccessfulFundings(
-    uint _localDisputeID,
-    uint _round,
-    address _contributor
-    ) public view returns(
-        uint[] memory fundedRulings,
-        uint[] memory contributions
-        )
-    {
-        Round storage round = disputeIDtoRoundArray[_localDisputeID][_round];
-        fundedRulings = round.fundedRulings;
-        contributions = new uint[](round.fundedRulings.length);
-        for (uint i = 0; i < contributions.length; i++) {
-            contributions[i] = round.contributions[_contributor][fundedRulings[i]];
-        }
-    }
-
-    /** @dev Returns active disputes.
-     *  @param _cursor Starting point for search.
-     *  @param _count Number of items to return.
-     *  @return openDisputes Dispute identifiers of open disputes, as in arbitrator.
-     *  @return hasMore Whether the search was exhausted (has no more) or not (has more).
-     */
-    function getOpenDisputes(uint _cursor, uint _count) external view returns (uint[] memory openDisputes, bool hasMore)
-    {
-        uint noOfOpenDisputes = 0;
-        uint i;
-        for (i = _cursor; i < disputes.length && (noOfOpenDisputes < _count || _count == 0); i++) {
-            if(disputes[i].isRuled == false){
-                noOfOpenDisputes++;
-            }
-        }
-        openDisputes = new uint[](noOfOpenDisputes);
-
-        uint count = 0;
-        hasMore = true;
-        for (i = _cursor; i < disputes.length && (count < _count || _count == 0); i++) {
-            if(disputes[i].isRuled == false){
-                openDisputes[count++] = disputes[i].disputeIDOnArbitratorSide;
-            }
-        }
-
-        if(i == disputes.length) hasMore = false;
-    }
 }
