@@ -176,7 +176,6 @@ contract ArbitrableProxy is IDisputeResolver {
         if (winner == _ruling) multiplier = winnerStakeMultiplier;
         else multiplier = loserStakeMultiplier;
 
-
         uint appealFee = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         return appealFee.addCap(appealFee.mulCap(multiplier) / MULTIPLIER_DIVISOR);
     }
@@ -317,6 +316,16 @@ contract ArbitrableProxy is IDisputeResolver {
 
         emit Evidence(arbitrator, _localDisputeID, msg.sender, _evidenceURI);
     }
+
+
+    /** @dev Changes governor.
+     *  @param _newGovernor The address of the new governor.
+     */
+    function setGovernor(address _newGovernor) external {
+        require(msg.sender == governor, "Only the governor can execute this.");
+        governor = _newGovernor;
+    }
+
 
 
     /** @dev Changes the proportion of appeal fees that must be paid by winner.
