@@ -142,7 +142,7 @@ contract ArbitrableProxy is IDisputeResolver {
             arbitrator.appeal{value: appealFee}(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
         }
 
-        msg.sender.send(msg.value.subCap(contribution)); // Sending extra value back to contributor.
+        msg.sender.transfer(msg.value.subCap(contribution)); // Sending extra value back to contributor.
 
         return lastRound.hasPaid[_ruling];
     }
