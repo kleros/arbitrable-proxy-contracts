@@ -83,8 +83,8 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
     /** @dev Returns stake multipliers.
      *  @return winnerStakeMultiplier Winners stake multiplier.
      *  @return loserStakeMultiplier Losers stake multiplier.
-     *  @return loserAppealPeriodMultiplier Losers appeal period multiplier. It is common to give less time for losers.
-     *  @return divisor Multiplier divisor.
+     *  @return loserAppealPeriodMultiplier Losers appeal period multiplier. The loser is given less time to fund its appeal to defend against last minute appeal funding attacks.
+     *  @return divisor Multiplier divisor in basis points.
      */
     function getMultipliers() external view virtual returns(uint winnerStakeMultiplier, uint loserStakeMultiplier, uint loserAppealPeriodMultiplier, uint divisor);
 
