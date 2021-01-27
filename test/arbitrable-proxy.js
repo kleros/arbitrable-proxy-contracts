@@ -74,7 +74,6 @@ contract(
 
     it("batch withdraws fees and rewards", async function() {
       await this.aaa.giveRuling(0, 1);
-      console.log((await this.bap.disputes(0)).ruling.words[0]);
 
       let previousBalanceOfThirdParty = await web3.eth.getBalance(thirdParty);
       let previousBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
@@ -96,29 +95,6 @@ contract(
       );
 
       //assert(new BN("1").eq(await this.bap.disputes(0).ruling));
-    });
-
-    it.skip("withdraws fees and rewards", async function() {
-      await this.aaa.giveRuling(0, 1);
-
-      let previousBalanceOfThirdParty = await web3.eth.getBalance(thirdParty);
-      let previousBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
-      await this.bap.withdrawFeesAndRewards(0, thirdParty, 0);
-      await this.bap.withdrawFeesAndRewards(0, fourthParty, 0);
-
-      let currentBalanceOfThirdParty = await web3.eth.getBalance(thirdParty);
-      let currentBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
-      assert(
-        new BN(currentBalanceOfThirdParty).eq(
-          new BN(previousBalanceOfThirdParty).add(new BN(1000000000))
-        )
-      );
-
-      assert(
-        new BN(currentBalanceOfFourthParty).eq(
-          new BN(previousBalanceOfFourthParty)
-        )
-      );
     });
   }
 );
