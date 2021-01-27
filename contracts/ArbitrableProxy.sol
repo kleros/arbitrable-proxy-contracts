@@ -2,7 +2,7 @@
 
 /**
  *  @authors: [@ferittuncer]
- *  @reviewers: [@fnanni-0*, @unknownunknown1*]
+ *  @reviewers: [@fnanni-0*, @unknownunknown1*, @mtsalenc]
  *  @auditors: []
  *  @bounties: []
  *  @deployments: []
@@ -59,6 +59,7 @@ contract ArbitrableProxy is IDisputeResolver {
         arbitrator = _arbitrator;
     }
 
+
     /** @dev TRUSTED. Calls createDispute function of the specified arbitrator to create a dispute.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
      *  @param _arbitratorExtraData Extra data for the arbitrator of prospective dispute.
@@ -89,6 +90,7 @@ contract ArbitrableProxy is IDisputeResolver {
         emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
     }
 
+
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
      *  @param _localDisputeID Dispute id as in arbitrable contract.
      *  @return count Number of possible ruling options.
@@ -96,6 +98,7 @@ contract ArbitrableProxy is IDisputeResolver {
     function numberOfRulingOptions(uint _localDisputeID) external view override returns (uint count){
         count = disputes[_localDisputeID].numberOfChoices;
     }
+
 
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
@@ -115,7 +118,6 @@ contract ArbitrableProxy is IDisputeResolver {
         Round[] storage rounds = disputeIDtoRoundArray[_localDisputeID];
         Round storage lastRound = rounds[rounds.length - 1];
         require(!lastRound.hasPaid[_ruling], "Appeal fee has already been paid.");
-        require(msg.value > 0, "Can't contribute zero");
 
         uint contribution = totalCost.subCap(lastRound.paidFees[_ruling]) > msg.value ? msg.value : totalCost.subCap(lastRound.paidFees[_ruling]);
         emit Contribution(_localDisputeID, rounds.length - 1, _ruling, msg.sender, contribution);
@@ -145,8 +147,8 @@ contract ArbitrableProxy is IDisputeResolver {
         return lastRound.hasPaid[_ruling];
     }
 
-    /** @dev Retrieves appeal period for each ruling. It extends the function with the same name on the arbitrator side by adding
-     *  _ruling parameter because in practice we don't give losers of previous round as much time as the winner.
+
+    /** @dev Retrieves appeal period for each ruling. It extends the function with the same name on the arbitrator by also requiring the _ruling parameter. This is because the arbitrable doesn't give losers of previous round as much time as the winner to avoid last-minute funding attacks.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _ruling The ruling option which the caller wants to learn about its appeal period.
      */
@@ -220,6 +222,7 @@ contract ArbitrableProxy is IDisputeResolver {
         }
     }
 
+
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved for multiple ruling options at once.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
@@ -232,6 +235,7 @@ contract ArbitrableProxy is IDisputeResolver {
         }
     }
 
+
     /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
@@ -243,6 +247,7 @@ contract ArbitrableProxy is IDisputeResolver {
             withdrawFeesAndRewardsForMultipleRulings(_localDisputeID, _contributor, roundNumber, _contributedTo);
         }
     }
+
 
     /** @dev Returns the sum of withdrawable amount. Although it's a nested loop, total iterations will be almost always less than 10. (Max number of rounds is 7 and it's very unlikely to have a contributor to contribute to more than 1 ruling option per round). Alternatively you can use Contribution events to calculate this off-chain.
      *  @param _localDisputeID The ID of the associated question.
@@ -283,6 +288,7 @@ contract ArbitrableProxy is IDisputeResolver {
       return sum;
     }
 
+
     /** @dev To be called by the arbitrator of the dispute, to declare winning ruling.
      *  @param _externalDisputeID ID of the dispute in arbitrator contract.
      *  @param _ruling The ruling choice of the arbitration.
@@ -307,6 +313,7 @@ contract ArbitrableProxy is IDisputeResolver {
         emit Ruling(IArbitrator(msg.sender), _externalDisputeID, uint(dispute.ruling));
     }
 
+
     /** @dev Allows to submit evidence for a given dispute.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _evidenceURI Link to evidence.
@@ -319,10 +326,10 @@ contract ArbitrableProxy is IDisputeResolver {
     }
 
 
-    /** @dev Changes the proportion of appeal fees that must be paid by winner.
-     *  @param _winnerStakeMultiplier The new winner stake multiplier value respect to MULTIPLIER_DIVISOR.
-     *  @param _loserStakeMultiplier The new loser stake multiplier value respect to MULTIPLIER_DIVISOR.
-     *  @param _loserAppealPeriodMultiplier The new loser appeal period multiplier respect to MULTIPLIER_DIVISOR.
+    /** @dev Changes the proportion of appeal fees that must be paid by winner and loser.
+     *  @param _winnerStakeMultiplier The new winner stake multiplier value in basis points.
+     *  @param _loserStakeMultiplier The new loser stake multiplier value in basis points.
+     *  @param _loserAppealPeriodMultiplier The new loser appeal period multiplier in basis points.
      */
     function changeMultipliers(uint _winnerStakeMultiplier, uint _loserStakeMultiplier, uint _loserAppealPeriodMultiplier) external {
         require(msg.sender == governor, "Only the governor can execute this.");
@@ -335,8 +342,8 @@ contract ArbitrableProxy is IDisputeResolver {
     /** @dev Returns stake multipliers.
      *  @return _winnerStakeMultiplier Winners stake multiplier.
      *  @return _loserStakeMultiplier Losers stake multiplier.
-     *  @return _loserAppealPeriodMultiplier Multiplier for losers appeal period. We give less time to loser.
-     *  @return divisor Multiplier divisor.
+     *  @return _loserAppealPeriodMultiplier Multiplier for losers appeal period. The loser is given less time to fund its appeal to defend against last minute appeal funding attacks.
+     *  @return divisor Multiplier divisor in basis points.
      */
     function getMultipliers() external override view returns(uint _winnerStakeMultiplier, uint _loserStakeMultiplier, uint _loserAppealPeriodMultiplier, uint divisor){
       return (winnerStakeMultiplier, loserStakeMultiplier, loserAppealPeriodMultiplier, MULTIPLIER_DIVISOR);
