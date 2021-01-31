@@ -1,7 +1,6 @@
 pragma solidity >=0.7;
 
 contract RealitioMock {
-
     address public arbitrator;
     bool public is_pending_arbitration;
     bytes32 public question_id;
@@ -21,12 +20,20 @@ contract RealitioMock {
         question_id = _question_id;
     }
 
-    function notifyOfArbitrationRequest(bytes32 _question_id, address _requester, uint256 _max_previous) external onlyArbitrator() {
+    function notifyOfArbitrationRequest(
+        bytes32 _question_id,
+        address _requester,
+        uint256 _max_previous
+    ) external onlyArbitrator() {
         require(_question_id == question_id, "ID of the question not match.");
         is_pending_arbitration = true;
     }
 
-    function submitAnswerByArbitrator(bytes32 _question_id, bytes32 _answer, address _answerer) external onlyArbitrator() {
+    function submitAnswerByArbitrator(
+        bytes32 _question_id,
+        bytes32 _answer,
+        address _answerer
+    ) external onlyArbitrator() {
         require(_question_id == question_id, "ID of the question not match.");
         is_pending_arbitration = false;
         history_hash = keccak256(abi.encodePacked(history_hash, _answer, uint256(0), _answerer, false));
@@ -34,7 +41,12 @@ contract RealitioMock {
     }
 
     // To simulate the answer submission.
-    function addAnswerToHistory(bytes32 _answer_or_commitment_id, address _answerer, uint256 _bond, bool _is_commitment) external {
+    function addAnswerToHistory(
+        bytes32 _answer_or_commitment_id,
+        address _answerer,
+        uint256 _bond,
+        bool _is_commitment
+    ) external {
         history_hash = keccak256(abi.encodePacked(history_hash, _answer_or_commitment_id, _bond, _answerer, _is_commitment));
     }
 
@@ -44,19 +56,23 @@ contract RealitioMock {
         revealedAnswer = _revealedAnswer;
     }
 
-    function commitments(bytes32 _commitmentID) external view returns (uint32, bool, bytes32) {
-        return(
-            reveal_ts,
-            isRevealed,
-            revealedAnswer
-        );
+    function commitments(bytes32 _commitmentID)
+        external
+        view
+        returns (
+            uint32,
+            bool,
+            bytes32
+        )
+    {
+        return (reveal_ts, isRevealed, revealedAnswer);
     }
 
-    function getHistoryHash(bytes32 _question_id) external view returns(bytes32) {
+    function getHistoryHash(bytes32 _question_id) external view returns (bytes32) {
         return history_hash;
     }
 
-    function toBytes(uint _a) external pure returns (bytes32) {
+    function toBytes(uint256 _a) external pure returns (bytes32) {
         return bytes32(_a);
     }
 }

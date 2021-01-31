@@ -18,45 +18,48 @@ import "/@kleros/ethereum-libraries/contracts/CappedMath.sol";
  *  @dev This is a centralized arbitrator which either gives direct rulings or provides a time and fee for appeal.
  */
 contract AutoAppealableArbitrator is IArbitrator {
-    using CappedMath for uint; // Operations bounded between 0 and 2**256 - 1.
+    using CappedMath for uint256; // Operations bounded between 0 and 2**256 - 1.
 
     address public owner = msg.sender;
-    uint arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
-    uint constant NOT_PAYABLE_VALUE = (2**256 - 2) / 2; // High value to be sure that the appeal is too expensive.
+    uint256 arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
+    uint256 constant NOT_PAYABLE_VALUE = (2**256 - 2) / 2; // High value to be sure that the appeal is too expensive.
 
     struct Dispute {
-        IArbitrable arbitrated;  // The contract requiring arbitration.
-        uint choices;           // The amount of possible choices, 0 excluded.
-        uint fees;              // The total amount of fees collected by the arbitrator.
-        uint ruling;            // The current ruling.
-        DisputeStatus status;   // The status of the dispute.
-        uint appealCost;        // The cost to appeal. 0 before it is appealable.
-        uint appealPeriodStart; // The start of the appeal period. 0 before it is appealable.
-        uint appealPeriodEnd;   // The end of the appeal Period. 0 before it is appealable.
+        IArbitrable arbitrated; // The contract requiring arbitration.
+        uint256 choices; // The amount of possible choices, 0 excluded.
+        uint256 fees; // The total amount of fees collected by the arbitrator.
+        uint256 ruling; // The current ruling.
+        DisputeStatus status; // The status of the dispute.
+        uint256 appealCost; // The cost to appeal. 0 before it is appealable.
+        uint256 appealPeriodStart; // The start of the appeal period. 0 before it is appealable.
+        uint256 appealPeriodEnd; // The end of the appeal Period. 0 before it is appealable.
     }
 
-    modifier onlyOwner {require(msg.sender==owner, "Can only be called by the owner."); _;}
+    modifier onlyOwner {
+        require(msg.sender == owner, "Can only be called by the owner.");
+        _;
+    }
 
     Dispute[] public disputes;
 
     /** @dev Constructor. Set the initial arbitration price.
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    constructor(uint _arbitrationPrice) public {
+    constructor(uint256 _arbitrationPrice) public {
         arbitrationPrice = _arbitrationPrice;
     }
 
     /** @dev Set the arbitration price. Only callable by the owner.
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    function setArbitrationPrice(uint _arbitrationPrice) external onlyOwner {
+    function setArbitrationPrice(uint256 _arbitrationPrice) external onlyOwner {
         arbitrationPrice = _arbitrationPrice;
     }
 
     /** @dev Cost of arbitration. Accessor to arbitrationPrice.
      *  @return fee Amount to be paid.
      */
-    function arbitrationCost(bytes memory) public view override returns(uint fee) {
+    function arbitrationCost(bytes memory) public view override returns (uint256 fee) {
         return arbitrationPrice;
     }
 
@@ -64,12 +67,10 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @param _disputeID ID of the dispute to be appealed.
      *  @return fee Amount to be paid.
      */
-    function appealCost(uint _disputeID, bytes memory) public view override returns(uint fee) {
+    function appealCost(uint256 _disputeID, bytes memory) public view override returns (uint256 fee) {
         Dispute storage dispute = disputes[_disputeID];
-        if (dispute.status == DisputeStatus.Appealable)
-            return dispute.appealCost;
-        else
-            return NOT_PAYABLE_VALUE;
+        if (dispute.status == DisputeStatus.Appealable) return dispute.appealCost;
+        else return NOT_PAYABLE_VALUE;
     }
 
     /** @dev Create a dispute. Must be called by the arbitrable contract.
@@ -78,29 +79,22 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @param _extraData Can be used to give additional info on the dispute to be created.
      *  @return disputeID ID of the dispute created.
      */
-    function createDispute(uint _choices, bytes memory _extraData) public payable override returns(uint disputeID) {
-        uint arbitrationFee = arbitrationCost(_extraData);
-        require(msg.value >= arbitrationFee,"Value is less than required arbitration fee.");
-        disputes.push(Dispute({
-            arbitrated: IArbitrable(msg.sender),
-            choices: _choices,
-            fees: msg.value,
-            ruling: 0,
-            status: DisputeStatus.Waiting,
-            appealCost: 0,
-            appealPeriodStart: 0,
-            appealPeriodEnd: 0
-            })); // Create the dispute and return its number.
+    function createDispute(uint256 _choices, bytes memory _extraData) public payable override returns (uint256 disputeID) {
+        uint256 arbitrationFee = arbitrationCost(_extraData);
+        require(msg.value >= arbitrationFee, "Value is less than required arbitration fee.");
+        disputes.push(
+            Dispute({arbitrated: IArbitrable(msg.sender), choices: _choices, fees: msg.value, ruling: 0, status: DisputeStatus.Waiting, appealCost: 0, appealPeriodStart: 0, appealPeriodEnd: 0})
+        ); // Create the dispute and return its number.
         emit DisputeCreation(disputeID, IArbitrable(msg.sender));
 
-        disputeID = disputes.length -1;
+        disputeID = disputes.length - 1;
     }
 
     /** @dev Give a ruling. UNTRUSTED.
      *  @param _disputeID ID of the dispute to rule.
      *  @param _ruling Ruling given by the arbitrator. Note that 0 means "Not able/wanting to make a decision".
      */
-    function giveRuling(uint _disputeID, uint _ruling) external onlyOwner {
+    function giveRuling(uint256 _disputeID, uint256 _ruling) external onlyOwner {
         Dispute storage dispute = disputes[_disputeID];
         require(_ruling <= dispute.choices, "Invalid ruling.");
         require(dispute.status == DisputeStatus.Waiting, "The dispute must be waiting for arbitration.");
@@ -118,7 +112,12 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @param _appealCost The cost of appeal.
      *  @param _timeToAppeal The time to appeal the ruling.
      */
-    function giveAppealableRuling(uint _disputeID, uint _ruling, uint _appealCost, uint _timeToAppeal) external onlyOwner {
+    function giveAppealableRuling(
+        uint256 _disputeID,
+        uint256 _ruling,
+        uint256 _appealCost,
+        uint256 _timeToAppeal
+    ) external onlyOwner {
         Dispute storage dispute = disputes[_disputeID];
         require(_ruling <= dispute.choices, "Invalid ruling.");
         require(dispute.status == DisputeStatus.Waiting, "The dispute must be waiting for arbitration.");
@@ -132,12 +131,11 @@ contract AutoAppealableArbitrator is IArbitrator {
         emit AppealPossible(_disputeID, dispute.arbitrated);
     }
 
-
     /** @dev Change the appeal fee of a dispute.
      *  @param _disputeID The ID of the dispute to update.
      *  @param _appealCost The new cost to appeal this ruling.
      */
-    function changeAppealFee(uint _disputeID, uint _appealCost) external onlyOwner {
+    function changeAppealFee(uint256 _disputeID, uint256 _appealCost) external onlyOwner {
         Dispute storage dispute = disputes[_disputeID];
         require(dispute.status == DisputeStatus.Appealable, "The dispute must be appealable.");
 
@@ -148,9 +146,9 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @param _disputeID ID of the dispute to be appealed.
      *  @param _extraData Can be used to give extra info on the appeal.
      */
-    function appeal(uint _disputeID, bytes memory _extraData) public payable override {
+    function appeal(uint256 _disputeID, bytes memory _extraData) public payable override {
         Dispute storage dispute = disputes[_disputeID];
-        uint appealFee = appealCost(_disputeID, _extraData);
+        uint256 appealFee = appealCost(_disputeID, _extraData);
         require(dispute.status == DisputeStatus.Appealable, "The dispute must be appealable.");
         require(block.timestamp < dispute.appealPeriodEnd, "The appeal must occur before the end of the appeal period.");
         require(msg.value >= appealFee, "Value is less than required appeal fee");
@@ -165,7 +163,7 @@ contract AutoAppealableArbitrator is IArbitrator {
     /** @dev Execute the ruling of a dispute after the appeal period has passed. UNTRUSTED.
      *  @param _disputeID ID of the dispute to execute.
      */
-    function executeRuling(uint _disputeID) external {
+    function executeRuling(uint256 _disputeID) external {
         Dispute storage dispute = disputes[_disputeID];
         require(dispute.status == DisputeStatus.Appealable, "The dispute must be appealable.");
         require(block.timestamp >= dispute.appealPeriodEnd, "The dispute must be executed after its appeal period has ended.");
@@ -179,19 +177,19 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @param _disputeID ID of the dispute to rule.
      *  @return status The status of the dispute.
      */
-    function disputeStatus(uint _disputeID) public view override returns(DisputeStatus status) {
+    function disputeStatus(uint256 _disputeID) public view override returns (DisputeStatus status) {
         Dispute storage dispute = disputes[_disputeID];
-        if (disputes[_disputeID].status==DisputeStatus.Appealable && block.timestamp>=dispute.appealPeriodEnd) // If the appeal period is over, consider it solved even if rule has not been called yet.
+        if (disputes[_disputeID].status == DisputeStatus.Appealable && block.timestamp >= dispute.appealPeriodEnd)
+            // If the appeal period is over, consider it solved even if rule has not been called yet.
             return DisputeStatus.Solved;
-        else
-            return disputes[_disputeID].status;
+        else return disputes[_disputeID].status;
     }
 
     /** @dev Return the ruling of a dispute.
      *  @param _disputeID ID of the dispute.
      *  @return ruling The ruling which have been given or which would be given if no appeals are raised.
      */
-    function currentRuling(uint _disputeID) public view override returns(uint ruling) {
+    function currentRuling(uint256 _disputeID) public view override returns (uint256 ruling) {
         return disputes[_disputeID].ruling;
     }
 
@@ -200,9 +198,8 @@ contract AutoAppealableArbitrator is IArbitrator {
      *  @return start The start of the period.
      *  @return end The End of the period.
      */
-    function appealPeriod(uint _disputeID) public view override returns(uint start, uint end) {
+    function appealPeriod(uint256 _disputeID) public view override returns (uint256 start, uint256 end) {
         Dispute storage dispute = disputes[_disputeID];
         return (dispute.appealPeriodStart, dispute.appealPeriodEnd);
     }
-
 }

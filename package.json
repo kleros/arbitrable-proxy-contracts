@@ -15,6 +15,8 @@
     "eth-gas-reporter": "^0.2.17",
     "ganache": "^6.4.4",
     "ganache-cli": "^6.7.0",
+    "prettier": "^2.2.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.3",
     "surya": "^0.4.0",
     "truffle": "^5.1.17",
     "truffle-plugin-verify": "^0.5.4"
@@ -25,7 +27,7 @@
     "@openzeppelin/contracts": "^2.4.0"
   },
   "scripts": {
-    "prepare": "truffle compile",
+    "prepare": "prettier --write 'contracts/**/*.sol' && truffle compile",
     "deploy": "truffle migrate --reset --network $NETWORK && truffle run verify ArbitrableProxy --network $NETWORK"
   },
   "files": [
@@ -34,5 +36,20 @@
   ],
   "engines": {
     "node": ">=0.12"
+  },
+  "prettier": {
+    "overrides": [
+      {
+        "files": "*.sol",
+        "options": {
+          "printWidth": 200,
+          "tabWidth": 4,
+          "useTabs": false,
+          "singleQuote": false,
+          "bracketSpacing": false,
+          "explicitTypes": "always"
+        }
+      }
+    ]
   }
 }
