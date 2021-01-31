@@ -27,6 +27,9 @@
     "@openzeppelin/contracts": "^2.4.0"
   },
   "scripts": {
+    "compile": "truffle compile",
+    "ganache": "ganache-cli -g 1 -l 1000000000",
+    "test": "truffle test",
     "prepare": "prettier --write 'contracts/**/*.sol' && truffle compile",
     "deploy": "truffle migrate --reset --network $NETWORK && truffle run verify ArbitrableProxy --network $NETWORK"
   },
@@ -38,6 +41,7 @@
     "node": ">=0.12"
   },
   "prettier": {
+    "printWidth": 280,
     "overrides": [
       {
         "files": "*.sol",

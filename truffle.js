@@ -11,23 +11,24 @@ module.exports = {
     development: {
       host: "127.0.0.1", // Localhost (default: none)
       port: 8545, // Standard Ethereum port (default: none)
-      network_id: "*" // Any network (default: none)
+      network_id: "*", // Any network (default: none),
+      gas: 120000000,
+      gasPrice: 1, // To cancel out gasPrice in tests.
     },
 
     main: {
-      provider: () =>
-        new HDWalletProvider(process.env.WALLET_KEY, process.env.ENDPOINT),
+      provider: () => new HDWalletProvider(process.env.WALLET_KEY, process.env.ENDPOINT),
       network_id: 1,
       gasPrice: 50000000000, // 50 GWei
-      gas: 10000000
+      gas: 10000000,
     },
 
     kovan: {
-      provider: () =>
-        new HDWalletProvider(process.env.WALLET_KEY, process.env.ENDPOINT),
+      provider: () => new HDWalletProvider(process.env.WALLET_KEY, process.env.ENDPOINT),
       network_id: 42,
-      skipDryRun: true
-    }
+      skipDryRun: true,
+      gas: 100000000,
+    },
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port
@@ -58,7 +59,7 @@ module.exports = {
   mocha: {
     // timeout: 100000
     reporter: "eth-gas-reporter",
-    reporterOptions: { gasPrice: 1, currency: "usd" }
+    reporterOptions: { gasPrice: 1, currency: "usd" },
   },
 
   // Configure your compilers
@@ -70,14 +71,14 @@ module.exports = {
         // See the solidity docs for advice about optimization and evmVersion
         optimizer: {
           enabled: true,
-          runs: 20000
+          runs: 20000,
         },
-        evmVersion: "byzantium"
-      }
-    }
+        evmVersion: "byzantium",
+      },
+    },
   },
   plugins: ["truffle-plugin-verify"],
   api_keys: {
-    etherscan: process.env.ETHERSCAN
-  }
+    etherscan: process.env.ETHERSCAN,
+  },
 };
