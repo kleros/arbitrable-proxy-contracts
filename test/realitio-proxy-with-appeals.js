@@ -1,4 +1,5 @@
 const { BN, expectRevert, time } = require("@openzeppelin/test-helpers");
+const { MAX_UINT256 } = require("@openzeppelin/test-helpers/src/constants");
 const { soliditySha3 } = require("web3-utils");
 
 const Arbitrator = artifacts.require("AutoAppealableArbitrator");
@@ -26,7 +27,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     "37982889683569963184062620292954163810666454706822743503198502129467053274669"; // Question's hash in uint.
   const gasPrice = 8000000;
   const MAX_ANSWER =
-    "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+    "115792089237316195423570985008687907853269984665640564039457584007913129639934";
 
   let arbitrator;
   let realitio;
@@ -49,6 +50,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     proxy = await Proxy.new(
       arbitrator.address,
       arbitratorExtraData,
+      "Metaevidence",
       realitio.address,
       winnerMultiplier,
       loserMultiplier,
@@ -69,11 +71,6 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       await proxy.arbitratorExtraData(),
       "0x85",
       "Incorrect extradata"
-    );
-    assert.equal(
-      await proxy.deployer(),
-      governor,
-      "Incorrect deployer address"
     );
     assert.equal(
       await proxy.governor(),
@@ -187,7 +184,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
         from: requester,
         value: arbitrationCost,
       }),
-      "The arbitration has already been requested for this question."
+      "Arbitration already requested"
     );
   });
 
@@ -222,14 +219,19 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
         from: crowdfunder1,
         value: arbitrationCost,
       }),
-      "Appeal fees must be paid within the appeal period."
+      "Appeal period is over"
     );
 
     await arbitrator.giveAppealableRuling(2, 51231, appealCost, appealTimeOut, {
       from: governor,
     });
-
-    const nbRulings = await proxy.numberOfRulingOptions(questionID); // The answer ID that is equal to the number of ruling can't be funded.
+    await expectRevert(
+      proxy.fundAppeal(questionID, MAX_UINT256, {
+        from: crowdfunder1,
+        value: arbitrationCost,
+      }),
+      "Answer is out of bounds"
+    );
 
     // loserFee = appealCost + (appealCost * loserMultiplier / 10000) // 5000 + 5000 * 7/10 = 8500
     // 1st Funding ////////////////////////////////////
@@ -285,7 +287,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
     assert.equal(
       txFundAppeal.logs[0].args.ruling.toNumber(),
-      534, // Ruling is equal to asnwer + 1
+      533,
       "Event Contribution has incorrect ruling"
     );
     assert.equal(
@@ -384,7 +386,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
     assert.equal(
       txFundAppeal.logs[0].args.ruling.toNumber(),
-      534, // Ruling is equal to asnwer + 1
+      533,
       "Event Contribution has incorrect ruling after 2nd funding"
     );
     assert.equal(
@@ -415,13 +417,13 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
     assert.equal(
       txFundAppeal.logs[0].args.ruling.toNumber(),
-      534, // Ruling is equal to asnwer + 1
+      533,
       "Event RulingFunded has incorrect ruling"
     );
 
     await expectRevert(
       proxy.fundAppeal(questionID, 533, { from: crowdfunder1, value: 1e18 }),
-      "Appeal fee has already been paid."
+      "Appeal fee already been paid."
     );
   });
 
@@ -436,7 +438,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     });
 
     await proxy.fundAppeal(questionID, 14, { from: crowdfunder1, value: 8500 });
-    await proxy.fundAppeal(questionID, 20, { from: crowdfunder2, value: 5000 }); // Winner appeal fee is 6500 full.
+    await proxy.fundAppeal(questionID, 21, { from: crowdfunder2, value: 5000 }); // Winner appeal fee is 6500 full.
 
     assert.equal(
       (await proxy.getNumberOfRounds(questionID)).toNumber(),
@@ -444,7 +446,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       "Number of rounds should not increase"
     );
 
-    await proxy.fundAppeal(questionID, 20, { from: crowdfunder3, value: 1500 });
+    await proxy.fundAppeal(questionID, 21, { from: crowdfunder3, value: 1500 });
 
     assert.equal(
       (await proxy.getNumberOfRounds(questionID)).toNumber(),
@@ -462,23 +464,21 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await arbitrator.giveAppealableRuling(2, 0, appealCost, appealTimeOut, {
       from: governor,
     });
-    // Fund 0 answer to make sure it's not treated as 0 ruling because of -1 offset.
-    await proxy.fundAppeal(questionID, 0, { from: crowdfunder1, value: 1e18 });
+    await proxy.fundAppeal(questionID, 1, { from: crowdfunder1, value: 1e18 });
 
     roundInfo = await proxy.getRoundInfo(questionID, 1);
     assert.equal(
       roundInfo[0][0].toNumber(),
-      8500, // total loser fee = 5000 + 5000 * 0.7
+      8500, // total winner fee = 5000 + 5000 * 0.7
       "Incorrect paidFees value after funding 0 answer"
     );
     assert.equal(
       roundInfo[2][0].toNumber(),
-      0,
-      "0 answer was not stored correctly"
+      1,
+      "1 answer was not stored correctly"
     );
 
-    // Max number is the equivalent of 0 ruling and should be considered a winner.
-    await proxy.fundAppeal(questionID, MAX_ANSWER, {
+    await proxy.fundAppeal(questionID, 0, {
       from: crowdfunder1,
       value: 6500,
     });
@@ -495,8 +495,8 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
     assert.equal(
       roundInfo[2][1].toString(),
-      MAX_ANSWER,
-      "-1 answer was not stored correctly"
+      0,
+      "0 answer was not stored correctly"
     );
 
     assert.equal(
@@ -528,7 +528,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     // Loser.
     await expectRevert(
       proxy.fundAppeal(questionID, 5, { from: crowdfunder1, value: 1e18 }),
-      "The loser must pay during the first half of the appeal period."
+      "Appeal period is over for loser"
     );
 
     // Adding another half will cover the whole period.
@@ -537,7 +537,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     // Winner.
     await expectRevert(
       proxy.fundAppeal(questionID, 440, { from: crowdfunder2, value: 1e18 }),
-      "Appeal fees must be paid within the appeal period."
+      "Appeal period is over"
     );
   });
 
@@ -561,8 +561,8 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await proxy.fundAppeal(questionID, 50, { from: requester, value: 4000 });
     await proxy.fundAppeal(questionID, 50, { from: crowdfunder1, value: 1e18 });
 
-    await proxy.fundAppeal(questionID, 4, { from: crowdfunder2, value: 6000 });
-    await proxy.fundAppeal(questionID, 4, { from: crowdfunder1, value: 500 });
+    await proxy.fundAppeal(questionID, 5, { from: crowdfunder2, value: 6000 });
+    await proxy.fundAppeal(questionID, 5, { from: crowdfunder1, value: 500 });
 
     await arbitrator.giveAppealableRuling(2, 5, appealCost, appealTimeOut, {
       from: governor,
@@ -572,7 +572,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await proxy.fundAppeal(questionID, 44, { from: requester, value: 500 });
     await proxy.fundAppeal(questionID, 44, { from: crowdfunder1, value: 8000 });
 
-    await proxy.fundAppeal(questionID, 4, { from: crowdfunder2, value: 20000 });
+    await proxy.fundAppeal(questionID, 5, { from: crowdfunder2, value: 20000 });
 
     await arbitrator.giveAppealableRuling(2, 5, appealCost, appealTimeOut, {
       from: governor,
@@ -582,7 +582,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     // Partially funded side should be reimbursed.
     await proxy.fundAppeal(questionID, 41, { from: requester, value: 8499 });
     // Winner doesn't have to fund appeal in this case but let's check if it causes unexpected behaviour.
-    await proxy.fundAppeal(questionID, 4, { from: crowdfunder2, value: 1e18 });
+    await proxy.fundAppeal(questionID, 5, { from: crowdfunder2, value: 1e18 });
 
     await time.increase(appealTimeOut + 1);
 
@@ -595,7 +595,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
 
     await arbitrator.executeRuling(2, { from: governor });
 
-    let ruling = (await arbitrator.currentRuling(2)).toNumber() - 1;
+    let ruling = (await arbitrator.currentRuling(2)).toNumber();
 
     const questionData = await proxy.questions(questionID);
     assert.equal(questionData[1].toNumber(), 2, "Status should be ruled");
@@ -619,7 +619,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       new BN(newBalance).eq(new BN(oldBalance)),
       "The balance of the requester should stay the same (withdraw 0 round)"
     );
-    await proxy.withdrawFeesAndRewards(questionID, requester, 0, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, requester, 0, 5, {
       from: governor,
     });
     newBalance = await web3.eth.getBalance(requester);
@@ -640,7 +640,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       questionID,
       crowdfunder1,
       0,
-      4,
+      5,
       { from: governor }
     );
     newBalance1 = await web3.eth.getBalance(crowdfunder1);
@@ -669,7 +669,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
     assert.equal(
       txWithdraw.logs[0].args.ruling.toNumber(),
-      5, // Ruling is equal to asnwer + 1
+      5,
       "Event Withdrawal has incorrect ruling"
     );
     assert.equal(
@@ -683,7 +683,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       "Event Withdrawal has incorrect reward value"
     );
 
-    await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 0, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 0, 5, {
       from: governor,
     });
     newBalance1 = await web3.eth.getBalance(crowdfunder1);
@@ -692,7 +692,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       "The balance of the crowdfunder1 should stay the same after withdrawing the 2nd time"
     );
 
-    await proxy.withdrawFeesAndRewards(questionID, crowdfunder2, 0, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder2, 0, 5, {
       from: governor,
     });
     newBalance2 = await web3.eth.getBalance(crowdfunder2);
@@ -726,19 +726,19 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
 
     // Withdraw 1 round.
-    await proxy.withdrawFeesAndRewards(questionID, requester, 1, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, requester, 1, 5, {
       from: governor,
     });
     await proxy.withdrawFeesAndRewards(questionID, requester, 1, 44, {
       from: governor,
     });
-    await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 1, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 1, 5, {
       from: governor,
     });
     await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 1, 44, {
       from: governor,
     });
-    await proxy.withdrawFeesAndRewards(questionID, crowdfunder2, 1, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder2, 1, 5, {
       from: governor,
     });
     newBalance = await web3.eth.getBalance(requester);
@@ -774,7 +774,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await proxy.withdrawFeesAndRewards(questionID, requester, 2, 41, {
       from: governor,
     });
-    await proxy.withdrawFeesAndRewards(questionID, crowdfunder2, 2, 4, {
+    await proxy.withdrawFeesAndRewards(questionID, crowdfunder2, 2, 5, {
       from: governor,
     });
     newBalance = await web3.eth.getBalance(requester);
@@ -986,8 +986,8 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await proxy.fundAppeal(questionID, 1, { from: requester, value: 5000 });
     await proxy.fundAppeal(questionID, 1, { from: crowdfunder1, value: 3500 });
 
-    await proxy.fundAppeal(questionID, 2, { from: requester, value: 1000 });
-    await proxy.fundAppeal(questionID, 2, { from: crowdfunder1, value: 10000 });
+    await proxy.fundAppeal(questionID, 3, { from: requester, value: 1000 });
+    await proxy.fundAppeal(questionID, 3, { from: crowdfunder1, value: 10000 });
 
     // 2 answer is the winner.
     await arbitrator.giveAppealableRuling(2, 3, appealCost, appealTimeOut, {
@@ -1002,10 +1002,17 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await arbitrator.executeRuling(2, { from: governor });
 
     oldBalance = await web3.eth.getBalance(requester);
+
+    assert.equal(
+      (await proxy.getTotalWithdrawableAmount(questionID, requester, [1, 3, 41])).toNumber(),
+      1555,
+      "Incorrect total withdrawable amount for requester"
+    );
+
     await proxy.withdrawFeesAndRewardsForAllRounds(
       questionID,
       requester,
-      [1, 2, 41],
+      [1, 3, 41],
       {
         from: governor,
       }
@@ -1022,7 +1029,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await proxy.withdrawFeesAndRewardsForAllRounds(
       questionID,
       crowdfunder1,
-      [1, 2, 45],
+      [1, 3, 45],
       { from: governor }
     );
     newBalance = await web3.eth.getBalance(crowdfunder1);
@@ -1041,13 +1048,13 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     });
     await expectRevert(
       proxy.rule(2, 15, { from: requester }),
-      "Must be called by the arbitrator."
+      "Caller must be arbitrator."
     );
 
     await arbitrator.giveRuling(2, 15, { from: governor });
     const questionData = await proxy.questions(questionID);
     assert.equal(questionData[1].toNumber(), 2, "The status should be Ruled");
-    assert.equal(questionData[3], 14, "Stored answer is incorrect");
+    assert.equal(questionData[3].toNumber(), 15, "Stored answer is incorrect");
   });
 
   it("Should store 0 ruling correctly", async () => {
@@ -1060,9 +1067,9 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     const questionData = await proxy.questions(questionID);
     assert.equal(questionData[1].toNumber(), 2, "The status should be Ruled");
     assert.equal(
-      questionData[3].toString(),
-      MAX_ANSWER,
-      "The answer should be MAX"
+      questionData[3].toNumber(),
+      0,
+      "The answer should be 0"
     );
   });
 
@@ -1082,7 +1089,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
 
     const questionData = await proxy.questions(questionID);
     assert.equal(questionData[1].toNumber(), 2, "The status should be Ruled");
-    assert.equal(questionData[3], 50, "The answer should be 50");
+    assert.equal(questionData[3].toNumber(), 50, "The answer should be 50");
   });
 
   it("Should set correct values when answer is reported to Realitio", async () => {
@@ -1249,7 +1256,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
     assert.equal(
       await realitio.answer(),
-      questionData[3].toNumber(),
+      questionData[3].toNumber() - 1,
       "Answer reported incorrectly"
     );
   });
@@ -1286,7 +1293,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
 
     const newHash = soliditySha3(
       currentHash,
-      questionData[3],
+      await realitio.toBytes(14),
       0,
       requester,
       false
@@ -1330,7 +1337,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
 
     const newHash = soliditySha3(
       currentHash,
-      questionData[3],
+      await realitio.toBytes(14),
       0,
       requester,
       false
@@ -1437,7 +1444,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
 
     const newHash = soliditySha3(
       currentHash,
-      questionData[3],
+      await realitio.toBytes(14),
       0,
       requester,
       false
@@ -1533,21 +1540,6 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await expectRevert(
       proxy.changeMetaEvidence("Metaevidence.json", { from: governor }), // 'Other' is governor at this point.
       "The caller must be the governor."
-    );
-    await expectRevert(
-      proxy.changeMetaEvidence("Metaevidence.json", { from: other }),
-      "Metaevidence was not set."
-    );
-    await expectRevert(
-      proxy.setMetaEvidence("Metaevidence.json", { from: other }), // The old governor is the deployer.
-      "The caller must be the deployer."
-    );
-
-    await proxy.setMetaEvidence("Metaevidence.json", { from: governor });
-    assert.equal(
-      await proxy.deployer(),
-      "0x0000000000000000000000000000000000000000",
-      "Deployer should be empty"
     );
     await proxy.changeMetaEvidence("Metaevidence.json", { from: other });
     assert.equal(

@@ -85,9 +85,8 @@ contract AutoAppealableArbitrator is IArbitrator {
         disputes.push(
             Dispute({arbitrated: IArbitrable(msg.sender), choices: _choices, fees: msg.value, ruling: 0, status: DisputeStatus.Waiting, appealCost: 0, appealPeriodStart: 0, appealPeriodEnd: 0})
         ); // Create the dispute and return its number.
-        emit DisputeCreation(disputeID, IArbitrable(msg.sender));
-
         disputeID = disputes.length - 1;
+        emit DisputeCreation(disputeID, IArbitrable(msg.sender));
     }
 
     /** @dev Give a ruling. UNTRUSTED.
