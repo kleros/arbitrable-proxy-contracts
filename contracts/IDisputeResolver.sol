@@ -59,14 +59,14 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
     function numberOfRulingOptions(uint256 _localDisputeID) external view virtual returns (uint256 count);
 
     /** @dev Allows to submit evidence for a given dispute.
-     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _localDisputeID Dispute id as in arbitrable contract.
      *  @param _evidenceURI Link to evidence.
      */
     function submitEvidence(uint256 _localDisputeID, string calldata _evidenceURI) external virtual;
 
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
-     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _localDisputeID Dispute id as in arbitrable contract.
      *  @param _ruling The ruling option to which the caller wants to contribute.
      *  @return fullyFunded True if the ruling option got fully funded as a result of this contribution.
      */
@@ -90,7 +90,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
         );
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
-     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _localDisputeID Dispute id as in arbitrable contract.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _ruling A ruling option that the caller wants to withdraw fees and rewards related to it.
@@ -104,7 +104,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
     ) external virtual returns (uint256 sum);
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved. For multiple ruling options at once.
-     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _localDisputeID Dispute id as in arbitrable contract.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _contributedTo Rulings that received contributions from contributor.
@@ -117,7 +117,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
     ) external virtual;
 
     /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.
-     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _localDisputeID Dispute id as in arbitrable contract.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
@@ -128,7 +128,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
     ) external virtual;
 
     /** @dev Returns the sum of withdrawable amount.
-     *  @param _localDisputeID The ID of the associated question.
+     *  @param _localDisputeID Dispute id as in arbitrable contract.
      *  @param _contributor The contributor for which to query.
      *  @param _contributedTo Ruling options to look for potential withdrawals.
      *  @return sum The total amount available to withdraw.
