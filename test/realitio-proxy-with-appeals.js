@@ -21,6 +21,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
   const appealTimeOut = 180;
   const winnerMultiplier = 3000;
   const loserMultiplier = 7000;
+  const loserAppealPeriodMultiplier = 5000;
 
   const questionHashed = soliditySha3("question");
   const questionID =
@@ -54,6 +55,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       realitio.address,
       winnerMultiplier,
       loserMultiplier,
+      loserAppealPeriodMultiplier,
       { from: governor }
     );
     await realitio.setArbitratorAndQuestion(proxy.address, questionHashed, {
@@ -91,7 +93,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       "Incorrect winner multiplier"
     );
     assert.equal(multipliers[1].toNumber(), 7000, "Incorrect loser multiplier");
-    assert.equal(multipliers[2].toNumber(), 0, "Incorrect shared multiplier");
+    assert.equal(multipliers[2].toNumber(), 5000, "Incorrect loserAppealPeriod multiplier");
     assert.equal(
       multipliers[3].toNumber(),
       10000,
@@ -1527,6 +1529,18 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       multipliers[1].toNumber(),
       3333,
       "Incorrect loserMultiplier value"
+    );
+    // LoserAppealPeriod.
+    await expectRevert(
+      proxy.changeLoserAppealPeriodMultiplier(8123, { from: other }),
+      "The caller must be the governor."
+    );
+    await proxy.changeLoserAppealPeriodMultiplier(8123, { from: governor });
+    multipliers = await proxy.getMultipliers();
+    assert.equal(
+      multipliers[2].toNumber(),
+      8123,
+      "Incorrect loserAppealPeriodMultiplier value"
     );
     // Governor.
     await expectRevert(

@@ -110,6 +110,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     // Multipliers are in basis points.
     uint256 private winnerMultiplier; // Multiplier for calculating the appeal fee that must be paid for the answer that was chosen by the arbitrator in the previous round.
     uint256 private loserMultiplier; // Multiplier for calculating the appeal fee that must be paid for the answer that the arbitrator didn't rule for in the previous round.
+    uint256 private loserAppealPeriodMultiplier; // Multiplier for calculating the duration of the appeal period for the loser, in basis points.
 
     mapping(uint256 => Question) public questions; // Maps a question ID to its data. questions[questionID].
     mapping(uint256 => uint256) public override externalIDtoLocalID; // Maps external (arbitrator side) dispute ids to local dispute(question) ids.
@@ -130,6 +131,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
      *  @param _realitio The address of the Realitio contract.
      *  @param _winnerMultiplier Multiplier for calculating the appeal cost of the winning answer.
      *  @param _loserMultiplier Multiplier for calculation the appeal cost of the losing answer.
+     *  @param _loserAppealPeriodMultiplier Multiplier for calculating the appeal period for the answer that didn't win the previous round.
      */
     constructor(
         IArbitrator _arbitrator,
@@ -137,13 +139,15 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         string memory _metaEvidence,
         RealitioInterface _realitio,
         uint256 _winnerMultiplier,
-        uint256 _loserMultiplier
+        uint256 _loserMultiplier,
+        uint256 _loserAppealPeriodMultiplier
     ) public {
         arbitrator = _arbitrator;
         arbitratorExtraData = _arbitratorExtraData;
         realitio = _realitio;
         winnerMultiplier = _winnerMultiplier;
         loserMultiplier = _loserMultiplier;
+        loserAppealPeriodMultiplier = _loserAppealPeriodMultiplier;
         
         emit MetaEvidence(0, _metaEvidence);
     }
@@ -162,6 +166,13 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
      */
     function changeLoserMultiplier(uint256 _loserMultiplier) external onlyGovernor {
         loserMultiplier = _loserMultiplier;
+    }
+
+    /** @dev Changes the multiplier for calculating the duration of the appeal period for loser.
+     *  @param _loserAppealPeriodMultiplier The new loser multiplier for the appeal period, in basis points.
+     */
+    function changeLoserAppealPeriodMultiplier(uint256 _loserAppealPeriodMultiplier) external onlyGovernor {
+        loserAppealPeriodMultiplier = _loserAppealPeriodMultiplier;
     }
 
     /** @dev Changes the governor of the contract.
@@ -220,7 +231,10 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
             if (winner == _answer) {
                 multiplier = winnerMultiplier;
             } else {
-                require(block.timestamp - appealPeriodStart < (appealPeriodEnd - appealPeriodStart) / 2, "Appeal period is over for loser");
+                require(
+                    block.timestamp - appealPeriodStart < (appealPeriodEnd - appealPeriodStart).mulCap(loserAppealPeriodMultiplier) / MULTIPLIER_DIVISOR, 
+                    "Appeal period is over for loser"
+                );
                 multiplier = loserMultiplier;
             }
         }
@@ -389,7 +403,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     /** @dev Returns stake multipliers.
      *  @return winner Winners stake multiplier.
      *  @return loser Losers stake multiplier.
-     *  @return shared Multiplier when it's a tie. It is not used in this contract.
+     *  @return loserAppealPeriod Multiplier for calculating an appeal period duration for the losing side.
      *  @return divisor Multiplier divisor.
      */
     function getMultipliers()
@@ -399,11 +413,11 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         returns (
             uint256 winner,
             uint256 loser,
-            uint256 shared,
+            uint256 loserAppealPeriod,
             uint256 divisor
         )
     {
-        return (winnerMultiplier, loserMultiplier, 0, MULTIPLIER_DIVISOR);
+        return (winnerMultiplier, loserMultiplier, loserAppealPeriodMultiplier, MULTIPLIER_DIVISOR);
     }
 
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
