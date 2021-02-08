@@ -105,9 +105,9 @@ contract ArbitrableProxy is IDisputeResolver {
         uint256 disputeIDOnArbitratorSide = dispute.disputeIDOnArbitratorSide;
         uint256 currentRuling = arbitrator.currentRuling(disputeIDOnArbitratorSide);
 
-        checkAppealPeriod(_localDisputeID, _ruling, currentRuling);
+        checkAppealPeriod(dispute, _ruling, currentRuling);
 
-        (uint256 originalCost, uint256 totalCost) = appealCost(_localDisputeID, _ruling, currentRuling);
+        (uint256 originalCost, uint256 totalCost) = appealCost(dispute, _ruling, currentRuling);
 
         Round[] storage rounds = disputeIDtoRoundArray[_localDisputeID];
         Round storage lastRound = rounds[rounds.length - 1];
@@ -143,17 +143,15 @@ contract ArbitrableProxy is IDisputeResolver {
     }
 
     /** @dev Retrieves appeal period for each ruling. It extends the function with the same name on the arbitrator by also requiring the _ruling parameter. This is because the arbitrable doesn't give losers of previous round as much time as the winner to avoid last-minute funding attacks.
-     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _dispute The dispute this function checks for appeal period.
      *  @param _ruling The ruling option which the caller wants to learn about its appeal period.
      */
     function checkAppealPeriod(
-        uint256 _localDisputeID,
+        DisputeStruct storage _dispute,
         uint256 _ruling,
         uint256 _currentRuling
     ) internal view {
-        DisputeStruct storage dispute = disputes[_localDisputeID];
-
-        (uint256 originalStart, uint256 originalEnd) = arbitrator.appealPeriod(dispute.disputeIDOnArbitratorSide);
+        (uint256 originalStart, uint256 originalEnd) = arbitrator.appealPeriod(_dispute.disputeIDOnArbitratorSide);
 
         if (_ruling == _currentRuling) require(block.timestamp >= originalStart && block.timestamp < originalEnd, "Funding must be made within the appeal period.");
         else {
@@ -166,22 +164,20 @@ contract ArbitrableProxy is IDisputeResolver {
 
     /** @dev Retrieves appeal cost for each ruling. It extends the function with the same name on the arbitrator side by adding
      *  _ruling parameter because total to be raised depends on multipliers.
-     *  @param _localDisputeID Index of the dispute in disputes array.
+     *  @param _dispute The dispute this function returns its appeal costs.
      *  @param _ruling The ruling option which the caller wants to learn about its appeal cost.
      */
     function appealCost(
-        uint256 _localDisputeID,
+        DisputeStruct storage _dispute,
         uint256 _ruling,
         uint256 _currentRuling
     ) internal view returns (uint256 originalCost, uint256 specificCost) {
-        DisputeStruct storage dispute = disputes[_localDisputeID];
-
         uint256 multiplier;
 
         if (_ruling == _currentRuling) multiplier = winnerStakeMultiplier;
         else multiplier = loserStakeMultiplier;
 
-        uint256 appealFee = arbitrator.appealCost(dispute.disputeIDOnArbitratorSide, dispute.arbitratorExtraData);
+        uint256 appealFee = arbitrator.appealCost(_dispute.disputeIDOnArbitratorSide, _dispute.arbitratorExtraData);
         return (appealFee, appealFee.addCap(appealFee.mulCap(multiplier) / MULTIPLIER_DIVISOR));
     }
 
