@@ -110,12 +110,13 @@ contract ArbitrableProxy is IDisputeResolver {
         (uint256 originalCost, uint256 totalCost) = appealCost(dispute, _ruling, currentRuling);
 
         Round[] storage rounds = disputeIDtoRoundArray[_localDisputeID];
-        Round storage lastRound = rounds[rounds.length - 1];
+        uint256 roundsLength = rounds.length;
+        Round storage lastRound = rounds[roundsLength - 1];
         require(!lastRound.hasPaid[_ruling], "Appeal fee has already been paid.");
         uint256 paidFeesInLastRound = lastRound.paidFees[_ruling];
 
         uint256 contribution = totalCost.subCap(paidFeesInLastRound) > msg.value ? msg.value : totalCost.subCap(paidFeesInLastRound);
-        emit Contribution(_localDisputeID, rounds.length - 1, _ruling, msg.sender, contribution);
+        emit Contribution(_localDisputeID, roundsLength - 1, _ruling, msg.sender, contribution);
 
         lastRound.contributions[msg.sender][_ruling] += contribution;
 
@@ -126,7 +127,7 @@ contract ArbitrableProxy is IDisputeResolver {
             lastRound.feeRewards += paidFeesInLastRound;
             lastRound.fundedRulings.push(_ruling);
             lastRound.hasPaid[_ruling] = true;
-            emit RulingFunded(_localDisputeID, rounds.length - 1, _ruling);
+            emit RulingFunded(_localDisputeID, roundsLength - 1, _ruling);
         }
 
         if (lastRound.fundedRulings.length > 1) {
