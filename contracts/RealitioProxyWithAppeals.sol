@@ -15,10 +15,29 @@ import "./IDisputeResolver.sol";
 import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 
 interface RealitioInterface {
-    /** @dev Notify the Realitio contract that the arbitrator has been paid for a question, freezing it pending their decision.
-     *  @param question_id The ID of the question.
-     *  @param requester The address that requested arbitration.
-     *  @param max_previous If specified, reverts if a bond higher than this was submitted after you sent your transaction.
+    event LogNewAnswer(bytes32 answer, bytes32 indexed question_id, bytes32 history_hash, address indexed user, uint256 bond, uint256 ts, bool is_commitment);
+
+    event LogNewTemplate(uint256 indexed template_id, address indexed user, string question_text);
+
+    event LogNewQuestion(
+        bytes32 indexed question_id,
+        address indexed user,
+        uint256 template_id,
+        string question,
+        bytes32 indexed content_hash,
+        address arbitrator,
+        uint32 timeout,
+        uint32 opening_ts,
+        uint256 nonce,
+        uint256 created
+    );
+
+    /**
+     * @dev The arbitrator contract is trusted to only call this if they've been paid, and tell us who paid them.
+     * @notice Notify the contract that the arbitrator has been paid for a question, freezing it pending their decision.
+     * @param question_id The ID of the question.
+     * @param requester The account that requested arbitration.
+     * @param max_previous If specified, reverts if a bond higher than this was submitted after you sent your transaction.
      */
     function notifyOfArbitrationRequest(
         bytes32 question_id,
@@ -26,36 +45,37 @@ interface RealitioInterface {
         uint256 max_previous
     ) external;
 
-    /** @dev Report the answer to Realitio contract.
-     *  @param question_id The ID of the question.
-     *  @param answer The answer, encoded into bytes32.
-     *  @param answerer The account credited with this answer for the purpose of bond claims.
+    /**
+     * @notice Cancel a previously-requested arbitration and extend the timeout
+     * @dev Useful when doing arbitration across chains that can't be requested atomically
+     * @param question_id The ID of the question
      */
-    function submitAnswerByArbitrator(
+    function cancelArbitration(bytes32 question_id) external;
+
+    /**
+     * @notice Submit the answer for a question, for use by the arbitrator, working out the appropriate winner based on the last answer details.
+     * @dev Doesn't require (or allow) a bond.
+     * @param question_id The ID of the question
+     * @param answer The answer, encoded into bytes32
+     * @param payee_if_wrong The account to be credited as winner if the last answer given is wrong, usually the account that paid the arbitrator
+     * @param last_history_hash The history hash before the final one
+     * @param last_answer_or_commitment_id The last answer given, or the commitment ID if it was a commitment.
+     * @param last_answerer The address that supplied the last answer
+     */
+    function assignWinnerAndSubmitAnswerByArbitrator(
         bytes32 question_id,
         bytes32 answer,
-        address answerer
+        address payee_if_wrong,
+        bytes32 last_history_hash,
+        bytes32 last_answer_or_commitment_id,
+        address last_answerer
     ) external;
 
-    /** @dev Returns the history hash of the question.
-     *  @param question_id The ID of the question.
-     *  @return The history hash.
+    /** @notice Returns the history hash of the question
+     * @param question_id The ID of the question
+     * @dev Updated on each answer, then rewound as each is claimed
      */
     function getHistoryHash(bytes32 question_id) external returns (bytes32);
-
-    /** @dev Returns the commitment info by its id.
-     *  @param commitment_id The ID of the commitment.
-     *  @return Time after which the committed answer can be revealed.
-     *  @return Whether the commitment has already been revealed or not.
-     *  @return The committed answer, encoded as bytes32.
-     */
-    function commitments(bytes32 commitment_id)
-        external
-        returns (
-            uint32,
-            bool,
-            bytes32
-        );
 }
 
 /**
@@ -98,6 +118,17 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         mapping(address => mapping(uint256 => uint256)) contributions; // Maps contributors to their contributions for each answer in the form contributions[address][answer].
         uint256 feeRewards; // Sum of reimbursable appeal fees available to the parties that made contributions to the answer that ultimately wins a dispute.
         uint256[] fundedAnswers; // Stores the answer choices that are fully funded.
+    }
+
+    /// @dev Associates an arbitration request with a question ID and a requester address. requests[questionID][requester]
+    mapping(bytes32 => mapping(address => Request)) public requests;
+
+    /// @dev Associates a question ID with the requester who succeeded in requesting arbitration. questionIDToRequester[questionID]
+    mapping(bytes32 => address) public questionIDToRequester;
+
+    struct Request {
+        Status status;
+        bytes32 arbitratorAnswer;
     }
 
     address public governor = msg.sender; // The address that can make governance changes.
@@ -361,8 +392,10 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         );
 
         question.status = Status.Reported;
-        // Realitio ruling is shifted by 1 compared to Kleros, so we subtract 1 to bring it to Realitio format.
-        realitio.submitAnswerByArbitrator(bytes32(_questionID), bytes32(question.answer - 1), computeWinner(_questionID, _lastAnswerOrCommitmentID, _lastBond, _lastAnswerer, _isCommitment));
+
+        address requester = questionIDToRequester[bytes32(_questionID)];
+        Request storage request = requests[bytes32(_questionID)][requester];
+        realitio.assignWinnerAndSubmitAnswerByArbitrator(bytes32(_questionID), bytes32(uint256(request.arbitratorAnswer) - 1), requester, _lastHistoryHash, _lastAnswerOrCommitmentID, _lastAnswerer);
     }
 
     /** @dev Allows to submit evidence for a given dispute.
@@ -549,44 +582,5 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         Question storage question = questions[_questionID];
         question.answer = _ruling;
         question.status = Status.Ruled;
-    }
-
-    /* Private */
-
-    /** @dev Computes the Realitio answerer, of a specified question, that should win. This function is needed to avoid the "stack too deep error".
-     *  @param _questionID The ID of the question.
-     *  @param _lastAnswerOrCommitmentID The last answer given, or its commitment ID if it was a commitment, to the question in the Realitio contract.
-     *  @param _lastBond The bond paid for the last answer to the question in the Realitio contract.
-     *  @param _lastAnswerer The last answerer to the question in the Realitio contract.
-     *  @param _isCommitment Whether the last answer to the question in the Realitio contract used commit or reveal or not. True if it did, false otherwise.
-     *  @return winner The computed winner.
-     */
-    function computeWinner(
-        uint256 _questionID,
-        bytes32 _lastAnswerOrCommitmentID,
-        uint256 _lastBond,
-        address _lastAnswerer,
-        bool _isCommitment
-    ) private returns (address winner) {
-        bytes32 lastAnswer;
-        bool isAnswered;
-        Question storage question = questions[_questionID];
-        if (_lastBond == 0) {
-            // If the question hasn't been answered, nobody is ever right.
-            isAnswered = false;
-        } else if (_isCommitment) {
-            (uint32 revealTS, bool isRevealed, bytes32 revealedAnswer) = realitio.commitments(_lastAnswerOrCommitmentID);
-            if (isRevealed) {
-                lastAnswer = revealedAnswer;
-                isAnswered = true;
-            } else {
-                require(revealTS <= uint32(block.timestamp), "Still has time to reveal.");
-                isAnswered = false;
-            }
-        } else {
-            lastAnswer = _lastAnswerOrCommitmentID;
-            isAnswered = true;
-        }
-        return isAnswered && lastAnswer == bytes32(question.answer - 1) ? _lastAnswerer : question.disputer;
     }
 }
