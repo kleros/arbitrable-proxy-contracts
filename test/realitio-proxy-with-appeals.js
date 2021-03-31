@@ -717,7 +717,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     assert.equal(questionData[3].toNumber(), 50, "The answer should be 50");
   });
 
-  it("Should set correct values when answer is reported to Realitio", async () => {
+  it.only("Should set correct values when answer is reported to Realitio", async () => {
     await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost,
