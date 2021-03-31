@@ -24,11 +24,9 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
   const loserAppealPeriodMultiplier = 5000;
 
   const questionHashed = soliditySha3("question");
-  const questionID =
-    "37982889683569963184062620292954163810666454706822743503198502129467053274669"; // Question's hash in uint.
+  const questionID = "37982889683569963184062620292954163810666454706822743503198502129467053274669"; // Question's hash in uint.
   const gasPrice = 8000000;
-  const MAX_ANSWER =
-    "115792089237316195423570985008687907853269984665640564039457584007913129639934";
+  const MAX_ANSWER = "115792089237316195423570985008687907853269984665640564039457584007913129639934";
 
   let arbitrator;
   let realitio;
@@ -48,57 +46,24 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
 
     realitio = await Realitio.new({ from: governor });
 
-    proxy = await Proxy.new(
-      arbitrator.address,
-      arbitratorExtraData,
-      "Metaevidence",
-      realitio.address,
-      winnerMultiplier,
-      loserMultiplier,
-      loserAppealPeriodMultiplier,
-      { from: governor }
-    );
+    proxy = await Proxy.new(arbitrator.address, arbitratorExtraData, "Metaevidence", realitio.address, winnerMultiplier, loserMultiplier, loserAppealPeriodMultiplier, { from: governor });
     await realitio.setArbitratorAndQuestion(proxy.address, questionHashed, {
       from: governor,
     });
   });
 
   it("Should set correct values in constructor", async () => {
-    assert.equal(
-      await proxy.arbitrator(),
-      arbitrator.address,
-      "Incorrect arbitrator address"
-    );
-    assert.equal(
-      await proxy.arbitratorExtraData(),
-      "0x85",
-      "Incorrect extradata"
-    );
-    assert.equal(
-      await proxy.governor(),
-      governor,
-      "Incorrect governor address"
-    );
-    assert.equal(
-      await proxy.realitio(),
-      realitio.address,
-      "Incorrect Realitio address"
-    );
+    assert.equal(await proxy.arbitrator(), arbitrator.address, "Incorrect arbitrator address");
+    assert.equal(await proxy.arbitratorExtraData(), "0x85", "Incorrect extradata");
+    assert.equal(await proxy.governor(), governor, "Incorrect governor address");
+    assert.equal(await proxy.realitio(), realitio.address, "Incorrect Realitio address");
 
     // 0 - winner, 1 - loser, 2 - shared, 3 - divisor.
     const multipliers = await proxy.getMultipliers();
-    assert.equal(
-      multipliers[0].toNumber(),
-      3000,
-      "Incorrect winner multiplier"
-    );
+    assert.equal(multipliers[0].toNumber(), 3000, "Incorrect winner multiplier");
     assert.equal(multipliers[1].toNumber(), 7000, "Incorrect loser multiplier");
-    assert.equal(multipliers[2].toNumber(), 5000, "Incorrect loserAppealPeriod multiplier");
-    assert.equal(
-      multipliers[3].toNumber(),
-      10000,
-      "Incorrect multiplier divisor"
-    );
+    assert.equal(multipliers[3].toNumber(), 5000, "Incorrect loserAppealPeriod multiplier");
+    assert.equal(multipliers[4].toNumber(), 10000, "Incorrect multiplier divisor");
   });
 
   it("Should set correct values when requesting arbitration and fire the event", async () => {
@@ -120,65 +85,23 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     assert.equal(questionData[1].toNumber(), 1, "Incorrect status");
     assert.equal(questionData[2].toNumber(), 2, "Incorrect dispute ID");
     assert.equal(questionData[3].toNumber(), 0, "Answer should not be set");
-    assert.equal(
-      (await proxy.getNumberOfRounds(questionID)).toNumber(),
-      1,
-      "Incorrect number of rounds"
-    );
+    assert.equal((await proxy.getNumberOfRounds(questionID)).toNumber(), 1, "Incorrect number of rounds");
 
-    const nbRulings = (
-      await proxy.numberOfRulingOptions(questionID)
-    ).toString();
+    const nbRulings = (await proxy.numberOfRulingOptions(questionID)).toString();
 
     const dispute = await arbitrator.disputes(2);
     assert.equal(dispute[0], proxy.address, "Arbitrable not set up properly");
-    assert.equal(
-      dispute[1].toString(),
-      nbRulings,
-      "Number of choices not set up properly"
-    );
-    assert.equal(
-      dispute[2].toNumber(),
-      arbitrationCost,
-      "Arbitration fee not set up properly"
-    );
-    assert.equal(
-      await proxy.externalIDtoLocalID(2),
-      questionID,
-      "Incorrect externalIDtoLocalID value"
-    );
-    assert.equal(
-      await realitio.is_pending_arbitration(),
-      true,
-      "Arbitration flag is not set in Realitio"
-    );
+    assert.equal(dispute[1].toString(), nbRulings, "Number of choices not set up properly");
+    assert.equal(dispute[2].toNumber(), arbitrationCost, "Arbitration fee not set up properly");
+    assert.equal(await proxy.externalIDtoLocalID(2), questionID, "Incorrect externalIDtoLocalID value");
+    assert.equal(await realitio.is_pending_arbitration(), true, "Arbitration flag is not set in Realitio");
 
     // Events.
-    assert.equal(
-      txRequest.logs[0].event,
-      "Dispute",
-      "Event Dispute has not been created"
-    );
-    assert.equal(
-      txRequest.logs[0].args._arbitrator,
-      arbitrator.address,
-      "Event Dispute has wrong arbitrator address"
-    );
-    assert.equal(
-      txRequest.logs[0].args._disputeID.toNumber(),
-      2,
-      "Event Dispute has wrong dispute ID"
-    );
-    assert.equal(
-      txRequest.logs[0].args._metaEvidenceID.toNumber(),
-      0,
-      "Event Dispute has wrong metaevidence ID"
-    );
-    assert.equal(
-      parseInt(txRequest.logs[0].args._evidenceGroupID, 10),
-      questionID,
-      "Event Dispute has wrong evidence group ID"
-    );
+    assert.equal(txRequest.logs[0].event, "Dispute", "Event Dispute has not been created");
+    assert.equal(txRequest.logs[0].args._arbitrator, arbitrator.address, "Event Dispute has wrong arbitrator address");
+    assert.equal(txRequest.logs[0].args._disputeID.toNumber(), 2, "Event Dispute has wrong dispute ID");
+    assert.equal(txRequest.logs[0].args._metaEvidenceID.toNumber(), 0, "Event Dispute has wrong metaevidence ID");
+    assert.equal(parseInt(txRequest.logs[0].args._evidenceGroupID, 10), questionID, "Event Dispute has wrong evidence group ID");
 
     // Check that can't make a request the 2nd time.
     await expectRevert(
@@ -210,10 +133,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       value: arbitrationCost,
     });
 
-    await expectRevert(
-      proxy.fundAppeal(1, 75, { from: crowdfunder1, value: arbitrationCost }),
-      "No dispute to appeal."
-    );
+    await expectRevert(proxy.fundAppeal(1, 75, { from: crowdfunder1, value: arbitrationCost }), "No dispute to appeal.");
 
     // Check that can't fund the dispute that is not appealable.
     await expectRevert(
@@ -246,62 +166,21 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     txFee = txFundAppeal.receipt.gasUsed * gasPrice;
 
     newBalance = await web3.eth.getBalance(crowdfunder1);
-    assert(
-      new BN(newBalance).eq(
-        new BN(oldBalance).sub(new BN(5000).add(new BN(txFee)))
-      ),
-      "The crowdfunder has incorrect balance after the first funding"
-    );
+    assert(new BN(newBalance).eq(new BN(oldBalance).sub(new BN(5000).add(new BN(txFee)))), "The crowdfunder has incorrect balance after the first funding");
 
     roundInfo = await proxy.getRoundInfo(questionID, 0);
-    assert.equal(
-      roundInfo[1].toNumber(),
-      0,
-      "feeRewards value should be 0 after partial funding"
-    );
+    assert.equal(roundInfo[1].toNumber(), 0, "feeRewards value should be 0 after partial funding");
     fundingStatus = await proxy.getFundingStatus(questionID, 0, 533);
-    assert.equal(
-      fundingStatus[0].toNumber(),
-      5000,
-      "Incorrect amount of paidFees registered after the first funding"
-    );
-    assert.equal(
-      fundingStatus[1],
-      false,
-      "The answer should not be fully funded after partial funding"
-    );
+    assert.equal(fundingStatus[0].toNumber(), 5000, "Incorrect amount of paidFees registered after the first funding");
+    assert.equal(fundingStatus[1], false, "The answer should not be fully funded after partial funding");
 
     // Events, 1st funding.
-    assert.equal(
-      txFundAppeal.logs[0].event,
-      "Contribution",
-      "Event Contribution has not been created"
-    );
-    assert.equal(
-      parseInt(txFundAppeal.logs[0].args.localDisputeID, 10),
-      questionID,
-      "Event Contribution has wrong dispute ID"
-    );
-    assert.equal(
-      txFundAppeal.logs[0].args.round.toNumber(),
-      0,
-      "Event Contribution has wrong round ID"
-    );
-    assert.equal(
-      txFundAppeal.logs[0].args.ruling.toNumber(),
-      533,
-      "Event Contribution has incorrect ruling"
-    );
-    assert.equal(
-      txFundAppeal.logs[0].args.contributor,
-      crowdfunder1,
-      "Event Contribution has incorrect contributor"
-    );
-    assert.equal(
-      txFundAppeal.logs[0].args.amount.toNumber(),
-      5000,
-      "Event Contribution has incorrect amount"
-    );
+    assert.equal(txFundAppeal.logs[0].event, "Contribution", "Event Contribution has not been created");
+    assert.equal(parseInt(txFundAppeal.logs[0].args.localDisputeID, 10), questionID, "Event Contribution has wrong dispute ID");
+    assert.equal(txFundAppeal.logs[0].args.round.toNumber(), 0, "Event Contribution has wrong round ID");
+    assert.equal(txFundAppeal.logs[0].args.ruling.toNumber(), 533, "Event Contribution has incorrect ruling");
+    assert.equal(txFundAppeal.logs[0].args.contributor, crowdfunder1, "Event Contribution has incorrect contributor");
+    assert.equal(txFundAppeal.logs[0].args.amount.toNumber(), 5000, "Event Contribution has incorrect amount");
 
     // 2nd Funding ////////////////////////////////////
     oldBalance = newBalance;
@@ -312,121 +191,37 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     }); // Overpay to check that it's handled correctly.
     txFee = txFundAppeal.receipt.gasUsed * gasPrice;
     newBalance = await web3.eth.getBalance(crowdfunder1);
-    assert(
-      new BN(newBalance).eq(
-        new BN(oldBalance).sub(new BN(3500).add(new BN(txFee)))
-      ),
-      "The crowdfunder has incorrect balance after the second funding"
-    );
+    assert(new BN(newBalance).eq(new BN(oldBalance).sub(new BN(3500).add(new BN(txFee)))), "The crowdfunder has incorrect balance after the second funding");
 
     roundInfo = await proxy.getRoundInfo(questionID, 0);
-    assert.equal(
-      roundInfo[0][0].toNumber(),
-      8500,
-      "Incorrect paidFees value of the fully funded answer"
-    );
-    assert.equal(
-      roundInfo[1].toNumber(),
-      8500,
-      "Incorrect feeRewards value after the full funding"
-    );
-    assert.equal(
-      roundInfo[2][0].toNumber(),
-      533,
-      "Incorrect funded answer stored"
-    );
+    assert.equal(roundInfo[0][0].toNumber(), 8500, "Incorrect paidFees value of the fully funded answer");
+    assert.equal(roundInfo[1].toNumber(), 8500, "Incorrect feeRewards value after the full funding");
+    assert.equal(roundInfo[2][0].toNumber(), 533, "Incorrect funded answer stored");
 
     fundingStatus = await proxy.getFundingStatus(questionID, 0, 533);
-    assert.equal(
-      fundingStatus[0].toNumber(),
-      8500,
-      "Incorrect amount of paidFees registered after the second funding"
-    );
-    assert.equal(
-      fundingStatus[1],
-      true,
-      "The answer should be fully funded after the second funding"
-    );
+    assert.equal(fundingStatus[0].toNumber(), 8500, "Incorrect amount of paidFees registered after the second funding");
+    assert.equal(fundingStatus[1], true, "The answer should be fully funded after the second funding");
 
-    const contributionInfo = await proxy.getContributionsToSuccessfulFundings(
-      questionID,
-      0,
-      crowdfunder1
-    );
-    assert.equal(
-      contributionInfo[0][0].toNumber(),
-      533,
-      "Incorrect fully funded answer returned by contrbution info"
-    );
-    assert.equal(
-      contributionInfo[1][0].toNumber(),
-      8500,
-      "Incorrect contribution value returned by contrbution info"
-    );
+    const contributionInfo = await proxy.getContributionsToSuccessfulFundings(questionID, 0, crowdfunder1);
+    assert.equal(contributionInfo[0][0].toNumber(), 533, "Incorrect fully funded answer returned by contrbution info");
+    assert.equal(contributionInfo[1][0].toNumber(), 8500, "Incorrect contribution value returned by contrbution info");
 
-    assert.equal(
-      (await proxy.getNumberOfRounds(questionID)).toNumber(),
-      1,
-      "Number of rounds should not increase"
-    );
+    assert.equal((await proxy.getNumberOfRounds(questionID)).toNumber(), 1, "Number of rounds should not increase");
 
     // Events, 2nd funding.
-    assert.equal(
-      txFundAppeal.logs[0].event,
-      "Contribution",
-      "Event Contribution has not been created after 2nd funding"
-    );
-    assert.equal(
-      parseInt(txFundAppeal.logs[0].args.localDisputeID, 10),
-      questionID,
-      "Event Contribution has wrong dispute ID after 2nd funding"
-    );
-    assert.equal(
-      txFundAppeal.logs[0].args.round.toNumber(),
-      0,
-      "Event Contribution has wrong round ID after 2nd funding"
-    );
-    assert.equal(
-      txFundAppeal.logs[0].args.ruling.toNumber(),
-      533,
-      "Event Contribution has incorrect ruling after 2nd funding"
-    );
-    assert.equal(
-      txFundAppeal.logs[0].args.contributor,
-      crowdfunder1,
-      "Event Contribution has incorrect contributor after 2nd funding"
-    );
-    assert.equal(
-      txFundAppeal.logs[0].args.amount.toNumber(),
-      3500,
-      "Event Contribution has incorrect amount after 2nd funding"
-    );
+    assert.equal(txFundAppeal.logs[0].event, "Contribution", "Event Contribution has not been created after 2nd funding");
+    assert.equal(parseInt(txFundAppeal.logs[0].args.localDisputeID, 10), questionID, "Event Contribution has wrong dispute ID after 2nd funding");
+    assert.equal(txFundAppeal.logs[0].args.round.toNumber(), 0, "Event Contribution has wrong round ID after 2nd funding");
+    assert.equal(txFundAppeal.logs[0].args.ruling.toNumber(), 533, "Event Contribution has incorrect ruling after 2nd funding");
+    assert.equal(txFundAppeal.logs[0].args.contributor, crowdfunder1, "Event Contribution has incorrect contributor after 2nd funding");
+    assert.equal(txFundAppeal.logs[0].args.amount.toNumber(), 3500, "Event Contribution has incorrect amount after 2nd funding");
 
-    assert.equal(
-      txFundAppeal.logs[1].event,
-      "RulingFunded",
-      "Event RulingFunded has not been created"
-    );
-    assert.equal(
-      parseInt(txFundAppeal.logs[1].args.localDisputeID, 10),
-      questionID,
-      "Event RulingFunded has wrong dispute ID"
-    );
-    assert.equal(
-      txFundAppeal.logs[0].args.round.toNumber(),
-      0,
-      "Event RulingFunded has wrong round ID"
-    );
-    assert.equal(
-      txFundAppeal.logs[0].args.ruling.toNumber(),
-      533,
-      "Event RulingFunded has incorrect ruling"
-    );
+    assert.equal(txFundAppeal.logs[1].event, "RulingFunded", "Event RulingFunded has not been created");
+    assert.equal(parseInt(txFundAppeal.logs[1].args.localDisputeID, 10), questionID, "Event RulingFunded has wrong dispute ID");
+    assert.equal(txFundAppeal.logs[0].args.round.toNumber(), 0, "Event RulingFunded has wrong round ID");
+    assert.equal(txFundAppeal.logs[0].args.ruling.toNumber(), 533, "Event RulingFunded has incorrect ruling");
 
-    await expectRevert(
-      proxy.fundAppeal(questionID, 533, { from: crowdfunder1, value: 1e18 }),
-      "Appeal fee already been paid."
-    );
+    await expectRevert(proxy.fundAppeal(questionID, 533, { from: crowdfunder1, value: 1e18 }), "Appeal fee already been paid.");
   });
 
   it("Should correctly create and fund subsequent appeal rounds", async () => {
@@ -442,19 +237,11 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await proxy.fundAppeal(questionID, 14, { from: crowdfunder1, value: 8500 });
     await proxy.fundAppeal(questionID, 21, { from: crowdfunder2, value: 5000 }); // Winner appeal fee is 6500 full.
 
-    assert.equal(
-      (await proxy.getNumberOfRounds(questionID)).toNumber(),
-      1,
-      "Number of rounds should not increase"
-    );
+    assert.equal((await proxy.getNumberOfRounds(questionID)).toNumber(), 1, "Number of rounds should not increase");
 
     await proxy.fundAppeal(questionID, 21, { from: crowdfunder3, value: 1500 });
 
-    assert.equal(
-      (await proxy.getNumberOfRounds(questionID)).toNumber(),
-      2,
-      "Number of rounds should increase after two sides are fully funded"
-    );
+    assert.equal((await proxy.getNumberOfRounds(questionID)).toNumber(), 2, "Number of rounds should increase after two sides are fully funded");
 
     roundInfo = await proxy.getRoundInfo(questionID, 0);
     assert.equal(
@@ -474,46 +261,26 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       8500, // total winner fee = 5000 + 5000 * 0.7
       "Incorrect paidFees value after funding 0 answer"
     );
-    assert.equal(
-      roundInfo[2][0].toNumber(),
-      1,
-      "1 answer was not stored correctly"
-    );
+    assert.equal(roundInfo[2][0].toNumber(), 1, "1 answer was not stored correctly");
 
     await proxy.fundAppeal(questionID, 0, {
       from: crowdfunder1,
       value: 6500,
     });
     roundInfo = await proxy.getRoundInfo(questionID, 1);
-    assert.equal(
-      roundInfo[0][1].toNumber(),
-      6500,
-      "Incorrect paidFees value for 2nd crowdfunder"
-    );
+    assert.equal(roundInfo[0][1].toNumber(), 6500, "Incorrect paidFees value for 2nd crowdfunder");
     assert.equal(
       roundInfo[1].toNumber(),
       10000, // 8500 + 6500 - 5000.
       "Incorrect feeRewards value after creating a 3rd round"
     );
-    assert.equal(
-      roundInfo[2][1].toString(),
-      0,
-      "0 answer was not stored correctly"
-    );
+    assert.equal(roundInfo[2][1].toString(), 0, "0 answer was not stored correctly");
 
-    assert.equal(
-      (await proxy.getNumberOfRounds(questionID)).toNumber(),
-      3,
-      "Number of rounds should increase to 3"
-    );
+    assert.equal((await proxy.getNumberOfRounds(questionID)).toNumber(), 3, "Number of rounds should increase to 3");
 
     // Check that newly created round is empty.
     roundInfo = await proxy.getRoundInfo(questionID, 2);
-    assert.equal(
-      roundInfo[1].toNumber(),
-      0,
-      "Incorrect feeRewards value in fresh round"
-    );
+    assert.equal(roundInfo[1].toNumber(), 0, "Incorrect feeRewards value in fresh round");
   });
 
   it("Should not fund the appeal after the timeout", async () => {
@@ -528,19 +295,13 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await time.increase(appealTimeOut / 2 + 1);
 
     // Loser.
-    await expectRevert(
-      proxy.fundAppeal(questionID, 5, { from: crowdfunder1, value: 1e18 }),
-      "Appeal period is over for loser"
-    );
+    await expectRevert(proxy.fundAppeal(questionID, 5, { from: crowdfunder1, value: 1e18 }), "Appeal period is over for loser");
 
     // Adding another half will cover the whole period.
     await time.increase(appealTimeOut / 2 + 1);
 
     // Winner.
-    await expectRevert(
-      proxy.fundAppeal(questionID, 440, { from: crowdfunder2, value: 1e18 }),
-      "Appeal period is over"
-    );
+    await expectRevert(proxy.fundAppeal(questionID, 440, { from: crowdfunder2, value: 1e18 }), "Appeal period is over");
   });
 
   it("Should correctly withdraw appeal fees if a dispute had winner/loser", async () => {
@@ -602,11 +363,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     const questionData = await proxy.questions(questionID);
     assert.equal(questionData[1].toNumber(), 2, "Status should be ruled");
     // Stored answer has a type bytes32 but it can still be compared to uint.
-    assert.equal(
-      questionData[3].toNumber(),
-      ruling,
-      "Stored answer is incorrect"
-    );
+    assert.equal(questionData[3].toNumber(), ruling, "Stored answer is incorrect");
 
     const oldBalance = await web3.eth.getBalance(requester);
     oldBalance1 = await web3.eth.getBalance(crowdfunder1);
@@ -617,34 +374,19 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       from: governor,
     });
     newBalance = await web3.eth.getBalance(requester);
-    assert(
-      new BN(newBalance).eq(new BN(oldBalance)),
-      "The balance of the requester should stay the same (withdraw 0 round)"
-    );
+    assert(new BN(newBalance).eq(new BN(oldBalance)), "The balance of the requester should stay the same (withdraw 0 round)");
     await proxy.withdrawFeesAndRewards(questionID, requester, 0, 5, {
       from: governor,
     });
     newBalance = await web3.eth.getBalance(requester);
-    assert(
-      new BN(newBalance).eq(new BN(oldBalance)),
-      "The balance of the requester should stay the same (withdraw 0 round from winning ruling)"
-    );
+    assert(new BN(newBalance).eq(new BN(oldBalance)), "The balance of the requester should stay the same (withdraw 0 round from winning ruling)");
 
     await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 0, 50, {
       from: governor,
     });
     newBalance1 = await web3.eth.getBalance(crowdfunder1);
-    assert(
-      new BN(newBalance1).eq(new BN(oldBalance1)),
-      "The balance of the crowdfunder1 should stay the same (withdraw 0 round)"
-    );
-    const txWithdraw = await proxy.withdrawFeesAndRewards(
-      questionID,
-      crowdfunder1,
-      0,
-      5,
-      { from: governor }
-    );
+    assert(new BN(newBalance1).eq(new BN(oldBalance1)), "The balance of the crowdfunder1 should stay the same (withdraw 0 round)");
+    const txWithdraw = await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 0, 5, { from: governor });
     newBalance1 = await web3.eth.getBalance(crowdfunder1);
     assert(
       new BN(newBalance1).eq(
@@ -654,45 +396,18 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
     oldBalance1 = newBalance1;
 
-    assert.equal(
-      txWithdraw.logs[0].event,
-      "Withdrawal",
-      "Event Withdrawal has not been created"
-    );
-    assert.equal(
-      parseInt(txWithdraw.logs[0].args.localDisputeID, 10),
-      questionID,
-      "Event Withdrawal has wrong dispute ID"
-    );
-    assert.equal(
-      txWithdraw.logs[0].args.round.toNumber(),
-      0,
-      "Event Withdrawal has wrong round ID"
-    );
-    assert.equal(
-      txWithdraw.logs[0].args.ruling.toNumber(),
-      5,
-      "Event Withdrawal has incorrect ruling"
-    );
-    assert.equal(
-      txWithdraw.logs[0].args.contributor,
-      crowdfunder1,
-      "Event Withdrawal has incorrect contributor"
-    );
-    assert.equal(
-      txWithdraw.logs[0].args.reward.toNumber(),
-      769,
-      "Event Withdrawal has incorrect reward value"
-    );
+    assert.equal(txWithdraw.logs[0].event, "Withdrawal", "Event Withdrawal has not been created");
+    assert.equal(parseInt(txWithdraw.logs[0].args.localDisputeID, 10), questionID, "Event Withdrawal has wrong dispute ID");
+    assert.equal(txWithdraw.logs[0].args.round.toNumber(), 0, "Event Withdrawal has wrong round ID");
+    assert.equal(txWithdraw.logs[0].args.ruling.toNumber(), 5, "Event Withdrawal has incorrect ruling");
+    assert.equal(txWithdraw.logs[0].args.contributor, crowdfunder1, "Event Withdrawal has incorrect contributor");
+    assert.equal(txWithdraw.logs[0].args.reward.toNumber(), 769, "Event Withdrawal has incorrect reward value");
 
     await proxy.withdrawFeesAndRewards(questionID, crowdfunder1, 0, 5, {
       from: governor,
     });
     newBalance1 = await web3.eth.getBalance(crowdfunder1);
-    assert(
-      new BN(newBalance1).eq(new BN(oldBalance1)),
-      "The balance of the crowdfunder1 should stay the same after withdrawing the 2nd time"
-    );
+    assert(new BN(newBalance1).eq(new BN(oldBalance1)), "The balance of the crowdfunder1 should stay the same after withdrawing the 2nd time");
 
     await proxy.withdrawFeesAndRewards(questionID, crowdfunder2, 0, 5, {
       from: governor,
@@ -706,26 +421,10 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
     oldBalance2 = newBalance2;
 
-    let contributionInfo = await proxy.getContributionsToSuccessfulFundings(
-      questionID,
-      0,
-      crowdfunder1
-    );
-    assert.equal(
-      contributionInfo[1][1].toNumber(),
-      0,
-      "Contribution of crowdfunder1 should be 0"
-    );
-    contributionInfo = await proxy.getContributionsToSuccessfulFundings(
-      questionID,
-      0,
-      crowdfunder2
-    );
-    assert.equal(
-      contributionInfo[1][0].toNumber(),
-      0,
-      "Contribution of crowdfunder2 should be 0"
-    );
+    let contributionInfo = await proxy.getContributionsToSuccessfulFundings(questionID, 0, crowdfunder1);
+    assert.equal(contributionInfo[1][1].toNumber(), 0, "Contribution of crowdfunder1 should be 0");
+    contributionInfo = await proxy.getContributionsToSuccessfulFundings(questionID, 0, crowdfunder2);
+    assert.equal(contributionInfo[1][0].toNumber(), 0, "Contribution of crowdfunder2 should be 0");
 
     // Withdraw 1 round.
     await proxy.withdrawFeesAndRewards(questionID, requester, 1, 5, {
@@ -746,30 +445,16 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     newBalance = await web3.eth.getBalance(requester);
     newBalance1 = await web3.eth.getBalance(crowdfunder1);
     newBalance2 = await web3.eth.getBalance(crowdfunder2);
-    assert(
-      new BN(newBalance).eq(new BN(oldBalance)),
-      "The balance of the requester should stay the same (withdraw 1 round)"
-    );
-    assert(
-      new BN(newBalance1).eq(new BN(oldBalance1)),
-      "The balance of the crowdfunder1 should stay the same (withdraw 1 round)"
-    );
+    assert(new BN(newBalance).eq(new BN(oldBalance)), "The balance of the requester should stay the same (withdraw 1 round)");
+    assert(new BN(newBalance1).eq(new BN(oldBalance1)), "The balance of the crowdfunder1 should stay the same (withdraw 1 round)");
     assert(
       new BN(newBalance2).eq(
         new BN(oldBalance2).add(new BN(10000)) // Full reward.
       ),
       "The balance of the crowdfunder2 is incorrect (withdraw 1 round)"
     );
-    contributionInfo = await proxy.getContributionsToSuccessfulFundings(
-      questionID,
-      1,
-      crowdfunder2
-    );
-    assert.equal(
-      contributionInfo[1][0].toNumber(),
-      0,
-      "Contribution of crowdfunder2 should be 0 in 1 round"
-    );
+    contributionInfo = await proxy.getContributionsToSuccessfulFundings(questionID, 1, crowdfunder2);
+    assert.equal(contributionInfo[1][0].toNumber(), 0, "Contribution of crowdfunder2 should be 0 in 1 round");
     oldBalance2 = newBalance2;
 
     // Withdraw 2 round.
@@ -781,26 +466,15 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     });
     newBalance = await web3.eth.getBalance(requester);
     newBalance2 = await web3.eth.getBalance(crowdfunder2);
-    assert(
-      new BN(newBalance).eq(new BN(oldBalance).add(new BN(8499))),
-      "The balance of the requester is incorrect (withdraw 2 round)"
-    );
+    assert(new BN(newBalance).eq(new BN(oldBalance).add(new BN(8499))), "The balance of the requester is incorrect (withdraw 2 round)");
     assert(
       new BN(newBalance2).eq(
         new BN(oldBalance2).add(new BN(6500)) // Full winner fee is reimbursed.
       ),
       "The balance of the crowdfunder2 is incorrect (withdraw 2 round)"
     );
-    contributionInfo = await proxy.getContributionsToSuccessfulFundings(
-      questionID,
-      2,
-      crowdfunder2
-    );
-    assert.equal(
-      contributionInfo[1][0].toNumber(),
-      0,
-      "Contribution of crowdfunder2 should be 0 in 2 round"
-    );
+    contributionInfo = await proxy.getContributionsToSuccessfulFundings(questionID, 2, crowdfunder2);
+    assert.equal(contributionInfo[1][0].toNumber(), 0, "Contribution of crowdfunder2 should be 0 in 2 round");
   });
 
   it("Should correctly withdraw appeal fees if the winner did not pay the fees in the round", async () => {
@@ -911,13 +585,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await arbitrator.executeRuling(2, { from: governor });
 
     oldBalance = await web3.eth.getBalance(requester);
-    await proxy.withdrawFeesAndRewardsForMultipleRulings(
-      questionID,
-      requester,
-      0,
-      [1, 2],
-      { from: governor }
-    );
+    await proxy.withdrawFeesAndRewardsForMultipleRulings(questionID, requester, 0, [1, 2], { from: governor });
     newBalance = await web3.eth.getBalance(requester);
     assert(
       new BN(newBalance).eq(
@@ -927,27 +595,12 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
 
     oldBalance = await web3.eth.getBalance(requester);
-    await proxy.withdrawFeesAndRewardsForMultipleRulings(
-      questionID,
-      requester,
-      0,
-      [41, 45],
-      { from: governor }
-    );
+    await proxy.withdrawFeesAndRewardsForMultipleRulings(questionID, requester, 0, [41, 45], { from: governor });
     newBalance = await web3.eth.getBalance(requester);
-    assert(
-      new BN(newBalance).eq(new BN(oldBalance).add(new BN(39))),
-      "The balance of the requester is incorrect after withdrawing not fully funded answers"
-    );
+    assert(new BN(newBalance).eq(new BN(oldBalance).add(new BN(39))), "The balance of the requester is incorrect after withdrawing not fully funded answers");
 
     oldBalance = await web3.eth.getBalance(crowdfunder1);
-    await proxy.withdrawFeesAndRewardsForMultipleRulings(
-      questionID,
-      crowdfunder1,
-      0,
-      [1, 2],
-      { from: governor }
-    );
+    await proxy.withdrawFeesAndRewardsForMultipleRulings(questionID, crowdfunder1, 0, [1, 2], { from: governor });
     newBalance = await web3.eth.getBalance(crowdfunder1);
     assert(
       new BN(newBalance).eq(
@@ -957,18 +610,9 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
 
     oldBalance = await web3.eth.getBalance(crowdfunder1);
-    await proxy.withdrawFeesAndRewardsForMultipleRulings(
-      questionID,
-      crowdfunder1,
-      0,
-      [1, 2],
-      { from: governor }
-    );
+    await proxy.withdrawFeesAndRewardsForMultipleRulings(questionID, crowdfunder1, 0, [1, 2], { from: governor });
     newBalance = await web3.eth.getBalance(crowdfunder1);
-    assert(
-      new BN(newBalance).eq(new BN(oldBalance)),
-      "The balance of the crowdfunder1 should stay the same after withdrawing the 2nd time"
-    );
+    assert(new BN(newBalance).eq(new BN(oldBalance)), "The balance of the crowdfunder1 should stay the same after withdrawing the 2nd time");
   });
 
   it("Should correctly withdraw appeal fees for multiple rounds", async () => {
@@ -1005,20 +649,11 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
 
     oldBalance = await web3.eth.getBalance(requester);
 
-    assert.equal(
-      (await proxy.getTotalWithdrawableAmount(questionID, requester, [1, 3, 41])).toNumber(),
-      1555,
-      "Incorrect total withdrawable amount for requester"
-    );
+    assert.equal((await proxy.getTotalWithdrawableAmount(questionID, requester, [1, 3, 41])).toNumber(), 1555, "Incorrect total withdrawable amount for requester");
 
-    await proxy.withdrawFeesAndRewardsForAllRounds(
-      questionID,
-      requester,
-      [1, 3, 41],
-      {
-        from: governor,
-      }
-    );
+    await proxy.withdrawFeesAndRewardsForAllRounds(questionID, requester, [1, 3, 41], {
+      from: governor,
+    });
     newBalance = await web3.eth.getBalance(requester);
     assert(
       new BN(newBalance).eq(
@@ -1028,12 +663,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     );
 
     oldBalance = await web3.eth.getBalance(crowdfunder1);
-    await proxy.withdrawFeesAndRewardsForAllRounds(
-      questionID,
-      crowdfunder1,
-      [1, 3, 45],
-      { from: governor }
-    );
+    await proxy.withdrawFeesAndRewardsForAllRounds(questionID, crowdfunder1, [1, 3, 45], { from: governor });
     newBalance = await web3.eth.getBalance(crowdfunder1);
     assert(
       new BN(newBalance).eq(
@@ -1048,10 +678,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       from: requester,
       value: arbitrationCost,
     });
-    await expectRevert(
-      proxy.rule(2, 15, { from: requester }),
-      "Caller must be arbitrator."
-    );
+    await expectRevert(proxy.rule(2, 15, { from: requester }), "Caller must be arbitrator.");
 
     await arbitrator.giveRuling(2, 15, { from: governor });
     const questionData = await proxy.questions(questionID);
@@ -1068,11 +695,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await arbitrator.giveRuling(2, 0, { from: governor });
     const questionData = await proxy.questions(questionID);
     assert.equal(questionData[1].toNumber(), 2, "The status should be Ruled");
-    assert.equal(
-      questionData[3].toNumber(),
-      0,
-      "The answer should be 0"
-    );
+    assert.equal(questionData[3].toNumber(), 0, "The answer should be 0");
   });
 
   it("Should switch the ruling if the loser paid appeal fees while winner did not", async () => {
@@ -1105,31 +728,10 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     const lastHistoryHash = await realitio.getHistoryHash(questionHashed);
     await realitio.addAnswerToHistory(realitioAnswer, answerer, 2000, false);
 
-    const currentHash = soliditySha3(
-      lastHistoryHash,
-      realitioAnswer,
-      2000,
-      answerer,
-      false
-    );
-    assert.equal(
-      await realitio.getHistoryHash(questionHashed),
-      currentHash,
-      "Realitio hash is incorrect"
-    );
+    const currentHash = soliditySha3(lastHistoryHash, realitioAnswer, 2000, answerer, false);
+    assert.equal(await realitio.getHistoryHash(questionHashed), currentHash, "Realitio hash is incorrect");
 
-    await expectRevert(
-      proxy.reportAnswer(
-        questionID,
-        lastHistoryHash,
-        realitioAnswer,
-        2000,
-        answerer,
-        false,
-        { from: governor }
-      ),
-      "The status should be Ruled."
-    );
+    await expectRevert(proxy.reportAnswer(questionID, lastHistoryHash, realitioAnswer, 2000, answerer, false, { from: governor }), "The status should be Ruled.");
 
     await arbitrator.giveAppealableRuling(2, 23, appealCost, appealTimeOut, {
       from: governor,
@@ -1139,93 +741,19 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     await arbitrator.executeRuling(2, { from: governor });
 
     // Check incorrect inputs.
-    await expectRevert(
-      proxy.reportAnswer(
-        questionID,
-        currentHash,
-        realitioAnswer,
-        2000,
-        answerer,
-        false,
-        { from: governor }
-      ),
-      "The hash does not match."
-    );
-    await expectRevert(
-      proxy.reportAnswer(
-        questionID,
-        lastHistoryHash,
-        badAnswer,
-        2000,
-        answerer,
-        false,
-        { from: governor }
-      ),
-      "The hash does not match."
-    );
-    await expectRevert(
-      proxy.reportAnswer(
-        questionID,
-        lastHistoryHash,
-        realitioAnswer,
-        2001,
-        answerer,
-        false,
-        { from: governor }
-      ),
-      "The hash does not match."
-    );
-    await expectRevert(
-      proxy.reportAnswer(
-        questionID,
-        lastHistoryHash,
-        realitioAnswer,
-        2000,
-        governor,
-        false,
-        { from: governor }
-      ),
-      "The hash does not match."
-    );
-    await expectRevert(
-      proxy.reportAnswer(
-        questionID,
-        lastHistoryHash,
-        realitioAnswer,
-        2000,
-        answerer,
-        true,
-        { from: governor }
-      ),
-      "The hash does not match."
-    );
+    await expectRevert(proxy.reportAnswer(questionID, currentHash, realitioAnswer, 2000, answerer, false, { from: governor }), "The hash does not match.");
+    await expectRevert(proxy.reportAnswer(questionID, lastHistoryHash, badAnswer, 2000, answerer, false, { from: governor }), "The hash does not match.");
+    await expectRevert(proxy.reportAnswer(questionID, lastHistoryHash, realitioAnswer, 2001, answerer, false, { from: governor }), "The hash does not match.");
+    await expectRevert(proxy.reportAnswer(questionID, lastHistoryHash, realitioAnswer, 2000, governor, false, { from: governor }), "The hash does not match.");
+    await expectRevert(proxy.reportAnswer(questionID, lastHistoryHash, realitioAnswer, 2000, answerer, true, { from: governor }), "The hash does not match.");
     //
-    await proxy.reportAnswer(
-      questionID,
-      lastHistoryHash,
-      realitioAnswer,
-      2000,
-      answerer,
-      false,
-      { from: governor }
-    );
+    await proxy.reportAnswer(questionID, lastHistoryHash, realitioAnswer, 2000, answerer, false, { from: governor });
 
     const questionData = await proxy.questions(questionID);
     assert.equal(questionData[1].toNumber(), 3, "Status should be Reported");
 
     // Check that can't report 2nd time.
-    await expectRevert(
-      proxy.reportAnswer(
-        questionID,
-        lastHistoryHash,
-        realitioAnswer,
-        2000,
-        answerer,
-        false,
-        { from: governor }
-      ),
-      "The status should be Ruled."
-    );
+    await expectRevert(proxy.reportAnswer(questionID, lastHistoryHash, realitioAnswer, 2000, answerer, false, { from: governor }), "The status should be Ruled.");
 
     // Check that withdrawal works with the updated status.
     const oldBalance = await web3.eth.getBalance(crowdfunder1);
@@ -1233,34 +761,13 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       from: governor,
     });
     newBalance = await web3.eth.getBalance(crowdfunder1);
-    assert(
-      new BN(newBalance).eq(new BN(oldBalance).add(new BN(500))),
-      "Withdrawal did not work with Reported status"
-    );
+    assert(new BN(newBalance).eq(new BN(oldBalance).add(new BN(500))), "Withdrawal did not work with Reported status");
 
     // Check Realitio data.
-    assert.equal(
-      await realitio.is_pending_arbitration(),
-      false,
-      "Arbitration flag should not be set"
-    );
-    const newHash = soliditySha3(
-      currentHash,
-      realitioAnswer,
-      0,
-      answerer,
-      false
-    );
-    assert.equal(
-      await realitio.getHistoryHash(questionHashed),
-      newHash,
-      "Realitio hash is incorrect after arbitration"
-    );
-    assert.equal(
-      await realitio.answer(),
-      questionData[3].toNumber() - 1,
-      "Answer reported incorrectly"
-    );
+    assert.equal(await realitio.is_pending_arbitration(), false, "Arbitration flag should not be set");
+    const newHash = soliditySha3(currentHash, realitioAnswer, 0, answerer, false);
+    assert.equal(await realitio.getHistoryHash(questionHashed), newHash, "Realitio hash is incorrect after arbitration");
+    assert.equal(await realitio.answer(), questionData[3].toNumber() - 1, "Answer reported incorrectly");
   });
 
   it("Should report answer correctly if Realitio had incorrect answer", async () => {
@@ -1273,38 +780,14 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     const lastHistoryHash = await realitio.getHistoryHash(questionHashed);
     await realitio.addAnswerToHistory(realitioAnswer, answerer, 2000, false);
 
-    const currentHash = soliditySha3(
-      lastHistoryHash,
-      realitioAnswer,
-      2000,
-      answerer,
-      false
-    );
+    const currentHash = soliditySha3(lastHistoryHash, realitioAnswer, 2000, answerer, false);
     await arbitrator.giveRuling(2, 15, { from: governor });
     const questionData = await proxy.questions(questionID);
 
-    await proxy.reportAnswer(
-      questionID,
-      lastHistoryHash,
-      realitioAnswer,
-      2000,
-      answerer,
-      false,
-      { from: governor }
-    );
+    await proxy.reportAnswer(questionID, lastHistoryHash, realitioAnswer, 2000, answerer, false, { from: governor });
 
-    const newHash = soliditySha3(
-      currentHash,
-      await realitio.toBytes(14),
-      0,
-      requester,
-      false
-    ); // In this case requester gets the reward.
-    assert.equal(
-      await realitio.getHistoryHash(questionHashed),
-      newHash,
-      "Realitio hash is incorrect after arbitration (requester wins - incorrect answer)"
-    );
+    const newHash = soliditySha3(currentHash, await realitio.toBytes(14), 0, requester, false); // In this case requester gets the reward.
+    assert.equal(await realitio.getHistoryHash(questionHashed), newHash, "Realitio hash is incorrect after arbitration (requester wins - incorrect answer)");
   });
 
   it("Should report answer correctly if lastBond = 0", async () => {
@@ -1317,38 +800,14 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     const lastHistoryHash = await realitio.getHistoryHash(questionHashed);
     await realitio.addAnswerToHistory(realitioAnswer, answerer, 0, false);
 
-    const currentHash = soliditySha3(
-      lastHistoryHash,
-      realitioAnswer,
-      0,
-      answerer,
-      false
-    );
+    const currentHash = soliditySha3(lastHistoryHash, realitioAnswer, 0, answerer, false);
     await arbitrator.giveRuling(2, 15, { from: governor });
     const questionData = await proxy.questions(questionID);
 
-    await proxy.reportAnswer(
-      questionID,
-      lastHistoryHash,
-      realitioAnswer,
-      0,
-      answerer,
-      false,
-      { from: governor }
-    );
+    await proxy.reportAnswer(questionID, lastHistoryHash, realitioAnswer, 0, answerer, false, { from: governor });
 
-    const newHash = soliditySha3(
-      currentHash,
-      await realitio.toBytes(14),
-      0,
-      requester,
-      false
-    ); // In this case requester gets the reward.
-    assert.equal(
-      await realitio.getHistoryHash(questionHashed),
-      newHash,
-      "Realitio hash is incorrect after arbitration (requester wins - last bond = 0)"
-    );
+    const newHash = soliditySha3(currentHash, await realitio.toBytes(14), 0, requester, false); // In this case requester gets the reward.
+    assert.equal(await realitio.getHistoryHash(questionHashed), newHash, "Realitio hash is incorrect after arbitration (requester wins - last bond = 0)");
   });
 
   it("Should correctly report committed answer", async () => {
@@ -1361,40 +820,16 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     const lastHistoryHash = await realitio.getHistoryHash(questionHashed);
     await realitio.addAnswerToHistory(commitment, answerer, 2000, true);
 
-    const currentHash = soliditySha3(
-      lastHistoryHash,
-      commitment,
-      2000,
-      answerer,
-      true
-    );
+    const currentHash = soliditySha3(lastHistoryHash, commitment, 2000, answerer, true);
     await arbitrator.giveRuling(2, 15, { from: governor });
 
     const revealedAnswer = await realitio.toBytes(14);
     await realitio.setCommitment(true, revealedAnswer);
 
-    await proxy.reportAnswer(
-      questionID,
-      lastHistoryHash,
-      commitment,
-      2000,
-      answerer,
-      true,
-      { from: governor }
-    );
+    await proxy.reportAnswer(questionID, lastHistoryHash, commitment, 2000, answerer, true, { from: governor });
 
-    const newHash = soliditySha3(
-      currentHash,
-      revealedAnswer,
-      0,
-      answerer,
-      false
-    );
-    assert.equal(
-      await realitio.getHistoryHash(questionHashed),
-      newHash,
-      "Realitio hash is incorrect after arbitration (commitment)"
-    );
+    const newHash = soliditySha3(currentHash, revealedAnswer, 0, answerer, false);
+    assert.equal(await realitio.getHistoryHash(questionHashed), newHash, "Realitio hash is incorrect after arbitration (commitment)");
   });
 
   it("Should make a correct report if the answer was not revealed", async () => {
@@ -1407,62 +842,24 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     const lastHistoryHash = await realitio.getHistoryHash(questionHashed);
     await realitio.addAnswerToHistory(commitment, answerer, 2000, true);
 
-    const currentHash = soliditySha3(
-      lastHistoryHash,
-      commitment,
-      2000,
-      answerer,
-      true
-    );
+    const currentHash = soliditySha3(lastHistoryHash, commitment, 2000, answerer, true);
     await arbitrator.giveRuling(2, 15, { from: governor });
 
     await realitio.setCommitment(false, commitment);
 
-    await expectRevert(
-      proxy.reportAnswer(
-        questionID,
-        lastHistoryHash,
-        commitment,
-        2000,
-        answerer,
-        true,
-        { from: governor }
-      ),
-      "Still has time to reveal."
-    );
+    await expectRevert(proxy.reportAnswer(questionID, lastHistoryHash, commitment, 2000, answerer, true, { from: governor }), "Still has time to reveal.");
     // RealitioMock gives 10 seconds offset to reveal.
     await time.increase(11);
 
-    await proxy.reportAnswer(
-      questionID,
-      lastHistoryHash,
-      commitment,
-      2000,
-      answerer,
-      true,
-      { from: governor }
-    );
+    await proxy.reportAnswer(questionID, lastHistoryHash, commitment, 2000, answerer, true, { from: governor });
     const questionData = await proxy.questions(questionID);
 
-    const newHash = soliditySha3(
-      currentHash,
-      await realitio.toBytes(14),
-      0,
-      requester,
-      false
-    );
-    assert.equal(
-      await realitio.getHistoryHash(questionHashed),
-      newHash,
-      "Realitio hash is incorrect after arbitration (commitment not revealed)"
-    );
+    const newHash = soliditySha3(currentHash, await realitio.toBytes(14), 0, requester, false);
+    assert.equal(await realitio.getHistoryHash(questionHashed), newHash, "Realitio hash is incorrect after arbitration (commitment not revealed)");
   });
 
   it("Should submit evidence and fire the event", async () => {
-    await expectRevert(
-      proxy.submitEvidence(questionID, "Evidence.json", { from: requester }),
-      "The status should be Disputed."
-    );
+    await expectRevert(proxy.submitEvidence(questionID, "Evidence.json", { from: requester }), "The status should be Disputed.");
     await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost,
@@ -1472,81 +869,34 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       from: requester,
     });
 
-    assert.equal(
-      txEvidence.logs[0].event,
-      "Evidence",
-      "Event Evidence has not been created"
-    );
-    assert.equal(
-      txEvidence.logs[0].args._arbitrator,
-      arbitrator.address,
-      "Event Evidence has wrong arbitrator address"
-    );
-    assert.equal(
-      parseInt(txEvidence.logs[0].args._evidenceGroupID, 10),
-      questionID,
-      "Event Evidence has wrong evidence group ID"
-    );
-    assert.equal(
-      txEvidence.logs[0].args._party,
-      requester,
-      "Event Evidence has wrong party"
-    );
-    assert.equal(
-      txEvidence.logs[0].args._evidence,
-      "Evidence.json",
-      "Event Evidence has wrong evidence URI"
-    );
+    assert.equal(txEvidence.logs[0].event, "Evidence", "Event Evidence has not been created");
+    assert.equal(txEvidence.logs[0].args._arbitrator, arbitrator.address, "Event Evidence has wrong arbitrator address");
+    assert.equal(parseInt(txEvidence.logs[0].args._evidenceGroupID, 10), questionID, "Event Evidence has wrong evidence group ID");
+    assert.equal(txEvidence.logs[0].args._party, requester, "Event Evidence has wrong party");
+    assert.equal(txEvidence.logs[0].args._evidence, "Evidence.json", "Event Evidence has wrong evidence URI");
 
     await arbitrator.giveRuling(2, 15, { from: governor });
-    await expectRevert(
-      proxy.submitEvidence(questionID, "Evidence.json", { from: requester }),
-      "The status should be Disputed."
-    );
+    await expectRevert(proxy.submitEvidence(questionID, "Evidence.json", { from: requester }), "The status should be Disputed.");
   });
 
   it("Should make governance changes", async () => {
     // Winner.
-    await expectRevert(
-      proxy.changeWinnerMultiplier(2222, { from: other }),
-      "The caller must be the governor."
-    );
+    await expectRevert(proxy.changeWinnerMultiplier(2222, { from: other }), "The caller must be the governor.");
     await proxy.changeWinnerMultiplier(2222, { from: governor });
     multipliers = await proxy.getMultipliers();
-    assert.equal(
-      multipliers[0].toNumber(),
-      2222,
-      "Incorrect winnerMultiplier value"
-    );
+    assert.equal(multipliers[0].toNumber(), 2222, "Incorrect winnerMultiplier value");
     // Loser.
-    await expectRevert(
-      proxy.changeLoserMultiplier(2222, { from: other }),
-      "The caller must be the governor."
-    );
+    await expectRevert(proxy.changeLoserMultiplier(2222, { from: other }), "The caller must be the governor.");
     await proxy.changeLoserMultiplier(3333, { from: governor });
     multipliers = await proxy.getMultipliers();
-    assert.equal(
-      multipliers[1].toNumber(),
-      3333,
-      "Incorrect loserMultiplier value"
-    );
+    assert.equal(multipliers[1].toNumber(), 3333, "Incorrect loserMultiplier value");
     // LoserAppealPeriod.
-    await expectRevert(
-      proxy.changeLoserAppealPeriodMultiplier(8123, { from: other }),
-      "The caller must be the governor."
-    );
+    await expectRevert(proxy.changeLoserAppealPeriodMultiplier(8123, { from: other }), "The caller must be the governor.");
     await proxy.changeLoserAppealPeriodMultiplier(8123, { from: governor });
     multipliers = await proxy.getMultipliers();
-    assert.equal(
-      multipliers[2].toNumber(),
-      8123,
-      "Incorrect loserAppealPeriodMultiplier value"
-    );
+    assert.equal(multipliers[3].toNumber(), 8123, "Incorrect loserAppealPeriodMultiplier value");
     // Governor.
-    await expectRevert(
-      proxy.changeGovernor(other, { from: other }),
-      "The caller must be the governor."
-    );
+    await expectRevert(proxy.changeGovernor(other, { from: other }), "The caller must be the governor.");
     await proxy.changeGovernor(other, { from: governor });
     assert.equal(await proxy.governor(), other, "Incorrect governor address");
 
@@ -1556,10 +906,6 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       "The caller must be the governor."
     );
     await proxy.changeMetaEvidence("Metaevidence.json", { from: other });
-    assert.equal(
-      (await proxy.metaEvidenceUpdates()).toNumber(),
-      1,
-      "Incorrect metaEvidenceUpdates value"
-    );
+    assert.equal((await proxy.metaEvidenceUpdates()).toNumber(), 1, "Incorrect metaEvidenceUpdates value");
   });
 });
