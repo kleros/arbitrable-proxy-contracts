@@ -2,6 +2,13 @@
 
 General purpose arbitrable contracts as defined in ERC-792
 
+## Testing
+
+```
+yarn run ganache-cli -l 200000000 -g 1
+yarn run truffle test
+```
+
 ## Deployment
 
 To deploy `ArbitrableProxy` run:
