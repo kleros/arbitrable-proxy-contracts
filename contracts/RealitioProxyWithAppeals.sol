@@ -101,7 +101,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     }
 
     address public governor = msg.sender; // The address that can make governance changes.
-    
+
     IArbitrator public immutable arbitrator; // The arbitrator contract.
     bytes public arbitratorExtraData; // Extra data to require particular dispute and appeal behaviour.
     RealitioInterface public immutable realitio; // The address of the Realitio contract.
@@ -141,14 +141,14 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         uint256 _winnerMultiplier,
         uint256 _loserMultiplier,
         uint256 _loserAppealPeriodMultiplier
-    ) public {
+    ) {
         arbitrator = _arbitrator;
         arbitratorExtraData = _arbitratorExtraData;
         realitio = _realitio;
         winnerMultiplier = _winnerMultiplier;
         loserMultiplier = _loserMultiplier;
         loserAppealPeriodMultiplier = _loserAppealPeriodMultiplier;
-        
+
         emit MetaEvidence(0, _metaEvidence);
     }
 
@@ -231,14 +231,11 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
             if (winner == _answer) {
                 multiplier = winnerMultiplier;
             } else {
-                require(
-                    block.timestamp - appealPeriodStart < (appealPeriodEnd - appealPeriodStart).mulCap(loserAppealPeriodMultiplier) / MULTIPLIER_DIVISOR, 
-                    "Appeal period is over for loser"
-                );
+                require(block.timestamp - appealPeriodStart < (appealPeriodEnd - appealPeriodStart).mulCap(loserAppealPeriodMultiplier) / MULTIPLIER_DIVISOR, "Appeal period is over for loser");
                 multiplier = loserMultiplier;
             }
         }
-        
+
         uint256 lastRoundID = question.rounds.length - 1;
         Round storage round = question.rounds[lastRoundID];
         require(!round.hasPaid[_answer], "Appeal fee already been paid");
@@ -403,6 +400,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     /** @dev Returns stake multipliers.
      *  @return winner Winners stake multiplier.
      *  @return loser Losers stake multiplier.
+     *  @return tie Stake multiplier in case of tie.
      *  @return loserAppealPeriod Multiplier for calculating an appeal period duration for the losing side.
      *  @return divisor Multiplier divisor.
      */
@@ -413,18 +411,18 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         returns (
             uint256 winner,
             uint256 loser,
+            uint256 tie,
             uint256 loserAppealPeriod,
             uint256 divisor
         )
     {
-        return (winnerMultiplier, loserMultiplier, loserAppealPeriodMultiplier, MULTIPLIER_DIVISOR);
+        return (winnerMultiplier, loserMultiplier, winnerMultiplier, loserAppealPeriodMultiplier, MULTIPLIER_DIVISOR);
     }
 
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
-     *  @param _questionID The ID of the question.
      *  @return count The number of ruling options.
      */
-    function numberOfRulingOptions(uint256 _questionID) external pure override returns (uint256) {
+    function numberOfRulingOptions(uint256) external pure override returns (uint256) {
         return NUMBER_OF_CHOICES;
     }
 
@@ -500,7 +498,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
             contributions[i] = round.contributions[_contributor][fundedAnswers[i]];
         }
     }
-    
+
     /** @dev Returns the sum of withdrawable amount.
      *  @param _questionID The ID of the associated question.
      *  @param _beneficiary The contributor for which to query.
@@ -514,12 +512,11 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     ) public view override returns (uint256 sum) {
         Question storage question = questions[_questionID];
         if (question.status < Status.Ruled) return sum;
-    
+
         uint256 finalAnswer = question.answer;
         uint256 noOfRounds = question.rounds.length;
         for (uint256 roundNumber = 0; roundNumber < noOfRounds; roundNumber++) {
             for (uint256 contributionNumber = 0; contributionNumber < _contributedTo.length; contributionNumber++) {
-                
                 Round storage round = question.rounds[roundNumber];
                 uint256 answer = _contributedTo[contributionNumber];
 

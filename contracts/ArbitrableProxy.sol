@@ -44,6 +44,7 @@ contract ArbitrableProxy is IDisputeResolver {
     // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
     uint256 public winnerStakeMultiplier = 10000; // Multiplier of the arbitration cost that the winner has to pay as fee stake for a round in basis points. Default is 1x of appeal fee.
     uint256 public loserStakeMultiplier = 20000; // Multiplier of the arbitration cost that the loser has to pay as fee stake for a round in basis points. Default is 2x of appeal fee.
+    uint256 public tieStakeMultiplier = 10000; // Multiplier of the arbitration cost that the parties has to pay as fee stake for a round in basis points, in case of tie. Default is 1x of appeal fee.
     uint256 public loserAppealPeriodMultiplier = 5000; // Multiplier of the appeal period for losers (any other ruling options) in basis points. Default is 1/2 of original appeal period.
     uint256 public constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
 
@@ -342,22 +343,26 @@ contract ArbitrableProxy is IDisputeResolver {
     /** @dev Changes the proportion of appeal fees that must be paid by winner.
      *  @param _winnerStakeMultiplier The new winner stake multiplier value respect to MULTIPLIER_DIVISOR.
      *  @param _loserStakeMultiplier The new loser stake multiplier value respect to MULTIPLIER_DIVISOR.
+     *  @param _tieStakeMultiplier The tie stake multiplier value respect to MULTIPLIER_DIVISOR.
      *  @param _loserAppealPeriodMultiplier The new loser appeal period multiplier respect to MULTIPLIER_DIVISOR.
      */
     function changeMultipliers(
         uint256 _winnerStakeMultiplier,
         uint256 _loserStakeMultiplier,
+        uint256 _tieStakeMultiplier,
         uint256 _loserAppealPeriodMultiplier
     ) external {
         require(msg.sender == governor, "Only the governor can execute this.");
         winnerStakeMultiplier = _winnerStakeMultiplier;
         loserStakeMultiplier = _loserStakeMultiplier;
+        tieStakeMultiplier = _tieStakeMultiplier;
         loserAppealPeriodMultiplier = _loserAppealPeriodMultiplier;
     }
 
     /** @dev Returns stake multipliers.
      *  @return _winnerStakeMultiplier Winners stake multiplier.
      *  @return _loserStakeMultiplier Losers stake multiplier.
+     *  @return _tieStakeMultiplier Stake multiplier in case of tie.
      *  @return _loserAppealPeriodMultiplier Multiplier for losers appeal period. The loser is given less time to fund its appeal to defend against last minute appeal funding attacks.
      *  @return divisor Multiplier divisor in basis points.
      */
@@ -368,10 +373,11 @@ contract ArbitrableProxy is IDisputeResolver {
         returns (
             uint256 _winnerStakeMultiplier,
             uint256 _loserStakeMultiplier,
+            uint256 _tieStakeMultiplier,
             uint256 _loserAppealPeriodMultiplier,
             uint256 divisor
         )
     {
-        return (winnerStakeMultiplier, loserStakeMultiplier, loserAppealPeriodMultiplier, MULTIPLIER_DIVISOR);
+        return (winnerStakeMultiplier, loserStakeMultiplier, tieStakeMultiplier, loserAppealPeriodMultiplier, MULTIPLIER_DIVISOR);
     }
 }
