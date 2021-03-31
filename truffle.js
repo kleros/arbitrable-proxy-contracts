@@ -27,7 +27,7 @@ module.exports = {
       provider: () => new HDWalletProvider(process.env.WALLET_KEY, process.env.ENDPOINT),
       network_id: 42,
       skipDryRun: true,
-      gas: 100000000,
+      gas: 10000000,
     },
     // Another network with more advanced options...
     // advanced: {

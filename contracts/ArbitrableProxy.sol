@@ -176,7 +176,8 @@ contract ArbitrableProxy is IDisputeResolver {
     ) internal view returns (uint256 originalCost, uint256 specificCost) {
         uint256 multiplier;
 
-        if (_ruling == _currentRuling) multiplier = winnerStakeMultiplier;
+        if (_ruling == 0) multiplier = tieStakeMultiplier;
+        else if (_ruling == _currentRuling) multiplier = winnerStakeMultiplier;
         else multiplier = loserStakeMultiplier;
 
         uint256 appealFee = arbitrator.appealCost(_dispute.disputeIDOnArbitratorSide, _dispute.arbitratorExtraData);

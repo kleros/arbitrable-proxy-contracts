@@ -37,11 +37,7 @@ contract("ArbitrableProxy", ([sender, receiver, thirdParty, fourthParty, fifthPa
       value: ARBITRATION_COST * (1 + WINNER_STAKE_MULTIPLIER / DIVISOR),
       from: thirdParty,
     });
-    await this.ap.fundAppeal(0, 0, {
-      // Partially funded, because this is not the winner.
-      value: ARBITRATION_COST * (1 + WINNER_STAKE_MULTIPLIER / DIVISOR),
-      from: fifthParty,
-    });
+
     await this.ap.fundAppeal(0, 2, {
       // Fully funded
       value: ARBITRATION_COST * (1 + LOSER_STAKE_MULTIPLIER / DIVISOR),
@@ -97,7 +93,7 @@ contract("ArbitrableProxy", ([sender, receiver, thirdParty, fourthParty, fifthPa
 
     const expectedDeltaOfThirdParty = 1600000000 + 1200000000;
     const expectedDeltaOfFourthParty = 2400000000 + 1600000000;
-    const expectedDeltaOfFifthParty = 2000000000 + 1200000000;
+    const expectedDeltaOfFifthParty = 1200000000;
 
     const actualDeltaOfThirdParty = new BN(currentBalanceOfThirdParty).sub(new BN(previousBalanceOfThirdParty));
     const actualDeltaOfFourthParty = new BN(currentBalanceOfFourthParty).sub(new BN(previousBalanceOfFourthParty));
