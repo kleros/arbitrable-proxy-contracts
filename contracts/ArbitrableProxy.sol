@@ -176,7 +176,7 @@ contract ArbitrableProxy is IDisputeResolver {
     ) internal view returns (uint256 originalCost, uint256 specificCost) {
         uint256 multiplier;
 
-        if (_ruling == 0) multiplier = tieStakeMultiplier;
+        if (_currentRuling == 0) multiplier = tieStakeMultiplier;
         else if (_ruling == _currentRuling) multiplier = winnerStakeMultiplier;
         else multiplier = loserStakeMultiplier;
 
