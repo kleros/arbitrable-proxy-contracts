@@ -29,6 +29,13 @@ module.exports = {
       skipDryRun: true,
       gas: 10000000,
     },
+
+    ropsten: {
+      provider: () => new HDWalletProvider(process.env.WALLET_KEY, process.env.ENDPOINT),
+      network_id: 3,
+      skipDryRun: true,
+      gas: 8000000,
+    },
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port
