@@ -14,6 +14,6 @@ module.exports = function (deployer, network) {
   else if (network == "ropsten")
     deployer.deploy(
       AP,
-      "0x9643e91D3734b795e914A64169147b70876272ba" // KlerosLiquid on Ropsten
+      "0xe4ee06e5c9921d7e4d4ab62199c8c4b5267a7547" // KlerosLiquid on Ropsten
     );
 };
