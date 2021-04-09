@@ -14,7 +14,7 @@ yarn run truffle test
 To deploy `ArbitrableProxy` run:
 
 ```
-ENDPOINT=<your_web3_endpoint> WALLET_KEY=<your_wallets_private_key> ETHERSCAN=<your_etherscan_api_key> NETWORK=<network_name> yarn deploy
+INFURA_PROJECT_ID=<your_infura_project_id> WALLET_KEY=<your_wallets_private_key> ETHERSCAN=<your_etherscan_api_key> NETWORK=<network_name> yarn deploy
 ```
 
 Note: Network names are defined in `truffle.js`. It has definitions for main, kovan and development. Define extra if needed.

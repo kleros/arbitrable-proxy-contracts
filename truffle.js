@@ -17,21 +17,21 @@ module.exports = {
     },
 
     main: {
-      provider: () => new HDWalletProvider(process.env.WALLET_KEY, process.env.ENDPOINT),
+      provider: () => new HDWalletProvider(process.env.WALLET_KEY, `https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`),
       network_id: 1,
       gasPrice: 50000000000, // 50 GWei
       gas: 10000000,
     },
 
     kovan: {
-      provider: () => new HDWalletProvider(process.env.WALLET_KEY, process.env.ENDPOINT),
+      provider: () => new HDWalletProvider(process.env.WALLET_KEY, `https://kovan.infura.io/v3/${process.env.INFURA_PROJECT_ID}`),
       network_id: 42,
       skipDryRun: true,
       gas: 10000000,
     },
 
     ropsten: {
-      provider: () => new HDWalletProvider(process.env.WALLET_KEY, process.env.ENDPOINT),
+      provider: () => new HDWalletProvider(process.env.WALLET_KEY, `https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`),
       network_id: 3,
       skipDryRun: true,
       gas: 8000000,

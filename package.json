@@ -1,6 +1,6 @@
 {
   "name": "@kleros/arbitrable-proxy-contracts",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "main": "index.js",
   "repository": "https://github.com/kleros/arbitrable-proxy-contracts",
   "author": "Kleros",
@@ -30,7 +30,7 @@
     "compile": "truffle compile",
     "ganache": "ganache-cli -g 1 -l 1000000000",
     "test": "truffle test",
-    "prepare": "prettier --write 'contracts/**/*.sol' && truffle compile && NETWORK=kovan npm run deploy && NETWORK=ropsten",
+    "prepare": "prettier --write 'contracts/**/*.sol' && NETWORK=kovan npm run deploy && NETWORK=ropsten npm run deploy",
     "deploy": "truffle migrate --reset --network $NETWORK && truffle run verify ArbitrableProxy --network $NETWORK"
   },
   "files": [
