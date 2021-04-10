@@ -155,7 +155,7 @@ contract ArbitrableProxy is IDisputeResolver {
     ) internal view {
         (uint256 originalStart, uint256 originalEnd) = arbitrator.appealPeriod(_dispute.disputeIDOnArbitratorSide);
 
-        if (_ruling == _currentRuling) require(block.timestamp >= originalStart && block.timestamp < originalEnd, "Funding must be made within the appeal period.");
+        if (_currentRuling == _ruling || _currentRuling == 0) require(block.timestamp >= originalStart && block.timestamp < originalEnd, "Funding must be made within the appeal period.");
         else {
             require(
                 block.timestamp >= originalStart && block.timestamp < (originalStart + ((originalEnd - originalStart) * loserAppealPeriodMultiplier) / MULTIPLIER_DIVISOR),
