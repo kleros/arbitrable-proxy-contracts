@@ -41,12 +41,12 @@
     "node": ">=0.12"
   },
   "prettier": {
-    "printWidth": 280,
+    "printWidth": 300,
     "overrides": [
       {
         "files": "*.sol",
         "options": {
-          "printWidth": 200,
+          "printWidth": 300,
           "tabWidth": 4,
           "useTabs": false,
           "singleQuote": false,
