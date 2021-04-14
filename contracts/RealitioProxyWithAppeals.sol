@@ -113,7 +113,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     uint256 private loserAppealPeriodMultiplier; // Multiplier for calculating the duration of the appeal period for the loser, in basis points.
 
     mapping(uint256 => Question) public questions; // Maps a question ID to its data. questions[questionID].
-    mapping(uint256 => uint256) public override externalIDtoLocalID; // Maps external (arbitrator side) dispute ids to local dispute(question) ids.
+    mapping(uint256 => uint256) public externalIDtoLocalID; // Maps external (arbitrator side) dispute ids to local dispute(question) ids.
 
     /* Modifiers */
 
@@ -289,9 +289,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         } else if (!round.hasPaid[question.answer]) {
             // Reimburse unspent fees proportionally if the ultimate winner didn't pay appeal fees fully.
             // Note that if only one side is funded it will become a winner and this part of the condition won't be reached.
-            reward = round.fundedAnswers.length > 1
-                ? (round.contributions[_beneficiary][_answer] * round.feeRewards) / (round.paidFees[round.fundedAnswers[0]] + round.paidFees[round.fundedAnswers[1]])
-                : 0;
+            reward = round.fundedAnswers.length > 1 ? (round.contributions[_beneficiary][_answer] * round.feeRewards) / (round.paidFees[round.fundedAnswers[0]] + round.paidFees[round.fundedAnswers[1]]) : 0;
         } else if (question.answer == _answer) {
             uint256 paidFees = round.paidFees[_answer];
             // Reward the winner.
@@ -355,10 +353,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     ) external {
         Question storage question = questions[_questionID];
         require(question.status == Status.Ruled, "The status should be Ruled.");
-        require(
-            realitio.getHistoryHash(bytes32(_questionID)) == keccak256(abi.encodePacked(_lastHistoryHash, _lastAnswerOrCommitmentID, _lastBond, _lastAnswerer, _isCommitment)),
-            "The hash does not match."
-        );
+        require(realitio.getHistoryHash(bytes32(_questionID)) == keccak256(abi.encodePacked(_lastHistoryHash, _lastAnswerOrCommitmentID, _lastBond, _lastAnswerer, _isCommitment)), "The hash does not match.");
 
         question.status = Status.Reported;
         // Realitio ruling is shifted by 1 compared to Kleros, so we subtract 1 to bring it to Realitio format.
@@ -526,9 +521,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
                 } else if (!round.hasPaid[finalAnswer]) {
                     // Reimburse unspent fees proportionally if the ultimate winner didn't pay appeal fees fully.
                     // Note that if only one side is funded it will become a winner and this part of the condition won't be reached.
-                    sum += round.fundedAnswers.length > 1
-                        ? (round.contributions[_beneficiary][answer] * round.feeRewards) / (round.paidFees[round.fundedAnswers[0]] + round.paidFees[round.fundedAnswers[1]])
-                        : 0;
+                    sum += round.fundedAnswers.length > 1 ? (round.contributions[_beneficiary][answer] * round.feeRewards) / (round.paidFees[round.fundedAnswers[0]] + round.paidFees[round.fundedAnswers[1]]) : 0;
                 } else if (finalAnswer == answer) {
                     uint256 paidFees = round.paidFees[answer];
                     // Reward the winner.
