@@ -15,7 +15,7 @@ import "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
 import "@kleros/erc-792/contracts/IArbitrator.sol";
 
 /**
- *  @title This is a common interface for apps to interact with disputes’ standard operations.
+ *  @title This is a common interface for apps to interact with Dispute Resolver's standard operations.
  *  Sets a standard arbitrable contract implementation to provide a general purpose user interface.
  */
 abstract contract IDisputeResolver is IArbitrable, IEvidence {
@@ -28,7 +28,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      *  @param contributor Caller of fundAppeal function.
      *  @param amount Contribution amount.
      */
-    event Contribution(uint256 indexed disputeID, uint256 indexed round, uint256 ruling, address indexed contributor, uint256 amount);
+    event Contribution(IArbitrator indexed arbitrator, uint256 indexed disputeID, uint256 indexed round, uint256 ruling, address contributor, uint256 amount);
 
     /** @dev Raised when a contributor withdraws non-zero value.
      *  @param disputeID The dispute id as in arbitrable contract.
@@ -37,26 +37,30 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      *  @param contributor The beneficiary of withdrawal.
      *  @param reward Total amount of deposits reimbursed plus rewards. This amount will be sent to contributor as an effect of calling withdrawFeesAndRewards function.
      */
-    event Withdrawal(uint256 indexed disputeID, uint256 indexed round, uint256 ruling, address indexed contributor, uint256 reward);
+    event Withdrawal(IArbitrator indexed arbitrator, uint256 indexed disputeID, uint256 indexed round, uint256 ruling, address contributor, uint256 reward);
 
     /** @dev To be raised when a ruling option is fully funded for appeal.
      *  @param disputeID The dispute id as in arbitrable contract.
      *  @param round Round code of the appeal. Starts from 0.
      *  @param ruling THe ruling option which just got fully funded.
      */
-    event RulingFunded(uint256 indexed disputeID, uint256 indexed round, uint256 indexed ruling);
+    event RulingFunded(IArbitrator indexed arbitrator, uint256 indexed disputeID, uint256 indexed round, uint256 ruling);
 
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
      *  @param disputeID Dispute id as in arbitrable contract.
      *  @return count The number of ruling options.
      */
-    function numberOfRulingOptions(uint256 disputeID) external view virtual returns (uint256 count);
+    function numberOfRulingOptions(IArbitrator arbitrator, uint256 disputeID) external view virtual returns (uint256 count);
 
     /** @dev Allows to submit evidence for a given dispute.
      *  @param disputeID Dispute id as in arbitrable contract.
      *  @param  evidenceURI Link to evidence.
      */
-    function submitEvidence(uint256 disputeID, string calldata evidenceURI) external virtual;
+    function submitEvidence(
+        IArbitrator arbitrator,
+        uint256 disputeID,
+        string calldata evidenceURI
+    ) external virtual;
 
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
@@ -64,7 +68,11 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      *  @param ruling The ruling option to which the caller wants to contribute.
      *  @return fullyFunded True if the ruling option got fully funded as a result of this contribution.
      */
-    function fundAppeal(uint256 disputeID, uint256 ruling) external payable virtual returns (bool fullyFunded);
+    function fundAppeal(
+        IArbitrator arbitrator,
+        uint256 disputeID,
+        uint256 ruling
+    ) external payable virtual returns (bool fullyFunded);
 
     /** @dev Returns stake multipliers.
      *  @return winnerStakeMultiplier Winners stake multiplier.
@@ -93,6 +101,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      *  @return sum The reward that is going to be paid as a result of this function call, if it's not zero.
      */
     function withdrawFeesAndRewards(
+        IArbitrator arbitrator,
         uint256 disputeID,
         address payable contributor,
         uint256 roundNumber,
@@ -106,6 +115,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      *  @param contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForMultipleRulings(
+        IArbitrator arbitrator,
         uint256 disputeID,
         address payable contributor,
         uint256 roundNumber,
@@ -118,6 +128,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      *  @param contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForAllRounds(
+        IArbitrator arbitrator,
         uint256 disputeID,
         address payable contributor,
         uint256[] memory contributedTo
@@ -130,6 +141,7 @@ abstract contract IDisputeResolver is IArbitrable, IEvidence {
      *  @return sum The total amount available to withdraw.
      */
     function getTotalWithdrawableAmount(
+        IArbitrator arbitrator,
         uint256 disputeID,
         address payable contributor,
         uint256[] memory contributedTo

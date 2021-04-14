@@ -21,7 +21,7 @@ contract("ArbitrableProxy", ([sender, receiver, thirdParty, fourthParty, fifthPa
   });
 
   it("creates a dispute", async function () {
-    await this.ap.createDispute("0x00000", "", NUMBER_OF_RULING_OPTIONS, {
+    await this.ap.createDispute(this.aaa.address, "0x00000", "", NUMBER_OF_RULING_OPTIONS, {
       value: ARBITRATION_COST,
     });
 
@@ -32,13 +32,13 @@ contract("ArbitrableProxy", ([sender, receiver, thirdParty, fourthParty, fifthPa
     await this.aaa.giveAppealableRuling(0, 1, ARBITRATION_COST, 240);
     assert(new BN("1").eq((await this.aaa.disputes(0)).status));
 
-    await this.ap.fundAppeal(0, 1, {
+    await this.ap.fundAppeal(this.aaa.address, 0, 1, {
       // Fully funded
       value: ARBITRATION_COST * (1 + WINNER_STAKE_MULTIPLIER / DIVISOR),
       from: thirdParty,
     });
 
-    await this.ap.fundAppeal(0, 2, {
+    await this.ap.fundAppeal(this.aaa.address, 0, 2, {
       // Fully funded
       value: ARBITRATION_COST * (1 + LOSER_STAKE_MULTIPLIER / DIVISOR),
       from: fourthParty,
@@ -53,17 +53,17 @@ contract("ArbitrableProxy", ([sender, receiver, thirdParty, fourthParty, fifthPa
     let disputeStatus = (await this.aaa.disputes(0)).status;
     assert(new BN("1").eq(disputeStatus), `Expected disputeStatus 1, actual ${disputeStatus}`);
 
-    await this.ap.fundAppeal(0, 1, {
+    await this.ap.fundAppeal(this.aaa.address, 0, 1, {
       value: (ARBITRATION_COST * (1 + LOSER_STAKE_MULTIPLIER / DIVISOR)) / 2,
       from: thirdParty,
     });
-    await this.ap.fundAppeal(0, 1, {
+    await this.ap.fundAppeal(this.aaa.address, 0, 1, {
       value: (ARBITRATION_COST * (1 + LOSER_STAKE_MULTIPLIER / DIVISOR)) / 2,
       from: fifthParty,
     });
 
     const previousBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
-    const tx = await this.ap.fundAppeal(0, 2, {
+    const tx = await this.ap.fundAppeal(this.aaa.address, 0, 2, {
       value: ARBITRATION_COST * (1 + WINNER_STAKE_MULTIPLIER / DIVISOR) + 123456789,
       from: fourthParty,
     }); // 123456789 is excess value, should be sent back.
@@ -83,9 +83,9 @@ contract("ArbitrableProxy", ([sender, receiver, thirdParty, fourthParty, fifthPa
     const previousBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
     const previousBalanceOfFifthParty = await web3.eth.getBalance(fifthParty);
 
-    await this.ap.withdrawFeesAndRewardsForAllRounds(0, thirdParty, [...Array(NUMBER_OF_RULING_OPTIONS + 1).keys()]);
-    await this.ap.withdrawFeesAndRewardsForAllRounds(0, fourthParty, [...Array(NUMBER_OF_RULING_OPTIONS + 1).keys()]);
-    await this.ap.withdrawFeesAndRewardsForAllRounds(0, fifthParty, [...Array(NUMBER_OF_RULING_OPTIONS + 1).keys()]);
+    await this.ap.withdrawFeesAndRewardsForAllRounds(this.aaa.address, 0, thirdParty, [...Array(NUMBER_OF_RULING_OPTIONS + 1).keys()]);
+    await this.ap.withdrawFeesAndRewardsForAllRounds(this.aaa.address, 0, fourthParty, [...Array(NUMBER_OF_RULING_OPTIONS + 1).keys()]);
+    await this.ap.withdrawFeesAndRewardsForAllRounds(this.aaa.address, 0, fifthParty, [...Array(NUMBER_OF_RULING_OPTIONS + 1).keys()]);
 
     const currentBalanceOfThirdParty = await web3.eth.getBalance(thirdParty);
     const currentBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);

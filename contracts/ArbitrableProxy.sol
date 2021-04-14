@@ -38,7 +38,6 @@ contract ArbitrableProxy is IDisputeResolver {
     }
 
     address public governor = msg.sender;
-    IArbitrator public immutable arbitrator;
 
     // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
     uint256 public winnerStakeMultiplier = 10000; // Multiplier of the arbitration cost that the winner has to pay as fee stake for a round in basis points. Default is 1x of appeal fee.
@@ -48,16 +47,9 @@ contract ArbitrableProxy is IDisputeResolver {
     uint256 public constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
 
     DisputeStruct[] public disputes;
-    mapping(uint256 => DisputeStruct) public disputeIDtoDisputeStruct;
+    mapping(IArbitrator => mapping(uint256 => DisputeStruct)) public disputeIDtoDisputeStruct;
 
-    mapping(uint256 => Round[]) public disputeIDtoRoundArray; // Maps dispute ids to round arrays.
-
-    /** @dev Constructor
-     *  @param _arbitrator Target global arbitrator for any disputes.
-     */
-    constructor(IArbitrator _arbitrator) {
-        arbitrator = _arbitrator;
-    }
+    mapping(IArbitrator => mapping(uint256 => Round[])) public disputeIDtoRoundArray; // Maps dispute ids to round arrays.
 
     /** @dev TRUSTED. Calls createDispute function of the specified arbitrator to create a dispute.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
@@ -67,28 +59,29 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @return disputeID Dispute id (on arbitrator side) of the dispute created.
      */
     function createDispute(
+        IArbitrator _arbitrator,
         bytes calldata _arbitratorExtraData,
         string calldata _metaevidenceURI,
         uint256 _numberOfRulingOptions
     ) external payable returns (uint256 disputeID) {
         if (_numberOfRulingOptions == 0) _numberOfRulingOptions = MAX_NO_OF_CHOICES;
 
-        disputeID = arbitrator.createDispute{value: msg.value}(_numberOfRulingOptions, _arbitratorExtraData);
+        disputeID = _arbitrator.createDispute{value: msg.value}(_numberOfRulingOptions, _arbitratorExtraData);
 
-        disputeIDtoDisputeStruct[disputeID] = DisputeStruct({arbitratorExtraData: _arbitratorExtraData, isRuled: false, ruling: 0, numberOfRulingOptions: _numberOfRulingOptions});
+        disputeIDtoDisputeStruct[_arbitrator][disputeID] = DisputeStruct({arbitratorExtraData: _arbitratorExtraData, isRuled: false, ruling: 0, numberOfRulingOptions: _numberOfRulingOptions});
 
-        disputeIDtoRoundArray[disputeID].push();
+        disputeIDtoRoundArray[_arbitrator][disputeID].push();
 
         emit MetaEvidence(disputeID, _metaevidenceURI);
-        emit Dispute(arbitrator, disputeID, disputeID, disputeID);
+        emit Dispute(_arbitrator, disputeID, disputeID, disputeID);
     }
 
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
      *  @param _disputeID Dispute id as in arbitrable contract.
      *  @return count Number of possible ruling options.
      */
-    function numberOfRulingOptions(uint256 _disputeID) external view override returns (uint256 count) {
-        count = disputeIDtoDisputeStruct[_disputeID].numberOfRulingOptions;
+    function numberOfRulingOptions(IArbitrator _arbitrator, uint256 _disputeID) external view override returns (uint256 count) {
+        count = disputeIDtoDisputeStruct[_arbitrator][_disputeID].numberOfRulingOptions;
     }
 
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
@@ -97,23 +90,27 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _ruling The ruling to which the caller wants to contribute.
      *  @return fullyFunded Whether _ruling was fully funded after the call.
      */
-    function fundAppeal(uint256 _disputeID, uint256 _ruling) external payable override returns (bool fullyFunded) {
-        DisputeStruct storage dispute = disputeIDtoDisputeStruct[_disputeID];
+    function fundAppeal(
+        IArbitrator _arbitrator,
+        uint256 _disputeID,
+        uint256 _ruling
+    ) external payable override returns (bool fullyFunded) {
+        DisputeStruct storage dispute = disputeIDtoDisputeStruct[_arbitrator][_disputeID];
         require(_ruling <= dispute.numberOfRulingOptions, "There is no such ruling to fund.");
-        uint256 currentRuling = arbitrator.currentRuling(_disputeID);
+        uint256 currentRuling = _arbitrator.currentRuling(_disputeID);
 
-        checkAppealPeriod(_disputeID, _ruling, currentRuling);
+        checkAppealPeriod(_arbitrator, _disputeID, _ruling, currentRuling);
 
-        (uint256 originalCost, uint256 totalCost) = appealCost(_disputeID, _ruling, currentRuling);
+        (uint256 originalCost, uint256 totalCost) = appealCost(_arbitrator, _disputeID, _ruling, currentRuling);
 
-        Round[] storage rounds = disputeIDtoRoundArray[_disputeID];
+        Round[] storage rounds = disputeIDtoRoundArray[_arbitrator][_disputeID];
         uint256 roundsLength = rounds.length;
         Round storage lastRound = rounds[roundsLength - 1];
         require(!lastRound.hasPaid[_ruling], "Appeal fee has already been paid.");
         uint256 paidFeesInLastRound = lastRound.paidFees[_ruling];
 
         uint256 contribution = totalCost.subCap(paidFeesInLastRound) > msg.value ? msg.value : totalCost.subCap(paidFeesInLastRound);
-        emit Contribution(_disputeID, roundsLength - 1, _ruling, msg.sender, contribution);
+        emit Contribution(_arbitrator, _disputeID, roundsLength - 1, _ruling, msg.sender, contribution);
 
         lastRound.contributions[msg.sender][_ruling] += contribution;
 
@@ -124,7 +121,7 @@ contract ArbitrableProxy is IDisputeResolver {
             lastRound.feeRewards += paidFeesInLastRound;
             lastRound.fundedRulings.push(_ruling);
             lastRound.hasPaid[_ruling] = true;
-            emit RulingFunded(_disputeID, roundsLength - 1, _ruling);
+            emit RulingFunded(_arbitrator, _disputeID, roundsLength - 1, _ruling);
         }
 
         if (lastRound.fundedRulings.length > 1) {
@@ -132,7 +129,7 @@ contract ArbitrableProxy is IDisputeResolver {
             rounds.push();
 
             lastRound.feeRewards = lastRound.feeRewards.subCap(originalCost);
-            arbitrator.appeal{value: originalCost}(_disputeID, dispute.arbitratorExtraData);
+            _arbitrator.appeal{value: originalCost}(_disputeID, dispute.arbitratorExtraData);
         }
 
         msg.sender.transfer(msg.value.subCap(contribution)); // Sending extra value back to contributor.
@@ -145,6 +142,7 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _ruling The ruling option which the caller wants to learn about its appeal period.
      */
     function checkAppealPeriod(
+        IArbitrator arbitrator,
         uint256 _disputeID,
         uint256 _ruling,
         uint256 _currentRuling
@@ -153,7 +151,10 @@ contract ArbitrableProxy is IDisputeResolver {
 
         if (_currentRuling == _ruling || _currentRuling == 0) require(block.timestamp >= originalStart && block.timestamp < originalEnd, "Funding must be made within the appeal period.");
         else {
-            require(block.timestamp >= originalStart && block.timestamp < (originalStart + ((originalEnd - originalStart) * loserAppealPeriodMultiplier) / MULTIPLIER_DIVISOR), "Funding must be made within the appeal period.");
+            require(
+                block.timestamp >= originalStart && block.timestamp < (originalStart + ((originalEnd - originalStart) * loserAppealPeriodMultiplier) / MULTIPLIER_DIVISOR),
+                "Funding must be made within the appeal period."
+            );
         }
     }
 
@@ -163,12 +164,13 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _ruling The ruling option which the caller wants to learn about its appeal cost.
      */
     function appealCost(
+        IArbitrator arbitrator,
         uint256 _disputeID,
         uint256 _ruling,
         uint256 _currentRuling
     ) internal view returns (uint256 originalCost, uint256 specificCost) {
         uint256 multiplier;
-        DisputeStruct storage dispute = disputeIDtoDisputeStruct[_disputeID];
+        DisputeStruct storage dispute = disputeIDtoDisputeStruct[arbitrator][_disputeID];
         if (_currentRuling == 0) multiplier = tieStakeMultiplier;
         else if (_ruling == _currentRuling) multiplier = winnerStakeMultiplier;
         else multiplier = loserStakeMultiplier;
@@ -185,14 +187,15 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @return sum Reward amount that is to be withdrawn. Might be zero if arguments are not qualifying for a reward or reimbursement, or it might be withdrawn already.
      */
     function withdrawFeesAndRewards(
+        IArbitrator arbitrator,
         uint256 _disputeID,
         address payable _contributor,
         uint256 _roundNumber,
         uint256 _ruling
     ) public override returns (uint256 sum) {
-        DisputeStruct storage dispute = disputeIDtoDisputeStruct[_disputeID];
+        DisputeStruct storage dispute = disputeIDtoDisputeStruct[arbitrator][_disputeID];
 
-        Round storage round = disputeIDtoRoundArray[_disputeID][_roundNumber];
+        Round storage round = disputeIDtoRoundArray[arbitrator][_disputeID][_roundNumber];
 
         require(dispute.isRuled, "The dispute should be solved");
 
@@ -214,7 +217,7 @@ contract ArbitrableProxy is IDisputeResolver {
         round.contributions[_contributor][_ruling] = 0;
         if (sum != 0) {
             _contributor.send(sum); // User is responsible for accepting the reward.
-            emit Withdrawal(_disputeID, _roundNumber, _ruling, _contributor, sum);
+            emit Withdrawal(arbitrator, _disputeID, _roundNumber, _ruling, _contributor, sum);
         }
     }
 
@@ -225,6 +228,7 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForMultipleRulings(
+        IArbitrator arbitrator,
         uint256 _disputeID,
         address payable _contributor,
         uint256 _roundNumber,
@@ -232,7 +236,7 @@ contract ArbitrableProxy is IDisputeResolver {
     ) public override {
         uint256 contributionArrayLength = _contributedTo.length;
         for (uint256 contributionNumber = 0; contributionNumber < contributionArrayLength; contributionNumber++) {
-            withdrawFeesAndRewards(_disputeID, _contributor, _roundNumber, _contributedTo[contributionNumber]);
+            withdrawFeesAndRewards(arbitrator, _disputeID, _contributor, _roundNumber, _contributedTo[contributionNumber]);
         }
     }
 
@@ -242,13 +246,14 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForAllRounds(
+        IArbitrator arbitrator,
         uint256 _disputeID,
         address payable _contributor,
         uint256[] calldata _contributedTo
     ) external override {
-        uint256 noOfRounds = disputeIDtoRoundArray[_disputeID].length;
+        uint256 noOfRounds = disputeIDtoRoundArray[arbitrator][_disputeID].length;
         for (uint256 roundNumber = 0; roundNumber < noOfRounds; roundNumber++) {
-            withdrawFeesAndRewardsForMultipleRulings(_disputeID, _contributor, roundNumber, _contributedTo);
+            withdrawFeesAndRewardsForMultipleRulings(arbitrator, _disputeID, _contributor, roundNumber, _contributedTo);
         }
     }
 
@@ -259,16 +264,17 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @return sum The total amount available to withdraw.
      */
     function getTotalWithdrawableAmount(
+        IArbitrator arbitrator,
         uint256 _disputeID,
         address payable _contributor,
         uint256[] calldata _contributedTo
     ) public view override returns (uint256 sum) {
-        uint256 noOfRounds = disputeIDtoRoundArray[_disputeID].length;
+        uint256 noOfRounds = disputeIDtoRoundArray[arbitrator][_disputeID].length;
         for (uint256 roundNumber = 0; roundNumber < noOfRounds; roundNumber++) {
             for (uint256 contributionNumber = 0; contributionNumber < _contributedTo.length; contributionNumber++) {
-                DisputeStruct storage dispute = disputeIDtoDisputeStruct[_disputeID];
+                DisputeStruct storage dispute = disputeIDtoDisputeStruct[arbitrator][_disputeID];
 
-                Round storage round = disputeIDtoRoundArray[_disputeID][roundNumber];
+                Round storage round = disputeIDtoRoundArray[arbitrator][_disputeID][roundNumber];
                 uint256 finalRuling = dispute.ruling;
                 uint256 ruling = _contributedTo[contributionNumber];
                 require(dispute.isRuled, "The dispute should be solved");
@@ -296,16 +302,15 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _ruling The ruling choice of the arbitration.
      */
     function rule(uint256 _externalDisputeID, uint256 _ruling) external override {
-        DisputeStruct storage dispute = disputeIDtoDisputeStruct[_externalDisputeID];
-        require(msg.sender == address(arbitrator), "Only the arbitrator can execute this.");
+        DisputeStruct storage dispute = disputeIDtoDisputeStruct[IArbitrator(msg.sender)][_externalDisputeID];
         require(_ruling <= dispute.numberOfRulingOptions, "Invalid ruling.");
         require(dispute.isRuled == false, "This dispute has been ruled already.");
 
         dispute.isRuled = true;
         dispute.ruling = _ruling;
 
-        Round[] storage rounds = disputeIDtoRoundArray[_externalDisputeID];
-        Round storage lastRound = disputeIDtoRoundArray[_externalDisputeID][rounds.length - 1];
+        Round[] storage rounds = disputeIDtoRoundArray[IArbitrator(msg.sender)][_externalDisputeID];
+        Round storage lastRound = disputeIDtoRoundArray[IArbitrator(msg.sender)][_externalDisputeID][rounds.length - 1];
         // If only one ruling option is funded, it wins by default. Note that if any other ruling had funded, an appeal would have been created.
         if (lastRound.fundedRulings.length == 1) {
             dispute.ruling = lastRound.fundedRulings[0];
@@ -318,8 +323,12 @@ contract ArbitrableProxy is IDisputeResolver {
      *  @param _disputeID Index of the dispute in disputes array.
      *  @param _evidenceURI Link to evidence.
      */
-    function submitEvidence(uint256 _disputeID, string calldata _evidenceURI) external override {
-        DisputeStruct storage dispute = disputeIDtoDisputeStruct[_disputeID];
+    function submitEvidence(
+        IArbitrator arbitrator,
+        uint256 _disputeID,
+        string calldata _evidenceURI
+    ) external override {
+        DisputeStruct storage dispute = disputeIDtoDisputeStruct[arbitrator][_disputeID];
         require(dispute.isRuled == false, "Cannot submit evidence to a resolved dispute.");
 
         emit Evidence(arbitrator, _disputeID, msg.sender, _evidenceURI);

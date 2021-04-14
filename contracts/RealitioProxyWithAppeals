@@ -244,7 +244,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
 
         // Take up to the amount necessary to fund the current round at the current costs.
         uint256 contribution = totalCost.subCap(round.paidFees[_answer]) > msg.value ? msg.value : totalCost.subCap(round.paidFees[_answer]);
-        emit Contribution(_questionID, lastRoundID, _answer, msg.sender, contribution);
+        emit Contribution(arbitrator, _questionID, lastRoundID, _answer, msg.sender, contribution);
 
         round.contributions[msg.sender][_answer] += contribution;
         round.paidFees[_answer] += contribution;
@@ -252,7 +252,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
             round.feeRewards += round.paidFees[_answer];
             round.fundedAnswers.push(_answer);
             round.hasPaid[_answer] = true;
-            emit RulingFunded(_questionID, lastRoundID, _answer);
+            emit RulingFunded(arbitrator, _questionID, lastRoundID, _answer);
         }
 
         if (round.fundedAnswers.length > 1) {
@@ -289,7 +289,9 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         } else if (!round.hasPaid[question.answer]) {
             // Reimburse unspent fees proportionally if the ultimate winner didn't pay appeal fees fully.
             // Note that if only one side is funded it will become a winner and this part of the condition won't be reached.
-            reward = round.fundedAnswers.length > 1 ? (round.contributions[_beneficiary][_answer] * round.feeRewards) / (round.paidFees[round.fundedAnswers[0]] + round.paidFees[round.fundedAnswers[1]]) : 0;
+            reward = round.fundedAnswers.length > 1
+                ? (round.contributions[_beneficiary][_answer] * round.feeRewards) / (round.paidFees[round.fundedAnswers[0]] + round.paidFees[round.fundedAnswers[1]])
+                : 0;
         } else if (question.answer == _answer) {
             uint256 paidFees = round.paidFees[_answer];
             // Reward the winner.
@@ -299,7 +301,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         if (reward != 0) {
             round.contributions[_beneficiary][_answer] = 0;
             _beneficiary.transfer(reward);
-            emit Withdrawal(_questionID, _round, _answer, _beneficiary, reward);
+            emit Withdrawal(arbitrator, _questionID, _round, _answer, _beneficiary, reward);
         }
     }
 
@@ -353,7 +355,10 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     ) external {
         Question storage question = questions[_questionID];
         require(question.status == Status.Ruled, "The status should be Ruled.");
-        require(realitio.getHistoryHash(bytes32(_questionID)) == keccak256(abi.encodePacked(_lastHistoryHash, _lastAnswerOrCommitmentID, _lastBond, _lastAnswerer, _isCommitment)), "The hash does not match.");
+        require(
+            realitio.getHistoryHash(bytes32(_questionID)) == keccak256(abi.encodePacked(_lastHistoryHash, _lastAnswerOrCommitmentID, _lastBond, _lastAnswerer, _isCommitment)),
+            "The hash does not match."
+        );
 
         question.status = Status.Reported;
         // Realitio ruling is shifted by 1 compared to Kleros, so we subtract 1 to bring it to Realitio format.
@@ -521,7 +526,9 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
                 } else if (!round.hasPaid[finalAnswer]) {
                     // Reimburse unspent fees proportionally if the ultimate winner didn't pay appeal fees fully.
                     // Note that if only one side is funded it will become a winner and this part of the condition won't be reached.
-                    sum += round.fundedAnswers.length > 1 ? (round.contributions[_beneficiary][answer] * round.feeRewards) / (round.paidFees[round.fundedAnswers[0]] + round.paidFees[round.fundedAnswers[1]]) : 0;
+                    sum += round.fundedAnswers.length > 1
+                        ? (round.contributions[_beneficiary][answer] * round.feeRewards) / (round.paidFees[round.fundedAnswers[0]] + round.paidFees[round.fundedAnswers[1]])
+                        : 0;
                 } else if (finalAnswer == answer) {
                     uint256 paidFees = round.paidFees[answer];
                     // Reward the winner.
