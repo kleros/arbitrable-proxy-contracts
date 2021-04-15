@@ -113,7 +113,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
     uint256 private loserAppealPeriodMultiplier; // Multiplier for calculating the duration of the appeal period for the loser, in basis points.
 
     mapping(uint256 => Question) public questions; // Maps a question ID to its data. questions[questionID].
-    mapping(uint256 => uint256) public override externalIDtoLocalID; // Maps external (arbitrator side) dispute ids to local dispute(question) ids.
+    mapping(uint256 => uint256) public externalIDtoLocalID; // Maps external (arbitrator side) dispute ids to local dispute(question) ids.
 
     /* Modifiers */
 
@@ -244,7 +244,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
 
         // Take up to the amount necessary to fund the current round at the current costs.
         uint256 contribution = totalCost.subCap(round.paidFees[_answer]) > msg.value ? msg.value : totalCost.subCap(round.paidFees[_answer]);
-        emit Contribution(_questionID, lastRoundID, _answer, msg.sender, contribution);
+        emit Contribution(arbitrator, _questionID, lastRoundID, _answer, msg.sender, contribution);
 
         round.contributions[msg.sender][_answer] += contribution;
         round.paidFees[_answer] += contribution;
@@ -252,7 +252,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
             round.feeRewards += round.paidFees[_answer];
             round.fundedAnswers.push(_answer);
             round.hasPaid[_answer] = true;
-            emit RulingFunded(_questionID, lastRoundID, _answer);
+            emit RulingFunded(arbitrator, _questionID, lastRoundID, _answer);
         }
 
         if (round.fundedAnswers.length > 1) {
@@ -301,7 +301,7 @@ contract RealitioArbitratorProxyWithAppeals is IDisputeResolver {
         if (reward != 0) {
             round.contributions[_beneficiary][_answer] = 0;
             _beneficiary.transfer(reward);
-            emit Withdrawal(_questionID, _round, _answer, _beneficiary, reward);
+            emit Withdrawal(arbitrator, _questionID, _round, _answer, _beneficiary, reward);
         }
     }
 
