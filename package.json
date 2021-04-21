@@ -7,7 +7,6 @@
   "license": "MIT",
   "private": false,
   "devDependencies": {
-    "@kleros/kathari": "^0.25.0",
     "@kleros/kleros-interaction": "^0.9.2",
     "@openzeppelin/test-helpers": "^0.5.4",
     "@truffle/hdwallet-provider": "^1.0.18",
@@ -24,7 +23,8 @@
   "dependencies": {
     "@kleros/erc-792": "7.0.0",
     "@kleros/ethereum-libraries": "^2.0.0",
-    "@openzeppelin/contracts": "^2.4.0"
+    "@openzeppelin/contracts": "^2.4.0",
+    "@realitio/realitio-contracts": "^2.2.8"
   },
   "scripts": {
     "compile": "truffle compile",
@@ -41,12 +41,12 @@
     "node": ">=0.12"
   },
   "prettier": {
-    "printWidth": 280,
+    "printWidth": 300,
     "overrides": [
       {
         "files": "*.sol",
         "options": {
-          "printWidth": 200,
+          "printWidth": 300,
           "tabWidth": 4,
           "useTabs": false,
           "singleQuote": false,
