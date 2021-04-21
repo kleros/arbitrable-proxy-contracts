@@ -16,11 +16,18 @@ import "./RealitioSafeMath32.sol";
 import "./RealitioSafeMath256.sol";
 import "../IDisputeResolver.sol";
 
+/**
+ *  @title RealitioArbitratorProxyWithAppeals
+ *  @dev A proxy contract for Realitio with extra logic to form an adapter between Kleros and Realitio. It notifies Realitio contract for arbitration requests and creates corresponding dispute on Kleros. Transmits Kleros ruling to Realitio contract. Maintains crowdfunded appeals and notifies Kleros contract. Provides a function to submit evidence for Kleros dispute.
+ *  Disputes happen between the last answer and the challengers answer. But Kleros can rule for any valid answer as a response.
+ *  There is a conversion between Kleros ruling and Realitio answer and there is a need for shifting by 1. For reviewers this should be a focus as it's quite easy to get confused. Any mistakes on this conversion will render this contract useless.
+ *  NOTE: This contract trusts to the Kleros arbitrator and Realitio.
+ */
 contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
-    IRealitio public realitioImplementation;
+    IRealitio public realitioImplementation; // Actual implementation of Realitio.
     uint256 private constant NO_OF_RULING_OPTIONS = (2**256) - 2; // The amount of non 0 choices the arbitrator can give. The uint256(-1) number of choices can not be used in the current Kleros Court implementation.
     bytes public arbitratorExtraData; // Extra data to require particular dispute and appeal behaviour. First 64 characters contain subcourtID and the second 64 characters contain number of votes in the jury.
-    IArbitrator public immutable arbitrator; // The arbitrator contract.
+    IArbitrator public immutable arbitrator; // The arbitrator contract. This will be Kleros arbitrator.
     address public governor = msg.sender; // The address that can make governance changes.
 
     // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
@@ -37,6 +44,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         Reported // The answer of the question has been reported to Realitio.
     }
 
+    // To track internal state in this contract
     struct QuestionArbitrationData {
         address disputer; // The address that requested the arbitration.
         Status status; // The current status of the question.
@@ -45,6 +53,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         Round[] rounds; // Tracks each appeal round of a dispute.
     }
 
+    // For appeal logic
     struct Round {
         mapping(uint256 => uint256) paidFees; // Tracks the fees paid in this round in the form paidFees[answer].
         mapping(uint256 => bool) hasPaid; // True if the fees for this particular answer has been fully paid in the form hasPaid[answer].
@@ -56,12 +65,15 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     using RealitioSafeMath256 for uint256;
     using RealitioSafeMath32 for uint32;
 
-    mapping(bytes32 => QuestionArbitrationData) public questionArbitrationDatas; // Maps a question ID to its data. questions[questionID].
+    mapping(bytes32 => QuestionArbitrationData) public questionArbitrationDatas; // Maps a question ID to its data.
     uint256 public metaEvidenceUpdates; // The number of times the meta evidence has been updated. Used to track the latest meta evidence ID.
-    mapping(uint256 => bytes32) public disputeIDtoQuestionID; // Arbitrator dispute ids to  question ids.
+    mapping(uint256 => bytes32) public disputeIDtoQuestionID; // Arbitrator dispute ids to question ids.
 
-    /// @notice Constructor, sets up some initial templates
-    /// @dev Creates some generalized templates for different question types used in the DApp.
+    /** @dev Constructor.
+     *  @param _realitioImplementation The address of the ERC792 arbitrator.
+     *  @param _arbitrator The address of the ERC792 arbitrator.
+     *  @param _arbitratorExtraData The extra data used to raise a dispute in the ERC792 arbitrator.
+     */
     constructor(
         IRealitio _realitioImplementation,
         IArbitrator _arbitrator,
@@ -81,18 +93,18 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         emit MetaEvidence(metaEvidenceUpdates, _metaEvidence);
     }
 
-    /// @notice Notify the contract that the arbitrator has been paid for a question, freezing it pending their decision.
-    /// @dev The arbitrator contract is trusted to only call this if they've been paid, and tell us who paid them.
-    /// @param questionID The ID of the question
-    /// @param max_previous If specified, reverts if a bond higher than this was submitted after you sent your transaction.
-    function requestArbitration(bytes32 questionID, uint256 max_previous) external payable {
-        QuestionArbitrationData storage question = questionArbitrationDatas[questionID];
+    /** @dev Sets the meta evidence. Can only be called once.
+     *  @param _questionID The question id as in Realitio side.
+     *  @param _maxPrevious If specified, reverts if a bond higher than this was submitted after you sent your transaction.
+     */
+    function requestArbitration(bytes32 _questionID, uint256 _maxPrevious) external payable {
+        QuestionArbitrationData storage question = questionArbitrationDatas[_questionID];
         require(question.status == Status.None, "Arbitration already requested");
 
         // Notify Kleros
         uint256 disputeID = arbitrator.createDispute{value: msg.value}(NO_OF_RULING_OPTIONS, arbitratorExtraData);
-        emit Dispute(arbitrator, disputeID, metaEvidenceUpdates, uint256(questionID));
-        disputeIDtoQuestionID[disputeID] = questionID;
+        emit Dispute(arbitrator, disputeID, metaEvidenceUpdates, uint256(_questionID));
+        disputeIDtoQuestionID[disputeID] = _questionID;
 
         // Update internal state
         question.disputer = msg.sender;
@@ -101,48 +113,10 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         question.rounds.push();
 
         // Notify Realitio
-        realitioImplementation.notifyOfArbitrationRequest(questionID, msg.sender, max_previous);
+        realitioImplementation.notifyOfArbitrationRequest(_questionID, msg.sender, _maxPrevious);
     }
 
-    /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
-     *  @param disputeID Dispute id as in arbitrable contract.
-     *  @return count The number of ruling options.
-     */
-    function numberOfRulingOptions(uint256 disputeID) external view override returns (uint256 count) {
-        return NO_OF_RULING_OPTIONS;
-    }
-
-    function rule(uint256 _disputeID, uint256 _ruling) public override {
-        bytes32 questionID = disputeIDtoQuestionID[_disputeID];
-        QuestionArbitrationData storage questionDispute = questionArbitrationDatas[questionID];
-
-        Round storage round = questionDispute.rounds[questionDispute.rounds.length - 1];
-        uint256 finalRuling = (round.fundedRulings.length == 1) ? round.fundedRulings[0] : _ruling;
-
-        questionDispute.answer = bytes32(finalRuling + 1); // Shift Kleros ruling by +1 to match Realitio layout
-        questionDispute.status = Status.Ruled;
-
-        // Notify Kleros
-        emit Ruling(IArbitrator(msg.sender), _disputeID, finalRuling);
-    }
-
-    function _verifyHistoryInputOrRevert(
-        bytes32 last_history_hash,
-        bytes32 history_hash,
-        bytes32 answer,
-        uint256 bond,
-        address addr
-    ) internal pure returns (bool) {
-        if (last_history_hash == keccak256(abi.encodePacked(history_hash, answer, bond, addr, true))) {
-            return true;
-        }
-        if (last_history_hash == keccak256(abi.encodePacked(history_hash, answer, bond, addr, false))) {
-            return false;
-        }
-        revert("History input provided did not match the expected hash");
-    }
-
-    /** @dev Reports the answer to a specified question from the ERC792 arbitrator to the Realitio contract.
+    /** @dev Reports the answer to a specified question from the Kleros arbitrator to the Realitio contract.
      *  @param _questionID The ID of the question.
      *  @param _lastHistoryHash The history hash given with the last answer to the question in the Realitio contract.
      *  @param _lastAnswerOrCommitmentID The last answer given, or its commitment ID if it was a commitment, to the question in the Realitio contract, in bytes32.
@@ -160,7 +134,6 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         require(questionDispute.status == Status.Ruled, "The status should be Ruled.");
 
         Question memory question = realitioImplementation.questions(_questionID);
-        // bool is_commitment = _verifyHistoryInputOrRevert(question.history_hash, _lastHistoryHash, _lastAnswerOrCommitmentID, question.bond, _lastAnswerer);
 
         questionDispute.status = Status.Reported;
 
@@ -168,6 +141,31 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     }
 
     /* Following section contains implementation of IDisputeResolver */
+
+    /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
+     *  @return count The number of ruling options.
+     */
+    function numberOfRulingOptions(uint256 _) external view override returns (uint256 count) {
+        return NO_OF_RULING_OPTIONS;
+    }
+
+    /** @dev Receives ruling from Kleros and executes consequences.
+     *  @param _disputeID ID of Kleros dispute.
+     *  @param _ruling Ruling that is given by Kleros. This needs to be converted to Realitio answer by shifting by 1.
+     */
+    function rule(uint256 _disputeID, uint256 _ruling) public override {
+        bytes32 questionID = disputeIDtoQuestionID[_disputeID];
+        QuestionArbitrationData storage questionDispute = questionArbitrationDatas[questionID];
+
+        Round storage round = questionDispute.rounds[questionDispute.rounds.length - 1];
+        uint256 finalRuling = (round.fundedRulings.length == 1) ? round.fundedRulings[0] : _ruling;
+
+        questionDispute.answer = bytes32(finalRuling + 1); // Shift Kleros ruling by +1 to match Realitio layout
+        questionDispute.status = Status.Ruled;
+
+        // Notify Kleros
+        emit Ruling(IArbitrator(msg.sender), _disputeID, finalRuling);
+    }
 
     /** @dev Allows to submit evidence for a given dispute.
      *  @param _disputeID Dispute id as in arbitrable contract.
@@ -201,9 +199,10 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         return (appealFee, appealFee.add(appealFee.mul(multiplier) / MULTIPLIER_DIVISOR));
     }
 
-    /** @dev Retrieves appeal period for each ruling. It extends the function with the same name on the arbitrator by also requiring the _ruling parameter. This is because the arbitrable doesn't give losers of previous round as much time as the winner to avoid last-minute funding attacks.
-     *  @param _disputeID The dispute this function checks for appeal period.
-     *  @param _ruling The ruling option which the caller wants to learn about its appeal period.
+    /** @dev Reverts if appeal period has expired for given ruling option. It gives less time for funding appeal for losing ruling option (in the last round).
+     *  @param _disputeID Dispute ID of Kleros dispute.
+     *  @param _ruling The ruling option to query for.
+     *  @param _currentRuling The latest ruling given by Kleros. Note that this ruling is not final at this point, can be appealed.
      */
     function checkAppealPeriod(
         uint256 _disputeID,
@@ -220,8 +219,8 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
 
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
-     *  @param _disputeID Dispute id as in arbitrable contract.
-     *  @param _ruling The ruling option to which the caller wants to contribute.
+     *  @param _disputeID Dispute ID of Kleros dispute.
+     *  @param _ruling The ruling option to which the caller wants to contribute to.
      *  @return fullyFunded True if the ruling option got fully funded as a result of this contribution.
      */
     function fundAppeal(uint256 _disputeID, uint256 _ruling) external payable override returns (bool fullyFunded) {
@@ -287,7 +286,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     }
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
-     *  @param _disputeID Dispute id as in arbitrable contract.
+     *  @param _disputeID Dispute ID of Kleros dispute.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _ruling A ruling option that the caller wants to withdraw fees and rewards related to it.
@@ -328,7 +327,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     }
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved. For multiple ruling options at once.
-     *  @param _disputeID Dispute id as in arbitrable contract.
+     *  @param _disputeID Dispute ID of Kleros dispute.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
      *  @param _contributedTo Rulings that received contributions from contributor.
@@ -346,7 +345,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     }
 
     /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.
-     *  @param _disputeID Dispute id as in arbitrable contract.
+     *  @param _disputeID Dispute ID of Kleros dispute.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
@@ -365,7 +364,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     }
 
     /** @dev Returns the sum of withdrawable amount.
-     *  @param _disputeID Dispute id as in arbitrable contract.
+     *  @param _disputeID Dispute ID of Kleros dispute.
      *  @param _contributor The contributor for which to query.
      *  @param _contributedTo Ruling options to look for potential withdrawals.
      *  @return sum The total amount available to withdraw.
