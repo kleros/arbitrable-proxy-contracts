@@ -103,14 +103,15 @@ abstract contract IRealitio {
 
     function getBond(bytes32 question_id) external view virtual returns (uint256);
 
-    function claimMultipleAndWithdrawBalance(
-        bytes32[] calldata question_ids,
-        uint256[] calldata lengths,
-        bytes32[] calldata hist_hashes,
-        address[] calldata addrs,
-        uint256[] calldata bonds,
-        bytes32[] calldata answers
-    ) external virtual;
+    // Disabled because of stack too deep error.
+    // function claimMultipleAndWithdrawBalance(
+    //     bytes32[] calldata question_ids,
+    //     uint256[] calldata lengths,
+    //     bytes32[] calldata hist_hashes,
+    //     address[] calldata addrs,
+    //     uint256[] calldata bonds,
+    //     bytes32[] calldata answers
+    // ) external virtual;
 
     function withdraw() public virtual;
 
