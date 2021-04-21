@@ -23,6 +23,13 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     IArbitrator public immutable arbitrator; // The arbitrator contract.
     address public governor = msg.sender; // The address that can make governance changes.
 
+    // The required fee stake that a party must pay depends on who won the previous round and is proportional to the arbitration cost such that the fee stake for a round is stake multiplier * arbitration cost for that round.
+    uint256 public winnerStakeMultiplier = 10000; // Multiplier of the arbitration cost that the winner has to pay as fee stake for a round in basis points. Default is 1x of appeal fee.
+    uint256 public loserStakeMultiplier = 20000; // Multiplier of the arbitration cost that the loser has to pay as fee stake for a round in basis points. Default is 2x of appeal fee.
+    uint256 public tieStakeMultiplier = 10000; // Multiplier of the arbitration cost that the parties has to pay as fee stake for a round in basis points, in case of tie. Default is 1x of appeal fee.
+    uint256 public loserAppealPeriodMultiplier = 5000; // Multiplier of the appeal period for losers (any other ruling options) in basis points. Default is 1/2 of original appeal period.
+    uint256 public constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
+
     enum Status {
         None, // The question hasn't been requested arbitration yet.
         Disputed, // The question has been requested arbitration.
@@ -43,7 +50,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         mapping(uint256 => bool) hasPaid; // True if the fees for this particular answer has been fully paid in the form hasPaid[answer].
         mapping(address => mapping(uint256 => uint256)) contributions; // Maps contributors to their contributions for each answer in the form contributions[address][answer].
         uint256 feeRewards; // Sum of reimbursable appeal fees available to the parties that made contributions to the answer that ultimately wins a dispute.
-        uint256[] fundedAnswers; // Stores the answer choices that are fully funded.
+        uint256[] fundedRulings; // Stores the answer choices that are fully funded.
     }
 
     using RealitioSafeMath256 for uint256;
@@ -110,7 +117,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         QuestionArbitrationData storage questionDispute = questionArbitrationDatas[questionID];
 
         Round storage round = questionDispute.rounds[questionDispute.rounds.length - 1];
-        uint256 finalRuling = (round.fundedAnswers.length == 1) ? round.fundedAnswers[0] : _ruling;
+        uint256 finalRuling = (round.fundedRulings.length == 1) ? round.fundedRulings[0] : _ruling;
 
         questionDispute.answer = bytes32(finalRuling + 1); // Shift Kleros ruling by +1 to match Realitio layout
         questionDispute.status = Status.Ruled;
@@ -160,6 +167,8 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         realitioImplementation.assignWinnerAndSubmitAnswerByArbitrator(_questionID, questionDispute.answer, questionDispute.disputer, _lastHistoryHash, _lastAnswerOrCommitmentID, _lastAnswerer);
     }
 
+    /* Following section contains implementation of IDisputeResolver */
+
     /** @dev Allows to submit evidence for a given dispute.
      *  @param _disputeID Dispute id as in arbitrable contract.
      *  @param  _evidenceURI Link to evidence.
@@ -173,14 +182,86 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         emit Evidence(arbitrator, _disputeID, msg.sender, _evidenceURI);
     }
 
+    /** @dev Retrieves appeal cost for each ruling. It extends the function with the same name on the arbitrator side by adding
+     *  _ruling parameter because total to be raised depends on multipliers.
+     *  @param _disputeID The dispute this function returns its appeal costs.
+     *  @param _ruling The ruling option which the caller wants to learn about its appeal cost.
+     */
+    function appealCost(
+        uint256 _disputeID,
+        uint256 _ruling,
+        uint256 _currentRuling
+    ) internal view returns (uint256 originalCost, uint256 specificCost) {
+        uint256 multiplier;
+        if (_currentRuling == 0) multiplier = tieStakeMultiplier;
+        else if (_ruling == _currentRuling) multiplier = winnerStakeMultiplier;
+        else multiplier = loserStakeMultiplier;
+
+        uint256 appealFee = arbitrator.appealCost(_disputeID, arbitratorExtraData);
+        return (appealFee, appealFee.add(appealFee.mul(multiplier) / MULTIPLIER_DIVISOR));
+    }
+
+    /** @dev Retrieves appeal period for each ruling. It extends the function with the same name on the arbitrator by also requiring the _ruling parameter. This is because the arbitrable doesn't give losers of previous round as much time as the winner to avoid last-minute funding attacks.
+     *  @param _disputeID The dispute this function checks for appeal period.
+     *  @param _ruling The ruling option which the caller wants to learn about its appeal period.
+     */
+    function checkAppealPeriod(
+        uint256 _disputeID,
+        uint256 _ruling,
+        uint256 _currentRuling
+    ) internal view {
+        (uint256 originalStart, uint256 originalEnd) = arbitrator.appealPeriod(_disputeID);
+
+        if (_currentRuling == _ruling || _currentRuling == 0) require(block.timestamp >= originalStart && block.timestamp < originalEnd, "Funding must be made within the appeal period.");
+        else {
+            require(block.timestamp >= originalStart && block.timestamp < (originalStart + ((originalEnd - originalStart) * loserAppealPeriodMultiplier) / MULTIPLIER_DIVISOR), "Funding must be made within the appeal period.");
+        }
+    }
+
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
         Note that we don’t need to check that msg.value is enough to pay arbitration fees as it’s the responsibility of the arbitrator contract.
-     *  @param disputeID Dispute id as in arbitrable contract.
-     *  @param ruling The ruling option to which the caller wants to contribute.
+     *  @param _disputeID Dispute id as in arbitrable contract.
+     *  @param _ruling The ruling option to which the caller wants to contribute.
      *  @return fullyFunded True if the ruling option got fully funded as a result of this contribution.
      */
-    function fundAppeal(uint256 disputeID, uint256 ruling) external payable override returns (bool fullyFunded) {
-        return true;
+    function fundAppeal(uint256 _disputeID, uint256 _ruling) external payable override returns (bool fullyFunded) {
+        bytes32 questionID = disputeIDtoQuestionID[_disputeID];
+        QuestionArbitrationData storage questionDispute = questionArbitrationDatas[questionID];
+        require(questionDispute.status == Status.Disputed, "No dispute to appeal.");
+
+        uint256 currentRuling = arbitrator.currentRuling(_disputeID);
+
+        checkAppealPeriod(_disputeID, _ruling, currentRuling);
+        (uint256 originalCost, uint256 totalCost) = appealCost(_disputeID, _ruling, currentRuling);
+
+        uint256 roundsLength = questionDispute.rounds.length;
+        Round storage lastRound = questionDispute.rounds[roundsLength - 1];
+        require(!lastRound.hasPaid[_ruling], "Appeal fee has already been paid.");
+        uint256 paidFeesInLastRound = lastRound.paidFees[_ruling];
+
+        uint256 contribution = totalCost.sub(paidFeesInLastRound) > msg.value ? msg.value : totalCost.sub(paidFeesInLastRound);
+        emit Contribution(_disputeID, roundsLength - 1, _ruling, msg.sender, contribution);
+
+        lastRound.contributions[msg.sender][_ruling] += contribution;
+
+        if (paidFeesInLastRound >= totalCost) {
+            lastRound.feeRewards += paidFeesInLastRound;
+            lastRound.fundedRulings.push(_ruling);
+            lastRound.hasPaid[_ruling] = true;
+            emit RulingFunded(_disputeID, roundsLength - 1, _ruling);
+        }
+
+        if (lastRound.fundedRulings.length > 1) {
+            // At least two ruling options are fully funded.
+            questionDispute.rounds.push();
+
+            lastRound.feeRewards = lastRound.feeRewards.sub(originalCost);
+            arbitrator.appeal{value: originalCost}(_disputeID, arbitratorExtraData);
+        }
+
+        msg.sender.transfer(msg.value.sub(contribution)); // Sending extra value back to contributor.
+
+        return lastRound.hasPaid[_ruling];
     }
 
     /** @dev Returns stake multipliers.
@@ -202,67 +283,127 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
             uint256 divisor
         )
     {
-        return (0, 0, 0, 0, 0);
+        return (winnerStakeMultiplier, loserStakeMultiplier, tieStakeMultiplier, loserAppealPeriodMultiplier, MULTIPLIER_DIVISOR);
     }
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved.
-     *  @param disputeID Dispute id as in arbitrable contract.
-     *  @param contributor The address to withdraw its rewards.
-     *  @param roundNumber The number of the round caller wants to withdraw from.
-     *  @param ruling A ruling option that the caller wants to withdraw fees and rewards related to it.
+     *  @param _disputeID Dispute id as in arbitrable contract.
+     *  @param _contributor The address to withdraw its rewards.
+     *  @param _roundNumber The number of the round caller wants to withdraw from.
+     *  @param _ruling A ruling option that the caller wants to withdraw fees and rewards related to it.
      */
     function withdrawFeesAndRewards(
-        uint256 disputeID,
-        address payable contributor,
-        uint256 roundNumber,
-        uint256 ruling
-    ) external override returns (uint256 sum) {
-        return 0;
+        uint256 _disputeID,
+        address payable _contributor,
+        uint256 _roundNumber,
+        uint256 _ruling
+    ) public override returns (uint256 sum) {
+        bytes32 questionID = disputeIDtoQuestionID[_disputeID];
+        QuestionArbitrationData storage questionDispute = questionArbitrationDatas[questionID];
+
+        Round storage round = questionDispute.rounds[_roundNumber];
+
+        require(questionDispute.status >= Status.Ruled, "There is no ruling yet.");
+
+        if (!round.hasPaid[_ruling]) {
+            // Allow to reimburse if funding was unsuccessful for this ruling option.
+            sum += round.contributions[_contributor][_ruling];
+        } else {
+            // Funding was successful for this ruling option.
+            if (_ruling == (uint256(questionDispute.answer) - 1)) {
+                // This ruling option is the ultimate winner.
+                uint256 paidFees = round.paidFees[_ruling];
+                sum += paidFees > 0 ? (round.contributions[_contributor][_ruling] * round.feeRewards) / paidFees : 0;
+            } else if (!round.hasPaid[uint256(questionDispute.answer) - 1]) {
+                // This ruling option was not the ultimate winner, but the ultimate winner was not funded in this round. In this case funded ruling option(s) wins by default. Prize is distributed among contributors of funded ruling option(s).
+                sum += (round.contributions[_contributor][_ruling] * round.feeRewards) / (round.paidFees[round.fundedRulings[0]] + round.paidFees[round.fundedRulings[1]]);
+            }
+        }
+
+        round.contributions[_contributor][_ruling] = 0;
+        if (sum != 0) {
+            _contributor.send(sum); // User is responsible for accepting the reward.
+            emit Withdrawal(_disputeID, _roundNumber, _ruling, _contributor, sum);
+        }
     }
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved. For multiple ruling options at once.
-     *  @param disputeID Dispute id as in arbitrable contract.
-     *  @param contributor The address to withdraw its rewards.
-     *  @param roundNumber The number of the round caller wants to withdraw from.
-     *  @param contributedTo Rulings that received contributions from contributor.
+     *  @param _disputeID Dispute id as in arbitrable contract.
+     *  @param _contributor The address to withdraw its rewards.
+     *  @param _roundNumber The number of the round caller wants to withdraw from.
+     *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForMultipleRulings(
-        uint256 disputeID,
-        address payable contributor,
-        uint256 roundNumber,
-        uint256[] memory contributedTo
-    ) external override {
-        return;
+        uint256 _disputeID,
+        address payable _contributor,
+        uint256 _roundNumber,
+        uint256[] memory _contributedTo
+    ) public override {
+        uint256 contributionArrayLength = _contributedTo.length;
+        for (uint256 contributionNumber = 0; contributionNumber < contributionArrayLength; contributionNumber++) {
+            withdrawFeesAndRewards(_disputeID, _contributor, _roundNumber, _contributedTo[contributionNumber]);
+        }
     }
 
     /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.
-     *  @param disputeID Dispute id as in arbitrable contract.
-     *  @param contributor The address to withdraw its rewards.
-     *  @param contributedTo Rulings that received contributions from contributor.
+     *  @param _disputeID Dispute id as in arbitrable contract.
+     *  @param _contributor The address to withdraw its rewards.
+     *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForAllRounds(
-        uint256 disputeID,
-        address payable contributor,
-        uint256[] memory contributedTo
+        uint256 _disputeID,
+        address payable _contributor,
+        uint256[] memory _contributedTo
     ) external override {
-        return;
+        bytes32 questionID = disputeIDtoQuestionID[_disputeID];
+        QuestionArbitrationData storage questionDispute = questionArbitrationDatas[questionID];
+        uint256 noOfRounds = questionDispute.rounds.length;
+
+        for (uint256 roundNumber = 0; roundNumber < noOfRounds; roundNumber++) {
+            withdrawFeesAndRewardsForMultipleRulings(_disputeID, _contributor, roundNumber, _contributedTo);
+        }
     }
 
     /** @dev Returns the sum of withdrawable amount.
-     *  @param disputeID Dispute id as in arbitrable contract.
-     *  @param contributor The contributor for which to query.
-     *  @param contributedTo Ruling options to look for potential withdrawals.
+     *  @param _disputeID Dispute id as in arbitrable contract.
+     *  @param _contributor The contributor for which to query.
+     *  @param _contributedTo Ruling options to look for potential withdrawals.
      *  @return sum The total amount available to withdraw.
      */
     function getTotalWithdrawableAmount(
-        uint256 disputeID,
-        address payable contributor,
-        uint256[] memory contributedTo
+        uint256 _disputeID,
+        address payable _contributor,
+        uint256[] memory _contributedTo
     ) public view override returns (uint256 sum) {
-        return 0;
+        bytes32 questionID = disputeIDtoQuestionID[_disputeID];
+        QuestionArbitrationData storage questionDispute = questionArbitrationDatas[questionID];
+        uint256 noOfRounds = questionDispute.rounds.length;
+        for (uint256 roundNumber = 0; roundNumber < noOfRounds; roundNumber++) {
+            for (uint256 contributionNumber = 0; contributionNumber < _contributedTo.length; contributionNumber++) {
+                Round storage round = questionDispute.rounds[roundNumber];
+                uint256 finalRuling = uint256(questionDispute.answer) + 1;
+                uint256 ruling = _contributedTo[contributionNumber];
+                require(questionDispute.status >= Status.Ruled, "There is no ruling yet.");
+
+                if (!round.hasPaid[ruling]) {
+                    // Allow to reimburse if funding was unsuccessful for this ruling option.
+                    sum += round.contributions[_contributor][ruling];
+                } else {
+                    //Funding was successful for this ruling option.
+                    if (ruling == finalRuling) {
+                        // This ruling option is the ultimate winner.
+                        sum += round.paidFees[ruling] > 0 ? (round.contributions[_contributor][ruling] * round.feeRewards) / round.paidFees[ruling] : 0;
+                    } else if (!round.hasPaid[finalRuling]) {
+                        // This ruling option was not the ultimate winner, but the ultimate winner was not funded in this round. In this case funded ruling option(s) wins by default. Prize is distributed among contributors of funded ruling option(s).
+                        sum += (round.contributions[_contributor][ruling] * round.feeRewards) / (round.paidFees[round.fundedRulings[0]] + round.paidFees[round.fundedRulings[1]]);
+                    }
+                }
+            }
+        }
+        return sum;
     }
 
-    /* The rest of the contract just redirects function calls: no extra logic implemented */
+    /* The rest of the contract just redirects function calls to underlying Realitio implementation: no extra logic implemented */
 
     /// @notice Notify the contract that the arbitrator has been paid for a question, freezing it pending their decision.
     /// @dev The arbitrator contract is trusted to only call this if they've been paid, and tell us who paid them.
