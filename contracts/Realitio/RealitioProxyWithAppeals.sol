@@ -145,7 +145,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].
      *  @return count The number of ruling options.
      */
-    function numberOfRulingOptions(uint256 _) external view override returns (uint256 count) {
+    function numberOfRulingOptions(IArbitrator, uint256) external view override returns (uint256 count) {
         return NO_OF_RULING_OPTIONS;
     }
 
@@ -171,7 +171,11 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
      *  @param _disputeID Dispute id as in arbitrable contract.
      *  @param  _evidenceURI Link to evidence.
      */
-    function submitEvidence(uint256 _disputeID, string calldata _evidenceURI) external override {
+    function submitEvidence(
+        IArbitrator,
+        uint256 _disputeID,
+        string calldata _evidenceURI
+    ) external override {
         bytes32 questionID = disputeIDtoQuestionID[_disputeID];
         QuestionArbitrationData storage questionDispute = questionArbitrationDatas[questionID];
 
@@ -223,7 +227,11 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
      *  @param _ruling The ruling option to which the caller wants to contribute to.
      *  @return fullyFunded True if the ruling option got fully funded as a result of this contribution.
      */
-    function fundAppeal(uint256 _disputeID, uint256 _ruling) external payable override returns (bool fullyFunded) {
+    function fundAppeal(
+        IArbitrator,
+        uint256 _disputeID,
+        uint256 _ruling
+    ) external payable override returns (bool fullyFunded) {
         bytes32 questionID = disputeIDtoQuestionID[_disputeID];
         QuestionArbitrationData storage questionDispute = questionArbitrationDatas[questionID];
         require(questionDispute.status == Status.Disputed, "No dispute to appeal.");
@@ -239,7 +247,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         uint256 paidFeesInLastRound = lastRound.paidFees[_ruling];
 
         uint256 contribution = totalCost.sub(paidFeesInLastRound) > msg.value ? msg.value : totalCost.sub(paidFeesInLastRound);
-        emit Contribution(_disputeID, roundsLength - 1, _ruling, msg.sender, contribution);
+        emit Contribution(arbitrator, _disputeID, roundsLength - 1, _ruling, msg.sender, contribution);
 
         lastRound.contributions[msg.sender][_ruling] += contribution;
 
@@ -247,7 +255,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
             lastRound.feeRewards += paidFeesInLastRound;
             lastRound.fundedRulings.push(_ruling);
             lastRound.hasPaid[_ruling] = true;
-            emit RulingFunded(_disputeID, roundsLength - 1, _ruling);
+            emit RulingFunded(arbitrator, _disputeID, roundsLength - 1, _ruling);
         }
 
         if (lastRound.fundedRulings.length > 1) {
@@ -292,6 +300,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
      *  @param _ruling A ruling option that the caller wants to withdraw fees and rewards related to it.
      */
     function withdrawFeesAndRewards(
+        IArbitrator,
         uint256 _disputeID,
         address payable _contributor,
         uint256 _roundNumber,
@@ -322,7 +331,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         round.contributions[_contributor][_ruling] = 0;
         if (sum != 0) {
             _contributor.send(sum); // User is responsible for accepting the reward.
-            emit Withdrawal(_disputeID, _roundNumber, _ruling, _contributor, sum);
+            emit Withdrawal(arbitrator, _disputeID, _roundNumber, _ruling, _contributor, sum);
         }
     }
 
@@ -333,6 +342,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForMultipleRulings(
+        IArbitrator,
         uint256 _disputeID,
         address payable _contributor,
         uint256 _roundNumber,
@@ -340,7 +350,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     ) public override {
         uint256 contributionArrayLength = _contributedTo.length;
         for (uint256 contributionNumber = 0; contributionNumber < contributionArrayLength; contributionNumber++) {
-            withdrawFeesAndRewards(_disputeID, _contributor, _roundNumber, _contributedTo[contributionNumber]);
+            withdrawFeesAndRewards(arbitrator, _disputeID, _contributor, _roundNumber, _contributedTo[contributionNumber]);
         }
     }
 
@@ -350,6 +360,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
      *  @param _contributedTo Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForAllRounds(
+        IArbitrator,
         uint256 _disputeID,
         address payable _contributor,
         uint256[] memory _contributedTo
@@ -359,7 +370,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         uint256 noOfRounds = questionDispute.rounds.length;
 
         for (uint256 roundNumber = 0; roundNumber < noOfRounds; roundNumber++) {
-            withdrawFeesAndRewardsForMultipleRulings(_disputeID, _contributor, roundNumber, _contributedTo);
+            withdrawFeesAndRewardsForMultipleRulings(arbitrator, _disputeID, _contributor, roundNumber, _contributedTo);
         }
     }
 
@@ -370,6 +381,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
      *  @return sum The total amount available to withdraw.
      */
     function getTotalWithdrawableAmount(
+        IArbitrator,
         uint256 _disputeID,
         address payable _contributor,
         uint256[] memory _contributedTo
