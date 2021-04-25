@@ -12,7 +12,9 @@ pragma solidity >=0.7;
 pragma abicoder v2;
 
 import "./IRealitio.sol";
+import "./IRealitioArbitrator.sol";
 import "../IDisputeResolver.sol";
+
 import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 
 /**
@@ -22,8 +24,9 @@ import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
  *  There is a conversion between Kleros ruling and Realitio answer and there is a need for shifting by 1. For reviewers this should be a focus as it's quite easy to get confused. Any mistakes on this conversion will render this contract useless.
  *  NOTE: This contract trusts to the Kleros arbitrator and Realitio.
  */
-contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
-    IRealitio public realitioImplementation; // Actual implementation of Realitio.
+contract RealitioProxyWithAppeals is IDisputeResolver, IRealitioArbitrator, IRealitio {
+    IRealitio public override realitio; // Actual implementation of Realitio.
+    string public override metadata = "0x0";
     uint256 private constant NO_OF_RULING_OPTIONS = (2**256) - 2; // The amount of non 0 choices the arbitrator can give. The uint256(-1) number of choices can not be used in the current Kleros Court implementation.
     bytes public arbitratorExtraData; // Extra data to require particular dispute and appeal behaviour. First 64 characters contain subcourtID and the second 64 characters contain number of votes in the jury.
     IArbitrator public immutable arbitrator; // The arbitrator contract. This will be Kleros arbitrator.
@@ -67,16 +70,18 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     mapping(uint256 => bytes32) public disputeIDtoQuestionID; // Arbitrator dispute ids to question ids.
 
     /** @dev Constructor.
-     *  @param _realitioImplementation The address of the Realitio contract.
+     *  @param _realitio The address of the Realitio contract.
      *  @param _arbitrator The address of the ERC792 arbitrator.
      *  @param _arbitratorExtraData The extra data used to raise a dispute in the ERC792 arbitrator.
      */
     constructor(
-        IRealitio _realitioImplementation,
+        IRealitio _realitio,
+        string memory _metadata,
         IArbitrator _arbitrator,
         bytes memory _arbitratorExtraData
     ) {
-        realitioImplementation = _realitioImplementation;
+        realitio = _realitio;
+        metadata = _metadata;
         arbitrator = _arbitrator;
         arbitratorExtraData = _arbitratorExtraData;
     }
@@ -110,7 +115,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         question.rounds.push();
 
         // Notify Realitio
-        realitioImplementation.notifyOfArbitrationRequest(_questionID, msg.sender, _maxPrevious);
+        realitio.notifyOfArbitrationRequest(_questionID, msg.sender, _maxPrevious);
     }
 
     /** @dev Reports the answer to a specified question from the Kleros arbitrator to the Realitio contract.
@@ -130,11 +135,11 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         QuestionArbitrationData storage questionDispute = questionArbitrationDatas[_questionID];
         require(questionDispute.status == Status.Ruled, "The status should be Ruled.");
 
-        Question memory question = realitioImplementation.questions(_questionID);
+        Question memory question = realitio.questions(_questionID);
 
         questionDispute.status = Status.Reported;
 
-        realitioImplementation.assignWinnerAndSubmitAnswerByArbitrator(_questionID, questionDispute.answer, questionDispute.disputer, _lastHistoryHash, _lastAnswerOrCommitmentID, _lastAnswerer);
+        realitio.assignWinnerAndSubmitAnswerByArbitrator(_questionID, questionDispute.answer, questionDispute.disputer, _lastHistoryHash, _lastAnswerOrCommitmentID, _lastAnswerer);
     }
 
     /* Following section contains implementation of IDisputeResolver */
@@ -428,14 +433,14 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         address requester,
         uint256 max_previous
     ) external override {
-        return realitioImplementation.notifyOfArbitrationRequest(questionID, requester, max_previous);
+        return realitio.notifyOfArbitrationRequest(questionID, requester, max_previous);
     }
 
     /// @notice Function for arbitrator to set an optional per-question fee.
     /// @dev The per-question fee, charged when a question is asked, is intended as an anti-spam measure.
     /// @param fee The fee to be charged by the arbitrator when a question is asked
     function setQuestionFee(uint256 fee) external override {
-        return realitioImplementation.setQuestionFee(fee);
+        return realitio.setQuestionFee(fee);
     }
 
     /// @notice Create a reusable template, which should be a JSON document.
@@ -444,7 +449,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     /// @param content The template content
     /// @return The ID of the newly-created template, which is created sequentially.
     function createTemplate(string calldata content) public override returns (uint256) {
-        return realitioImplementation.createTemplate(content);
+        return realitio.createTemplate(content);
     }
 
     /// @notice Create a new reusable template and use it to ask a question
@@ -485,14 +490,14 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         uint32 opening_ts,
         uint256 nonce
     ) public payable override returns (bytes32) {
-        return realitioImplementation.askQuestion(template_id, question, arbitrator, timeout, opening_ts, nonce);
+        return realitio.askQuestion(template_id, question, arbitrator, timeout, opening_ts, nonce);
     }
 
     /// @notice Add funds to the bounty for a question
     /// @dev Add bounty funds after the initial question creation. Can be done any time until the question is finalized.
     /// @param questionID The ID of the question you wish to fund
     function fundAnswerBounty(bytes32 questionID) external payable override {
-        return realitioImplementation.fundAnswerBounty(questionID);
+        return realitio.fundAnswerBounty(questionID);
     }
 
     /// @notice Submit an answer for a question.
@@ -506,7 +511,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         bytes32 answer,
         uint256 maxPrevious
     ) external payable override {
-        return realitioImplementation.submitAnswer(questionID, answer, maxPrevious);
+        return realitio.submitAnswer(questionID, answer, maxPrevious);
     }
 
     /// @notice Submit an answer for a question, crediting it to the specified account.
@@ -522,7 +527,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         uint256 max_previous,
         address answerer
     ) external payable override {
-        return realitioImplementation.submitAnswerFor(questionID, answer, max_previous, answerer);
+        return realitio.submitAnswerFor(questionID, answer, max_previous, answerer);
     }
 
     /// @notice Submit the hash of an answer, laying your claim to that answer if you reveal it in a subsequent transaction.
@@ -540,7 +545,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         uint256 max_previous,
         address _answerer
     ) external payable override {
-        return realitioImplementation.submitAnswerCommitment(questionID, answer_hash, max_previous, _answerer);
+        return realitio.submitAnswerCommitment(questionID, answer_hash, max_previous, _answerer);
     }
 
     /// @notice Submit the answer whose hash you sent in a previous submitAnswerCommitment() transaction
@@ -559,7 +564,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         uint256 nonce,
         uint256 bond
     ) external override {
-        return realitioImplementation.submitAnswerReveal(questionID, answer, nonce, bond);
+        return realitio.submitAnswerReveal(questionID, answer, nonce, bond);
     }
 
     /// @notice Cancel a previously-requested arbitration and extend the timeout
@@ -608,21 +613,21 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
     /// @param questionID The ID of the question
     /// @return Return true if finalized
     function isFinalized(bytes32 questionID) public view override returns (bool) {
-        return realitioImplementation.isFinalized(questionID);
+        return realitio.isFinalized(questionID);
     }
 
     /// @notice (Deprecated) Return the final answer to the specified question, or revert if there isn't one
     /// @param questionID The ID of the question
     /// @return The answer formatted as a bytes32
     function getFinalAnswer(bytes32 questionID) external view override returns (bytes32) {
-        return realitioImplementation.getFinalAnswer(questionID);
+        return realitio.getFinalAnswer(questionID);
     }
 
     /// @notice Return the final answer to the specified question, or revert if there isn't one
     /// @param questionID The ID of the question
     /// @return The answer formatted as a bytes32
     function resultFor(bytes32 questionID) external view override returns (bytes32) {
-        return realitioImplementation.resultFor(questionID);
+        return realitio.resultFor(questionID);
     }
 
     /// @notice Return the final answer to the specified question, provided it matches the specified criteria.
@@ -640,7 +645,7 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         uint32 min_timeout,
         uint256 min_bond
     ) external view override returns (bytes32) {
-        return realitioImplementation.getFinalAnswerIfMatches(questionID, content_hash, _arbitrator, min_timeout, min_bond);
+        return realitio.getFinalAnswerIfMatches(questionID, content_hash, _arbitrator, min_timeout, min_bond);
     }
 
     /// @notice Assigns the winnings (bounty and bonds) to everyone who gave the accepted answer
@@ -664,100 +669,100 @@ contract RealitioProxyWithAppeals is IRealitio, IDisputeResolver {
         uint256[] calldata bonds,
         bytes32[] calldata answers
     ) public override {
-        return realitioImplementation.claimWinnings(questionID, history_hashes, addrs, bonds, answers);
+        return realitio.claimWinnings(questionID, history_hashes, addrs, bonds, answers);
     }
 
     /// @notice Returns the questions's content hash, identifying the question content
     /// @param questionID The ID of the question
     function getContentHash(bytes32 questionID) public view override returns (bytes32) {
-        return realitioImplementation.getContentHash(questionID);
+        return realitio.getContentHash(questionID);
     }
 
     /// @notice Returns the arbitrator address for the question
     /// @param questionID The ID of the question
     function getArbitrator(bytes32 questionID) public view override returns (address) {
-        return realitioImplementation.getArbitrator(questionID);
+        return realitio.getArbitrator(questionID);
     }
 
     /// @notice Returns the timestamp when the question can first be answered
     /// @param questionID The ID of the question
     function getOpeningTS(bytes32 questionID) public view override returns (uint32) {
-        return realitioImplementation.getOpeningTS(questionID);
+        return realitio.getOpeningTS(questionID);
     }
 
     /// @notice Returns the timeout in seconds used after each answer
     /// @param questionID The ID of the question
     function getTimeout(bytes32 questionID) public view override returns (uint32) {
-        return realitioImplementation.getTimeout(questionID);
+        return realitio.getTimeout(questionID);
     }
 
     /// @notice Returns the timestamp at which the question will be/was finalized
     /// @param questionID The ID of the question
     function getFinalizeTS(bytes32 questionID) public view override returns (uint32) {
-        return realitioImplementation.getFinalizeTS(questionID);
+        return realitio.getFinalizeTS(questionID);
     }
 
     /// @notice Returns whether the question is pending arbitration
     /// @param questionID The ID of the question
     function isPendingArbitration(bytes32 questionID) public view override returns (bool) {
-        return realitioImplementation.isPendingArbitration(questionID);
+        return realitio.isPendingArbitration(questionID);
     }
 
     /// @notice Returns the current total unclaimed bounty
     /// @dev Set back to zero once the bounty has been claimed
     /// @param questionID The ID of the question
     function getBounty(bytes32 questionID) public view override returns (uint256) {
-        return realitioImplementation.getBounty(questionID);
+        return realitio.getBounty(questionID);
     }
 
     /// @notice Returns the current best answer
     /// @param questionID The ID of the question
     function getBestAnswer(bytes32 questionID) public view override returns (bytes32) {
-        return realitioImplementation.getBestAnswer(questionID);
+        return realitio.getBestAnswer(questionID);
     }
 
     /// @notice Returns the history hash of the question
     /// @param questionID The ID of the question
     /// @dev Updated on each answer, then rewound as each is claimed
     function getHistoryHash(bytes32 questionID) public view override returns (bytes32) {
-        return realitioImplementation.getHistoryHash(questionID);
+        return realitio.getHistoryHash(questionID);
     }
 
     /// @notice Returns the highest bond posted so far for a question
     /// @param questionID The ID of the question
     function getBond(bytes32 questionID) public view override returns (uint256) {
-        return realitioImplementation.getBond(questionID);
+        return realitio.getBond(questionID);
     }
 
     function arbitrator_question_fees(address arbitrator) external view override returns (uint256) {
-        return realitioImplementation.arbitrator_question_fees(arbitrator);
+        return realitio.arbitrator_question_fees(arbitrator);
     }
 
     function balanceOf(address beneficiary) public view override returns (uint256) {
-        return realitioImplementation.balanceOf(beneficiary);
+        return realitio.balanceOf(beneficiary);
     }
 
     function commitments(bytes32 id) public view override returns (Commitment memory) {
-        return realitioImplementation.commitments(id);
+        return realitio.commitments(id);
     }
 
     function question_claims(bytes32 id) public view override returns (Claim memory) {
-        return realitioImplementation.question_claims(id);
+        return realitio.question_claims(id);
     }
 
     function template_hashes(uint256 id) public view override returns (bytes32) {
-        return realitioImplementation.template_hashes(id);
+        return realitio.template_hashes(id);
     }
 
     function templates(uint256 id) public view override returns (uint256) {
-        return realitioImplementation.templates(id);
+        return realitio.templates(id);
     }
 
     function withdraw() public override {
-        return realitioImplementation.withdraw();
+        return realitio.withdraw();
     }
 
     function questions(bytes32 id) public view override returns (Question memory) {
-        return realitioImplementation.questions(id);
+        return realitio.questions(id);
     }
 }
