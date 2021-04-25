@@ -97,6 +97,16 @@ contract RealitioProxyWithAppeals is IDisputeResolver, IRealitioArbitrator {
 
     /** @dev Sets the meta evidence. Can only be called once.
      *  @param _questionID The question id as in Realitio side.
+     */
+    function getDisputeFee(bytes32 _questionID) external view override returns (uint256 fee) {
+        QuestionArbitrationData storage question = questionArbitrationDatas[_questionID];
+        require(question.status == Status.None, "Arbitration already requested");
+
+        return arbitrator.arbitrationCost(arbitratorExtraData);
+    }
+
+    /** @dev Sets the meta evidence. Can only be called once.
+     *  @param _questionID The question id as in Realitio side.
      *  @param _maxPrevious If specified, reverts if a bond higher than this was submitted after you sent your transaction.
      */
     function requestArbitration(bytes32 _questionID, uint256 _maxPrevious) external payable returns (uint256 disputeID) {

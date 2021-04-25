@@ -19,4 +19,6 @@ interface IRealitioArbitrator {
     function realitio() external view returns (IRealitio);
 
     function metadata() external view returns (string calldata);
+
+    function getDisputeFee(bytes32 questionID) external view returns (uint256);
 }
