@@ -78,12 +78,14 @@ contract RealitioProxyWithAppeals is IDisputeResolver, IRealitioArbitrator {
         IRealitio _realitio,
         string memory _metadata,
         IArbitrator _arbitrator,
-        bytes memory _arbitratorExtraData
+        bytes memory _arbitratorExtraData,
+        string memory _metaEvidence
     ) {
         realitio = _realitio;
         metadata = _metadata;
         arbitrator = _arbitrator;
         arbitratorExtraData = _arbitratorExtraData;
+        emit MetaEvidence(metaEvidenceUpdates, _metaEvidence);
     }
 
     /** @dev Updates the meta evidence used for disputes.
@@ -91,8 +93,8 @@ contract RealitioProxyWithAppeals is IDisputeResolver, IRealitioArbitrator {
      */
     function changeMetaEvidence(string calldata _metaEvidence) external {
         require(msg.sender == governor, "Only governor can execute this");
-        emit MetaEvidence(metaEvidenceUpdates, _metaEvidence);
         metaEvidenceUpdates++;
+        emit MetaEvidence(metaEvidenceUpdates, _metaEvidence);
     }
 
     /** @dev Sets the meta evidence. Can only be called once.
