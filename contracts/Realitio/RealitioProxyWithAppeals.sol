@@ -69,6 +69,12 @@ contract RealitioProxyWithAppeals is IDisputeResolver, IRealitioArbitrator {
     uint256 public metaEvidenceUpdates; // The number of times the meta evidence has been updated. Used to track the latest meta evidence ID.
     mapping(uint256 => bytes32) public disputeIDtoQuestionID; // Arbitrator dispute ids to question ids.
 
+    /** @dev Emitted when arbitration is requested, to link dispute ID to question ID for dynamic script. See metaevidence.
+     *  @param _disputeID The ID of the dispute in the ERC792 arbitrator.
+     *  @param _questionID The ID of the question.
+     */
+    event DisputeIDToQuestionID(uint256 indexed _disputeID, bytes32 _questionID);
+
     /** @dev Constructor.
      *  @param _realitio The address of the Realitio contract.
      *  @param _arbitrator The address of the ERC792 arbitrator.
@@ -118,6 +124,7 @@ contract RealitioProxyWithAppeals is IDisputeResolver, IRealitioArbitrator {
         // Notify Kleros
         disputeID = arbitrator.createDispute{value: msg.value}(NO_OF_RULING_OPTIONS, arbitratorExtraData);
         emit Dispute(arbitrator, disputeID, metaEvidenceUpdates, uint256(_questionID));
+        emit DisputeIDToQuestionID(disputeID, _questionID); // For the dynamic script https://github.com/kleros/realitio-script/blob/master/src/index.js
         disputeIDtoQuestionID[disputeID] = _questionID;
 
         // Update internal state
