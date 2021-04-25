@@ -77,6 +77,7 @@ contract RealitioProxyWithAppeals is IDisputeResolver, IRealitioArbitrator {
 
     /** @dev Constructor.
      *  @param _realitio The address of the Realitio contract.
+     *  @param _metadata The metadata required for RealitioArbitrator.
      *  @param _arbitrator The address of the ERC792 arbitrator.
      *  @param _arbitratorExtraData The extra data used to raise a dispute in the ERC792 arbitrator.
      */
@@ -84,14 +85,12 @@ contract RealitioProxyWithAppeals is IDisputeResolver, IRealitioArbitrator {
         IRealitio _realitio,
         string memory _metadata,
         IArbitrator _arbitrator,
-        bytes memory _arbitratorExtraData,
-        string memory _metaEvidence
+        bytes memory _arbitratorExtraData
     ) {
         realitio = _realitio;
         metadata = _metadata;
         arbitrator = _arbitrator;
         arbitratorExtraData = _arbitratorExtraData;
-        emit MetaEvidence(metaEvidenceUpdates, _metaEvidence);
     }
 
     /** @dev Updates the meta evidence used for disputes.
@@ -99,8 +98,8 @@ contract RealitioProxyWithAppeals is IDisputeResolver, IRealitioArbitrator {
      */
     function changeMetaEvidence(string calldata _metaEvidence) external {
         require(msg.sender == governor, "Only governor can execute this");
-        metaEvidenceUpdates++;
         emit MetaEvidence(metaEvidenceUpdates, _metaEvidence);
+        metaEvidenceUpdates++;
     }
 
     /** @dev Sets the meta evidence. Can only be called once.
@@ -123,7 +122,7 @@ contract RealitioProxyWithAppeals is IDisputeResolver, IRealitioArbitrator {
 
         // Notify Kleros
         disputeID = arbitrator.createDispute{value: msg.value}(NO_OF_RULING_OPTIONS, arbitratorExtraData);
-        emit Dispute(arbitrator, disputeID, metaEvidenceUpdates, uint256(_questionID));
+        emit Dispute(arbitrator, disputeID, metaEvidenceUpdates - 1, uint256(_questionID));
         emit DisputeIDToQuestionID(disputeID, _questionID); // For the dynamic script https://github.com/kleros/realitio-script/blob/master/src/index.js
         disputeIDtoQuestionID[disputeID] = _questionID;
 
