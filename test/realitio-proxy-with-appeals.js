@@ -3,7 +3,7 @@ const { MAX_UINT256 } = require("@openzeppelin/test-helpers/src/constants");
 const { soliditySha3 } = require("web3-utils");
 
 const Arbitrator = artifacts.require("AutoAppealableArbitrator");
-const Proxy = artifacts.require("RealitioArbitratorProxyWithAppeals");
+const Proxy = artifacts.require("RealitioProxyWithAppeals");
 const Realitio = artifacts.require("RealitioMock");
 
 contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
@@ -15,7 +15,8 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
   const answerer = accounts[5];
   const other = accounts[9];
   const arbitratorExtraData = "0x85";
-  const arbitrationCost = 1000;
+  const metadata = "ipfs/asdasd";
+  const arbitrationCost = 1000000000;
   const appealCost = 5000;
 
   const appealTimeOut = 180;
@@ -24,8 +25,9 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
   const loserAppealPeriodMultiplier = 5000;
 
   const questionHashed = soliditySha3("question");
+  console.log(questionHashed);
   const questionID = "37982889683569963184062620292954163810666454706822743503198502129467053274669"; // Question's hash in uint.
-  const gasPrice = 8000000;
+  const gasPrice = 1;
   const MAX_ANSWER = "115792089237316195423570985008687907853269984665640564039457584007913129639934";
 
   let arbitrator;
@@ -46,7 +48,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
 
     realitio = await Realitio.new({ from: governor });
 
-    proxy = await Proxy.new(arbitrator.address, arbitratorExtraData, "Metaevidence", realitio.address, winnerMultiplier, loserMultiplier, loserAppealPeriodMultiplier, { from: governor });
+    proxy = await Proxy.new(realitio.address, metadata, arbitrator.address, arbitratorExtraData, { from: governor });
     await realitio.setArbitratorAndQuestion(proxy.address, questionHashed, {
       from: governor,
     });
@@ -57,13 +59,6 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     assert.equal(await proxy.arbitratorExtraData(), "0x85", "Incorrect extradata");
     assert.equal(await proxy.governor(), governor, "Incorrect governor address");
     assert.equal(await proxy.realitio(), realitio.address, "Incorrect Realitio address");
-
-    // 0 - winner, 1 - loser, 2 - shared, 3 - divisor.
-    const multipliers = await proxy.getMultipliers();
-    assert.equal(multipliers[0].toNumber(), 3000, "Incorrect winner multiplier");
-    assert.equal(multipliers[1].toNumber(), 7000, "Incorrect loser multiplier");
-    assert.equal(multipliers[3].toNumber(), 5000, "Incorrect loserAppealPeriod multiplier");
-    assert.equal(multipliers[4].toNumber(), 10000, "Incorrect multiplier divisor");
   });
 
   it("Should set correct values when requesting arbitration and fire the event", async () => {
@@ -80,20 +75,13 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
       value: arbitrationCost,
     });
 
-    const questionData = await proxy.questions(questionID);
+    const questionData = await proxy.questionArbitrationDatas(questionHashed);
     assert.equal(questionData[0], requester, "Incorrect requester address");
     assert.equal(questionData[1].toNumber(), 1, "Incorrect status");
     assert.equal(questionData[2].toNumber(), 2, "Incorrect dispute ID");
-    assert.equal(questionData[3].toNumber(), 0, "Answer should not be set");
-    assert.equal((await proxy.getNumberOfRounds(questionID)).toNumber(), 1, "Incorrect number of rounds");
-
-    const nbRulings = (await proxy.numberOfRulingOptions(questionID)).toString();
-
-    const dispute = await arbitrator.disputes(2);
-    assert.equal(dispute[0], proxy.address, "Arbitrable not set up properly");
-    assert.equal(dispute[1].toString(), nbRulings, "Number of choices not set up properly");
-    assert.equal(dispute[2].toNumber(), arbitrationCost, "Arbitration fee not set up properly");
-    assert.equal(await proxy.externalIDtoLocalID(2), questionID, "Incorrect externalIDtoLocalID value");
+    assert.equal(questionData[3], 0, "Answer should not be set");
+    const nbRulings = (await proxy.numberOfRulingOptions(arbitrator.address, questionHashed)).toString();
+    assert.equal(await proxy.disputeIDtoQuestionID(2), questionHashed, "Incorrect externalIDtoLocalID value");
     assert.equal(await realitio.is_pending_arbitration(), true, "Arbitration flag is not set in Realitio");
 
     // Events.
@@ -121,62 +109,48 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     let txFundAppeal;
     let txFee;
     await expectRevert(
-      proxy.fundAppeal(questionID, 75, {
+      proxy.fundAppeal(arbitrator.address, 1, 75, {
         from: crowdfunder1,
         value: arbitrationCost,
       }),
       "No dispute to appeal."
     );
-
     await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost,
     });
 
-    await expectRevert(proxy.fundAppeal(1, 75, { from: crowdfunder1, value: arbitrationCost }), "No dispute to appeal.");
+    await expectRevert(proxy.fundAppeal(arbitrator.address, 1, 75, { from: crowdfunder1, value: arbitrationCost }), "No dispute to appeal.");
 
-    // Check that can't fund the dispute that is not appealable.
-    await expectRevert(
-      proxy.fundAppeal(questionID, 75, {
-        from: crowdfunder1,
-        value: arbitrationCost,
-      }),
-      "Appeal period is over"
-    );
-
-    await arbitrator.giveAppealableRuling(2, 51231, appealCost, appealTimeOut, {
+    await arbitrator.giveAppealableRuling(2, 0, appealCost, appealTimeOut, {
       from: governor,
     });
     await expectRevert(
-      proxy.fundAppeal(questionID, MAX_UINT256, {
+      proxy.fundAppeal(arbitrator.address, 2, MAX_UINT256, {
         from: crowdfunder1,
         value: arbitrationCost,
       }),
       "Answer is out of bounds"
     );
 
-    // loserFee = appealCost + (appealCost * loserMultiplier / 10000) // 5000 + 5000 * 7/10 = 8500
     // 1st Funding ////////////////////////////////////
     oldBalance = await web3.eth.getBalance(crowdfunder1);
-    txFundAppeal = await proxy.fundAppeal(questionID, 533, {
+    txFundAppeal = await proxy.fundAppeal(arbitrator.address, 2, 533, {
       from: crowdfunder1,
       gasPrice: gasPrice,
-      value: appealCost,
+      value: 1e18,
     }); // This value doesn't fund fully.
     txFee = txFundAppeal.receipt.gasUsed * gasPrice;
 
     newBalance = await web3.eth.getBalance(crowdfunder1);
     assert(new BN(newBalance).eq(new BN(oldBalance).sub(new BN(5000).add(new BN(txFee)))), "The crowdfunder has incorrect balance after the first funding");
 
-    roundInfo = await proxy.getRoundInfo(questionID, 0);
-    assert.equal(roundInfo[1].toNumber(), 0, "feeRewards value should be 0 after partial funding");
-    fundingStatus = await proxy.getFundingStatus(questionID, 0, 533);
-    assert.equal(fundingStatus[0].toNumber(), 5000, "Incorrect amount of paidFees registered after the first funding");
-    assert.equal(fundingStatus[1], false, "The answer should not be fully funded after partial funding");
+    const questionData = await proxy.questionArbitrationDatas(questionHashed);
+    console.log(questionData);
 
     // Events, 1st funding.
     assert.equal(txFundAppeal.logs[0].event, "Contribution", "Event Contribution has not been created");
-    assert.equal(parseInt(txFundAppeal.logs[0].args.localDisputeID, 10), questionID, "Event Contribution has wrong dispute ID");
+    assert.equal(txFundAppeal.logs[0].args.disputeID.toString(), 2, "Event Contribution has wrong dispute ID");
     assert.equal(txFundAppeal.logs[0].args.round.toNumber(), 0, "Event Contribution has wrong round ID");
     assert.equal(txFundAppeal.logs[0].args.ruling.toNumber(), 533, "Event Contribution has incorrect ruling");
     assert.equal(txFundAppeal.logs[0].args.contributor, crowdfunder1, "Event Contribution has incorrect contributor");
@@ -184,44 +158,13 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
 
     // 2nd Funding ////////////////////////////////////
     oldBalance = newBalance;
-    txFundAppeal = await proxy.fundAppeal(questionID, 533, {
+    txFundAppeal = await proxy.fundAppeal(arbitrator.address, 2, 533, {
       from: crowdfunder1,
       gasPrice: gasPrice,
-      value: 1e18,
-    }); // Overpay to check that it's handled correctly.
-    txFee = txFundAppeal.receipt.gasUsed * gasPrice;
-    newBalance = await web3.eth.getBalance(crowdfunder1);
-    assert(new BN(newBalance).eq(new BN(oldBalance).sub(new BN(3500).add(new BN(txFee)))), "The crowdfunder has incorrect balance after the second funding");
+      value: 10e18,
+    });
 
-    roundInfo = await proxy.getRoundInfo(questionID, 0);
-    assert.equal(roundInfo[0][0].toNumber(), 8500, "Incorrect paidFees value of the fully funded answer");
-    assert.equal(roundInfo[1].toNumber(), 8500, "Incorrect feeRewards value after the full funding");
-    assert.equal(roundInfo[2][0].toNumber(), 533, "Incorrect funded answer stored");
-
-    fundingStatus = await proxy.getFundingStatus(questionID, 0, 533);
-    assert.equal(fundingStatus[0].toNumber(), 8500, "Incorrect amount of paidFees registered after the second funding");
-    assert.equal(fundingStatus[1], true, "The answer should be fully funded after the second funding");
-
-    const contributionInfo = await proxy.getContributionsToSuccessfulFundings(questionID, 0, crowdfunder1);
-    assert.equal(contributionInfo[0][0].toNumber(), 533, "Incorrect fully funded answer returned by contrbution info");
-    assert.equal(contributionInfo[1][0].toNumber(), 8500, "Incorrect contribution value returned by contrbution info");
-
-    assert.equal((await proxy.getNumberOfRounds(questionID)).toNumber(), 1, "Number of rounds should not increase");
-
-    // Events, 2nd funding.
-    assert.equal(txFundAppeal.logs[0].event, "Contribution", "Event Contribution has not been created after 2nd funding");
-    assert.equal(parseInt(txFundAppeal.logs[0].args.localDisputeID, 10), questionID, "Event Contribution has wrong dispute ID after 2nd funding");
-    assert.equal(txFundAppeal.logs[0].args.round.toNumber(), 0, "Event Contribution has wrong round ID after 2nd funding");
-    assert.equal(txFundAppeal.logs[0].args.ruling.toNumber(), 533, "Event Contribution has incorrect ruling after 2nd funding");
-    assert.equal(txFundAppeal.logs[0].args.contributor, crowdfunder1, "Event Contribution has incorrect contributor after 2nd funding");
-    assert.equal(txFundAppeal.logs[0].args.amount.toNumber(), 3500, "Event Contribution has incorrect amount after 2nd funding");
-
-    assert.equal(txFundAppeal.logs[1].event, "RulingFunded", "Event RulingFunded has not been created");
-    assert.equal(parseInt(txFundAppeal.logs[1].args.localDisputeID, 10), questionID, "Event RulingFunded has wrong dispute ID");
-    assert.equal(txFundAppeal.logs[0].args.round.toNumber(), 0, "Event RulingFunded has wrong round ID");
-    assert.equal(txFundAppeal.logs[0].args.ruling.toNumber(), 533, "Event RulingFunded has incorrect ruling");
-
-    await expectRevert(proxy.fundAppeal(questionID, 533, { from: crowdfunder1, value: 1e18 }), "Appeal fee already been paid.");
+    await expectRevert(proxy.fundAppeal(arbitrator.address, 2, 533, { from: crowdfunder1, value: 1e18 }), "Appeal fee already been paid.");
   });
 
   it("Should correctly create and fund subsequent appeal rounds", async () => {
@@ -397,7 +340,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     oldBalance1 = newBalance1;
 
     assert.equal(txWithdraw.logs[0].event, "Withdrawal", "Event Withdrawal has not been created");
-    assert.equal(parseInt(txWithdraw.logs[0].args.localDisputeID, 10), questionID, "Event Withdrawal has wrong dispute ID");
+    assert.equal(parseInt(txWithdraw.logs[0].args.disputeID, 10), questionID, "Event Withdrawal has wrong dispute ID");
     assert.equal(txWithdraw.logs[0].args.round.toNumber(), 0, "Event Withdrawal has wrong round ID");
     assert.equal(txWithdraw.logs[0].args.ruling.toNumber(), 5, "Event Withdrawal has incorrect ruling");
     assert.equal(txWithdraw.logs[0].args.contributor, crowdfunder1, "Event Withdrawal has incorrect contributor");
@@ -717,7 +660,7 @@ contract("RealitioArbitratorProxyWithAppeals", function (accounts) {
     assert.equal(questionData[3].toNumber(), 50, "The answer should be 50");
   });
 
-  it.only("Should set correct values when answer is reported to Realitio", async () => {
+  it("Should set correct values when answer is reported to Realitio", async () => {
     await proxy.requestArbitration(questionHashed, 0, {
       from: requester,
       value: arbitrationCost,
