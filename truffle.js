@@ -1,4 +1,5 @@
 var HDWalletProvider = require("@truffle/hdwallet-provider");
+const privateKeys = [process.env.WALLET_KEY];
 
 module.exports = {
   networks: {
@@ -16,26 +17,29 @@ module.exports = {
       gasPrice: 1, // To cancel out gasPrice in tests.
     },
 
-    main: {
-      provider: () => new HDWalletProvider(process.env.WALLET_KEY, `https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`),
-      network_id: 1,
-      gasPrice: 50000000000, // 50 GWei
-      gas: 10000000,
-    },
-
     kovan: {
-      provider: () => new HDWalletProvider(process.env.WALLET_KEY, `https://kovan.infura.io/v3/${process.env.INFURA_PROJECT_ID}`),
+      provider: () =>
+        new HDWalletProvider({
+          privateKeys: privateKeys,
+          providerOrUrl: `https://kovan.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+          chainId: 42,
+        }),
       network_id: 42,
       skipDryRun: true,
       gas: 10000000,
     },
-
     ropsten: {
-      provider: () => new HDWalletProvider(process.env.WALLET_KEY, `https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`),
+      provider: () =>
+        new HDWalletProvider({
+          privateKeys: privateKeys,
+          providerOrUrl: `https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+          chainId: 3,
+        }),
       network_id: 3,
       skipDryRun: true,
-      gas: 8000000,
+      gas: 10000000,
     },
+
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port

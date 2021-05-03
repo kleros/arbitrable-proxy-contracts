@@ -7,7 +7,6 @@
   "license": "MIT",
   "private": false,
   "devDependencies": {
-    "@kleros/kleros-interaction": "^0.9.2",
     "@openzeppelin/test-helpers": "^0.5.4",
     "@truffle/hdwallet-provider": "^1.0.18",
     "chai": "^4.2.0",
@@ -21,17 +20,17 @@
     "truffle-plugin-verify": "^0.5.4"
   },
   "dependencies": {
+    "@kleros/dispute-resolver-interface-contract": "^1.0.0",
     "@kleros/erc-792": "7.0.0",
     "@kleros/ethereum-libraries": "^2.0.0",
-    "@openzeppelin/contracts": "^2.4.0",
-    "@realitio/realitio-contracts": "^2.2.8"
+    "@openzeppelin/contracts": "^2.4.0"
   },
   "scripts": {
     "compile": "truffle compile",
     "ganache": "ganache-cli -g 1 -l 1000000000",
     "test": "truffle test",
-    "prepare": "prettier --write 'contracts/**/*.sol' && NETWORK=ropsten npm run deploy && sleep 3 && NETWORK=kovan npm run deploy",
-    "deploy": "truffle migrate --reset --network $NETWORK && sleep 3 && truffle run verify ArbitrableProxy --network $NETWORK && sleep 3 && truffle run verify RealitioProxyWithAppeals --network $NETWORK"
+    "prepack": "prettier --write 'contracts/**/*.sol' && NETWORK=ropsten npm run deploy && sleep 3 && NETWORK=kovan npm run deploy",
+    "deploy": "truffle migrate --reset --network $NETWORK && sleep 3 && truffle run verify ArbitrableProxy --network $NETWORK"
   },
   "files": [
     "build",

@@ -45,7 +45,7 @@ contract AutoAppealableArbitrator is IArbitrator {
     /** @dev Constructor. Set the initial arbitration price.
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    constructor(uint256 _arbitrationPrice) public {
+    constructor(uint256 _arbitrationPrice) {
         arbitrationPrice = _arbitrationPrice;
     }
 
@@ -82,9 +82,7 @@ contract AutoAppealableArbitrator is IArbitrator {
     function createDispute(uint256 _choices, bytes memory _extraData) public payable override returns (uint256 disputeID) {
         uint256 arbitrationFee = arbitrationCost(_extraData);
         require(msg.value >= arbitrationFee, "Value is less than required arbitration fee.");
-        disputes.push(
-            Dispute({arbitrated: IArbitrable(msg.sender), choices: _choices, fees: msg.value, ruling: 0, status: DisputeStatus.Waiting, appealCost: 0, appealPeriodStart: 0, appealPeriodEnd: 0})
-        ); // Create the dispute and return its number.
+        disputes.push(Dispute({arbitrated: IArbitrable(msg.sender), choices: _choices, fees: msg.value, ruling: 0, status: DisputeStatus.Waiting, appealCost: 0, appealPeriodStart: 0, appealPeriodEnd: 0})); // Create the dispute and return its number.
         disputeID = disputes.length - 1;
         emit DisputeCreation(disputeID, IArbitrable(msg.sender));
     }
@@ -101,7 +99,7 @@ contract AutoAppealableArbitrator is IArbitrator {
         dispute.ruling = _ruling;
         dispute.status = DisputeStatus.Solved;
 
-        msg.sender.send(dispute.fees); // Avoid blocking.
+        msg.sender.transfer(dispute.fees);
         dispute.arbitrated.rule(_disputeID, _ruling);
     }
 
@@ -168,7 +166,7 @@ contract AutoAppealableArbitrator is IArbitrator {
         require(block.timestamp >= dispute.appealPeriodEnd, "The dispute must be executed after its appeal period has ended.");
 
         dispute.status = DisputeStatus.Solved;
-        msg.sender.send(dispute.fees); // Avoid blocking.
+        msg.sender.transfer(dispute.fees);
         dispute.arbitrated.rule(_disputeID, dispute.ruling);
     }
 
