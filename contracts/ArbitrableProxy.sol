@@ -246,7 +246,7 @@ contract ArbitrableProxy is IDisputeResolver {
         governor = _newGovernor;
     }
 
-    /** @dev Changes the proportion of appeal fees that must be paid by winner.
+    /** @dev Changes the proportion of appeal fees that must be paid by winner and loser and changes the appeal period portion for losers.
      *  @param _winnerStakeMultiplier The new winner stake multiplier value respect to DENOMINATOR.
      *  @param _loserStakeMultiplier The new loser stake multiplier value respect to DENOMINATOR.
      *  @param _loserAppealPeriodMultiplier The new loser appeal period multiplier respect to DENOMINATOR.
@@ -286,7 +286,6 @@ contract ArbitrableProxy is IDisputeResolver {
                 sum += getWithdrawableAmount(round, _contributor, ruling, finalRuling);
             }
         }
-        return sum;
     }
 
     /** @dev Returns stake multipliers.
