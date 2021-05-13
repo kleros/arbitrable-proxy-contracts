@@ -21,9 +21,10 @@ module.exports = {
       provider: () =>
         new HDWalletProvider({
           privateKeys: privateKeys,
-          providerOrUrl: `https://kovan.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+          providerOrUrl: `wss://kovan.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
           chainId: 42,
         }),
+      networkCheckTimeout: 99999999,
       network_id: 42,
       skipDryRun: true,
       gas: 10000000,
@@ -32,12 +33,13 @@ module.exports = {
       provider: () =>
         new HDWalletProvider({
           privateKeys: privateKeys,
-          providerOrUrl: `https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+          providerOrUrl: `wss://ropsten.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
           chainId: 3,
         }),
+      networkCheckTimeout: 99999999,
       network_id: 3,
       skipDryRun: true,
-      gas: 8000000,
+      gas: 2900000,
     },
   },
   // Set default mocha options here, use special reporters etc.
