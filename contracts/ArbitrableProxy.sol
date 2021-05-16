@@ -158,7 +158,7 @@ contract ArbitrableProxy is IDisputeResolver {
      *  This function has O(m*n) time complexity where m is number of rounds and n is the number of ruling options contributed by given user.
      *  It is safe to assume m is always less than 10 as appeal cost growth order is O(m^2).
      *  It is safe to assume n is always less than 3 as it does not make sense to contribute to different ruling options in the same round, so it will rarely be greater than 1.
-     *  Thus, we can assume this loop will run less than 30 times, and on average just a few times.
+     *  Thus, we can assume this loop will run less than 30(10*3) times, and on average just a few times.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _contributedTo Rulings that received contributions from contributor.
@@ -378,7 +378,7 @@ contract ArbitrableProxy is IDisputeResolver {
         uint256 _currentRuling
     ) internal view returns (uint256 originalCost, uint256 specificCost) {
         uint256 multiplier;
-        if (_ruling == _currentRuling || _currentRuling == 0) multiplier = winnerStakeMultiplier;
+        if (_ruling == _currentRuling) multiplier = winnerStakeMultiplier;
         else multiplier = loserStakeMultiplier;
 
         uint256 appealFee = arbitrator.appealCost(_disputeID, _arbitratorExtraData);
