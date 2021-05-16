@@ -17,6 +17,17 @@ module.exports = {
       gasPrice: 1, // To cancel out gasPrice in tests.
     },
 
+    main: {
+      provider: () =>
+        new HDWalletProvider({
+          privateKeys: privateKeys,
+          providerOrUrl: `wss://mainnet.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
+          chainId: 1,
+        }),
+      networkCheckTimeout: 99999999,
+      network_id: 1,
+    },
+
     kovan: {
       provider: () =>
         new HDWalletProvider({
