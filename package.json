@@ -29,8 +29,8 @@
     "ganache": "ganache-cli -g 1 -l 1000000000",
     "test": "truffle test",
     "prepack": "prettier --write 'contracts/**/*.sol' && NETWORK=ropsten npm run deploy && sleep 3 && NETWORK=kovan npm run deploy",
-    "deploy": "truffle migrate --network $NETWORK && sleep 3 && truffle run verify ArbitrableProxy --network $NETWORK",
-    "deployprod": "truffle migrate --network main --dry-run && sleep 3 && truffle run verify ArbitrableProxy --network main"
+    "deploy": "truffle migrate --network $NETWORK -f 2 && sleep 3 && truffle run verify ArbitrableProxy --network $NETWORK",
+    "deploy-interactive": "truffle migrate --network $NETWORK --interactive --verbose-rpc  && sleep 3 && truffle run verify ArbitrableProxy --network $NETWORK"
   },
   "files": [
     "build",

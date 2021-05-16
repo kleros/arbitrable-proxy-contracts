@@ -24,8 +24,9 @@ module.exports = {
           providerOrUrl: `wss://mainnet.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
           chainId: 1,
         }),
-      networkCheckTimeout: 99999999,
+      networkCheckTimeout: 99999,
       network_id: 1,
+      gasPrice: 60000000000, // 60 gwei
     },
 
     kovan: {
