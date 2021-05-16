@@ -98,7 +98,7 @@ contract ArbitrableProxy is IDisputeResolver {
         emit MetaEvidence(localDisputeID, _metaevidenceURI);
         emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
 
-        msg.sender.transfer(msg.value - arbitrationCost); // Return excess msg.value to sender.
+        msg.sender.send(msg.value.subCap(arbitrationCost)); // Return excess msg.value to sender. Send preferred over transfer deliberately.
     }
 
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
@@ -142,19 +142,23 @@ contract ArbitrableProxy is IDisputeResolver {
         }
 
         if (lastRound.fundedRulings.length == 2) {
-            // At least two ruling options are fully funded.
+            // Two competing ruling options means we will have another appeal round.
             rounds.push();
 
             lastRound.feeRewards = lastRound.feeRewards.subCap(originalCost);
             arbitrator.appeal{value: originalCost}(disputeID, dispute.arbitratorExtraData);
         }
 
-        msg.sender.transfer(msg.value.subCap(contribution)); // Sending extra value back to contributor.
+        msg.sender.send(msg.value.subCap(contribution)); // Sending extra value back to contributor. Send preferred over transfer deliberately.
 
         return lastRound.hasPaid[_ruling];
     }
 
     /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.
+     *  This function has O(m*n) time complexity where m is number of rounds and n is the number of ruling options contributed by given user.
+     *  It is safe to assume m is always less than 10 as appeal cost growth order is O(m^2).
+     *  It is safe to assume n is always less than 3 as it does not make sense to contribute to different ruling options in the same round, so it will rarely be greater than 1.
+     *  Thus, we can assume this loop will run less than 30 times, and on average just a few times.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _contributedTo Rulings that received contributions from contributor.
@@ -171,6 +175,8 @@ contract ArbitrableProxy is IDisputeResolver {
     }
 
     /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved for multiple ruling options at once.
+     *  This function has O(n) time complexity where n is number of ruling options contributed by given user.
+     *  It is safe to assume n is always less than 3 as it does not make sense to contribute to different ruling options in the same round, so it will rarely be greater than 1.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
      *  @param _roundNumber The number of the round caller wants to withdraw from.
@@ -208,8 +214,9 @@ contract ArbitrableProxy is IDisputeResolver {
 
         amount = getWithdrawableAmount(round, _contributor, _ruling, dispute.ruling);
 
-        if (amount != 0 && _contributor.send(amount)) {
+        if (amount != 0) {
             round.contributions[_contributor][_ruling] = 0;
+            _contributor.send(amount); // Ignoring failure condition deliberately.
             emit Withdrawal(_localDisputeID, _roundNumber, _ruling, _contributor, amount);
         }
     }
