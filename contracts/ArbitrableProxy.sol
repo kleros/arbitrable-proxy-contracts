@@ -84,7 +84,7 @@ contract ArbitrableProxy is IDisputeResolver {
         if (_numberOfRulingOptions == 0) _numberOfRulingOptions = MAX_NO_OF_CHOICES;
 
         uint256 arbitrationCost = arbitrator.arbitrationCost(_arbitratorExtraData);
-        disputeID = arbitrator.createDispute{value: msg.value}(_numberOfRulingOptions, _arbitratorExtraData);
+        disputeID = arbitrator.createDispute{value: arbitrationCost}(_numberOfRulingOptions, _arbitratorExtraData);
 
         uint256 localDisputeID = disputes.length;
 
@@ -242,7 +242,7 @@ contract ArbitrableProxy is IDisputeResolver {
             dispute.ruling = lastRound.fundedRulings[0];
         }
 
-        emit Ruling(IArbitrator(msg.sender), _externalDisputeID, uint256(dispute.ruling));
+        emit Ruling(IArbitrator(msg.sender), _externalDisputeID, dispute.ruling);
     }
 
     /** @dev Changes governor.
@@ -256,7 +256,7 @@ contract ArbitrableProxy is IDisputeResolver {
     /** @dev Changes the proportion of appeal fees that must be paid by winner and loser and changes the appeal period portion for losers.
      *  @param _winnerStakeMultiplier The new winner stake multiplier value respect to DENOMINATOR.
      *  @param _loserStakeMultiplier The new loser stake multiplier value respect to DENOMINATOR.
-     *  @param _loserAppealPeriodMultiplier The new loser appeal period multiplier respect to DENOMINATOR.
+     *  @param _loserAppealPeriodMultiplier The new loser appeal period multiplier respect to DENOMINATOR. Having a value greater than DENOMINATOR has no effect since arbitrator limits appeal period.
      */
     function changeMultipliers(
         uint256 _winnerStakeMultiplier,
@@ -335,7 +335,7 @@ contract ArbitrableProxy is IDisputeResolver {
             if (_contributedTo == _finalRuling) {
                 // This ruling option is the ultimate winner.
                 amount = _round.paidFees[_contributedTo] > 0 ? (_round.contributions[_contributor][_contributedTo] * _round.feeRewards) / _round.paidFees[_contributedTo] : 0;
-            } else if (_round.fundedRulings.length >= 1 && !_round.hasPaid[_finalRuling]) {
+            } else if (!_round.hasPaid[_finalRuling]) {
                 // The ultimate winner was not funded in this round. In this case funded ruling option(s) wins by default. Prize is distributed among contributors of funded ruling option(s).
                 amount = (_round.contributions[_contributor][_contributedTo] * _round.feeRewards) / (_round.paidFees[_round.fundedRulings[0]] + _round.paidFees[_round.fundedRulings[1]]);
             }
