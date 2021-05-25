@@ -20,7 +20,7 @@ import "@kleros/dispute-resolver-interface-contract/contracts/solc-0.7.x/IDisput
 contract ArbitrableProxy is IDisputeResolver {
     using CappedMath for uint256; // Operations bounded between 0 and `type(uint256).max`.
 
-    uint256 public constant MAX_NO_OF_CHOICES = type(uint256).max;
+    uint256 public constant MAX_NO_OF_CHOICES = type(uint256).max - 1;
 
     struct Round {
         mapping(uint256 => uint256) paidFees; // Tracks the fees paid for each ruling option in this round.
