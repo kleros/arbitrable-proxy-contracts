@@ -269,7 +269,9 @@ contract ArbitrableProxy is IDisputeResolver {
         loserAppealPeriodMultiplier = _loserAppealPeriodMultiplier;
     }
 
-    /** @dev Returns the sum of withdrawable amount. Although it's a nested loop, total iterations will be almost always less than 10. (Max number of rounds is 7 and it's very unlikely to have a contributor to contribute to more than 1 ruling option per round). Alternatively you can use Contribution events to calculate this off-chain.
+    /** @notice Returns the sum of withdrawable amount.
+     *  @dev This function has O(m*n) time complexity where m is number of rounds and n is the number of ruling options contributed by given user.
+     *  It is safe to assume m is always less than 10 as appeal cost growth order is O(m^2). And n being greater than 1 is unlikely.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The contributor for which to query.
      *  @param _contributedTo The array which includes ruling options to search for potential withdrawal. Caller can obtain this information using Contribution events.
@@ -279,7 +281,7 @@ contract ArbitrableProxy is IDisputeResolver {
         uint256 _localDisputeID,
         address payable _contributor,
         uint256[] memory _contributedTo
-    ) public view override returns (uint256 sum) {
+    ) external view override returns (uint256 sum) {
         DisputeStruct storage dispute = disputes[_localDisputeID];
         if (!dispute.isRuled) return 0;
         uint256 finalRuling = dispute.ruling;
