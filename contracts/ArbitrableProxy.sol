@@ -281,7 +281,7 @@ contract ArbitrableProxy is IDisputeResolver {
         uint256 _localDisputeID,
         address payable _contributor,
         uint256[] memory _contributedTo
-    ) public view override returns (uint256 sum) {
+    ) external view override returns (uint256 sum) {
         DisputeStruct storage dispute = disputes[_localDisputeID];
         if (!dispute.isRuled) return 0;
         uint256 finalRuling = dispute.ruling;
