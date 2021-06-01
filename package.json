@@ -20,7 +20,7 @@
     "truffle-plugin-verify": "^0.5.7"
   },
   "dependencies": {
-    "@kleros/dispute-resolver-interface-contract": "^1.0.0",
+    "@kleros/dispute-resolver-interface-contract": "^1.0.2",
     "@kleros/erc-792": "7.0.0",
     "@kleros/ethereum-libraries": "^2.0.0"
   },
