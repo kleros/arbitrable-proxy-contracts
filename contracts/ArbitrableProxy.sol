@@ -2,11 +2,7 @@
 
 /**
  *  @authors: [@ferittuncer]
-<<<<<<< HEAD
- *  @reviewers: [@fnanni-0*, @unknownunknown1*, @mtsalenc*, @MerlinEgalite*, @shalzz]
-=======
- *  @reviewers: [@fnanni-0*, @unknownunknown1*, @mtsalenc*, @MerlinEgalite]
->>>>>>> refactor/arbitrable-proxy
+ *  @reviewers: [@fnanni-0*, @unknownunknown1*, @mtsalenc*, @MerlinEgalite, @shalzz]
  *  @auditors: []
  *  @bounties: []
  *  @deployments: [0xA3B02bA6E10F55fb177637917B1b472da0110CcC]
