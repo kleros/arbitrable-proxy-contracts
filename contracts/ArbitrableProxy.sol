@@ -2,7 +2,11 @@
 
 /**
  *  @authors: [@ferittuncer]
+<<<<<<< HEAD
  *  @reviewers: [@fnanni-0*, @unknownunknown1*, @mtsalenc*, @MerlinEgalite*, @shalzz]
+=======
+ *  @reviewers: [@fnanni-0*, @unknownunknown1*, @mtsalenc*, @MerlinEgalite]
+>>>>>>> refactor/arbitrable-proxy
  *  @auditors: []
  *  @bounties: []
  *  @deployments: [0xA3B02bA6E10F55fb177637917B1b472da0110CcC]
@@ -20,7 +24,7 @@ import "@kleros/dispute-resolver-interface-contract/contracts/solc-0.7.x/IDisput
 contract ArbitrableProxy is IDisputeResolver {
     using CappedMath for uint256; // Operations bounded between 0 and `type(uint256).max`.
 
-    uint256 public constant MAX_NO_OF_CHOICES = type(uint256).max - 1;
+    uint256 public constant MAX_NUMBER_OF_CHOICES = type(uint256).max - 1;
 
     struct Round {
         mapping(uint256 => uint256) paidFees; // Tracks the fees paid for each ruling option in this round.
@@ -47,8 +51,8 @@ contract ArbitrableProxy is IDisputeResolver {
     uint256 public constant DENOMINATOR = 10000; // Denominator for multipliers.
 
     DisputeStruct[] public disputes;
-    mapping(uint256 => uint256) public override externalIDtoLocalID; // Maps external (arbitrator side) dispute ids to local dispute ids.
-    mapping(uint256 => Round[]) public disputeIDtoRoundArray; // Maps dispute ids to round arrays.
+    mapping(uint256 => uint256) public override externalIDtoLocalID; // Maps external (arbitrator side) dispute IDs to local dispute IDs.
+    mapping(uint256 => Round[]) public disputeIDtoRoundArray; // Maps dispute IDs to round arrays.
     mapping(uint256 => uint256) public override numberOfRulingOptions; // Maps localDisputeIDs to number of possible ruling options.
 
     /** @dev Constructor
@@ -81,7 +85,7 @@ contract ArbitrableProxy is IDisputeResolver {
         string calldata _metaevidenceURI,
         uint256 _numberOfRulingOptions
     ) external payable returns (uint256 disputeID) {
-        if (_numberOfRulingOptions == 0) _numberOfRulingOptions = MAX_NO_OF_CHOICES;
+        if (_numberOfRulingOptions == 0) _numberOfRulingOptions = MAX_NUMBER_OF_CHOICES;
 
         uint256 arbitrationCost = arbitrator.arbitrationCost(_arbitratorExtraData);
         disputeID = arbitrator.createDispute{value: arbitrationCost}(_numberOfRulingOptions, _arbitratorExtraData);
@@ -168,8 +172,8 @@ contract ArbitrableProxy is IDisputeResolver {
         address payable _contributor,
         uint256[] memory _contributedTo
     ) external override {
-        uint256 noOfRounds = disputeIDtoRoundArray[_localDisputeID].length;
-        for (uint256 roundNumber = 0; roundNumber < noOfRounds; roundNumber++) {
+        uint256 numberOfRounds = disputeIDtoRoundArray[_localDisputeID].length;
+        for (uint256 roundNumber = 0; roundNumber < numberOfRounds; roundNumber++) {
             withdrawFeesAndRewardsForMultipleRulings(_localDisputeID, _contributor, roundNumber, _contributedTo);
         }
     }
@@ -286,8 +290,8 @@ contract ArbitrableProxy is IDisputeResolver {
         if (!dispute.isRuled) return 0;
         uint256 finalRuling = dispute.ruling;
 
-        uint256 noOfRounds = disputeIDtoRoundArray[_localDisputeID].length;
-        for (uint256 roundNumber = 0; roundNumber < noOfRounds; roundNumber++) {
+        uint256 numberOfRounds = disputeIDtoRoundArray[_localDisputeID].length;
+        for (uint256 roundNumber = 0; roundNumber < numberOfRounds; roundNumber++) {
             Round storage round = disputeIDtoRoundArray[_localDisputeID][roundNumber];
             for (uint256 contributionNumber = 0; contributionNumber < _contributedTo.length; contributionNumber++) {
                 uint256 ruling = _contributedTo[contributionNumber];
