@@ -2,7 +2,7 @@
 
 /**
  *  @authors: [@ferittuncer]
- *  @reviewers: [@fnanni-0*, @unknownunknown1*, @mtsalenc*, @MerlinEgalite, @shalzz]
+ *  @reviewers: [@fnanni-0*, @unknownunknown1*, @mtsalenc*, @MerlinEgalite*, @shalzz*]
  *  @auditors: []
  *  @bounties: []
  *  @deployments: [0xA3B02bA6E10F55fb177637917B1b472da0110CcC]
@@ -81,9 +81,12 @@ contract ArbitrableProxy is IDisputeResolver {
         string calldata _metaevidenceURI,
         uint256 _numberOfRulingOptions
     ) external payable returns (uint256 disputeID) {
+        require(_numberOfRulingOptions <= MAX_NUMBER_OF_CHOICES, "Number of ruling options out of range.");
         if (_numberOfRulingOptions == 0) _numberOfRulingOptions = MAX_NUMBER_OF_CHOICES;
 
         uint256 arbitrationCost = arbitrator.arbitrationCost(_arbitratorExtraData);
+        require(msg.value >= arbitrationCost, "Not enough value to cover arbitration fees.");
+
         disputeID = arbitrator.createDispute{value: arbitrationCost}(_numberOfRulingOptions, _arbitratorExtraData);
 
         uint256 localDisputeID = disputes.length;
