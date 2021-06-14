@@ -84,10 +84,7 @@ contract ArbitrableProxy is IDisputeResolver {
         require(_numberOfRulingOptions <= MAX_NUMBER_OF_CHOICES, "Number of ruling options out of range.");
         if (_numberOfRulingOptions == 0) _numberOfRulingOptions = MAX_NUMBER_OF_CHOICES;
 
-        uint256 arbitrationCost = arbitrator.arbitrationCost(_arbitratorExtraData);
-        require(msg.value >= arbitrationCost, "Not enough value to cover arbitration fees.");
-
-        disputeID = arbitrator.createDispute{value: arbitrationCost}(_numberOfRulingOptions, _arbitratorExtraData);
+        disputeID = arbitrator.createDispute{value: msg.value}(_numberOfRulingOptions, _arbitratorExtraData);
 
         uint256 localDisputeID = disputes.length;
 
@@ -100,8 +97,6 @@ contract ArbitrableProxy is IDisputeResolver {
 
         emit MetaEvidence(localDisputeID, _metaevidenceURI);
         emit Dispute(arbitrator, disputeID, localDisputeID, localDisputeID);
-
-        msg.sender.send(msg.value.subCap(arbitrationCost)); // Return excess msg.value to sender. Send preferred over transfer deliberately.
     }
 
     /** @dev TRUSTED. Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.
