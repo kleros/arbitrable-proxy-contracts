@@ -53,6 +53,19 @@ module.exports = {
       skipDryRun: true,
       gas: 2900000,
     },
+    sokol: {
+      provider: () =>
+        new HDWalletProvider({
+          privateKeys: privateKeys,
+          providerOrUrl: "https://sokol.poa.network",
+          chainId: 77,
+        }),
+      network_id: 77,
+      skipDryRun: true,
+      networkCheckTimeout: 99999999,
+      gas: 5000000,
+      gasPrice: 1000000000,
+    },
   },
   // Set default mocha options here, use special reporters etc.
   mocha: {
