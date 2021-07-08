@@ -66,6 +66,18 @@ module.exports = {
       gas: 5000000,
       gasPrice: 1000000000,
     },
+    xdai: {
+      provider: () =>
+        new HDWalletProvider({
+          privateKeys: privateKeys,
+          providerOrUrl: "https://rpc.xdaichain.com",
+          chainId: 100,
+        }),
+      network_id: 100,
+      networkCheckTimeout: 2000000,
+      gas: 5000000,
+      gasPrice: 10000000000, // 10 gwei
+    },
   },
   // Set default mocha options here, use special reporters etc.
   mocha: {
