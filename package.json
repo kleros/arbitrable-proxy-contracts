@@ -8,6 +8,7 @@
   "private": false,
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.4",
+    "@poanet/solidity-flattener": "^3.0.6",
     "@truffle/hdwallet-provider": "^1.4.0",
     "chai": "^4.2.0",
     "eth-gas-reporter": "^0.2.17",
@@ -20,16 +21,14 @@
     "truffle-plugin-verify": "^0.5.7"
   },
   "dependencies": {
-    "@kleros/dispute-resolver-interface-contract": "^1.0.2",
-    "@kleros/erc-792": "7.0.0",
+    "@kleros/dispute-resolver-interface-contract": "^2",
     "@kleros/ethereum-libraries": "^2.0.0"
   },
   "scripts": {
     "compile": "truffle compile",
     "ganache": "ganache-cli -g 1 -l 1000000000",
     "test": "truffle test",
-    "prepack": "prettier --write 'contracts/**/*.sol' && NETWORK=ropsten npm run deploy-and-verify && sleep 3 && NETWORK=kovan npm run deploy-and-verify && sleep 3 && NETWORK=sokol npm run deploy && sleep 3 && NETWORK=xdai npm run deploy && sleep 3 && NETWORK=main npm run deploy-and-verify",
-    "deploy-and-verify": "truffle migrate --network $NETWORK -f 2 && sleep 5 && truffle run verify ArbitrableProxy --network $NETWORK",
+    "deploy-and-verify": "truffle migrate --network $NETWORK && sleep 5 && truffle run verify ArbitrableProxy --network $NETWORK",
     "deploy": "truffle migrate --network $NETWORK -f 2",
     "deploy-interactive": "truffle migrate --network $NETWORK --interactive --verbose-rpc  && sleep 3 && truffle run verify ArbitrableProxy --network $NETWORK"
   },

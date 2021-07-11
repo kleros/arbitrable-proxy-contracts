@@ -5,7 +5,6 @@
  *  @reviewers: [@fnanni-0*, @unknownunknown1*, @mtsalenc*, @MerlinEgalite*, @shalzz*]
  *  @auditors: []
  *  @bounties: []
- *  @deployments: [0xA3B02bA6E10F55fb177637917B1b472da0110CcC]
  */
 
 pragma solidity ^0.7.0;
@@ -152,43 +151,22 @@ contract ArbitrableProxy is IDisputeResolver {
         return lastRound.hasPaid[_ruling];
     }
 
-    /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.
-     *  This function has O(m*n) time complexity where m is number of rounds and n is the number of ruling options contributed by given user.
-     *  It is safe to assume m is always less than 10 as appeal cost growth order is O(m^2).
-     *  It is safe to assume n is always less than 3 as it does not make sense to contribute to different ruling options in the same round, so it will rarely be greater than 1.
-     *  Thus, we can assume this loop will run less than 30(10*3) times, and on average just a few times.
+    /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For all rounds at once.
+     *  This function has O(m) time complexity where m is number of rounds.
+     *  It is safe to assume m is always less than 10 as appeal cost growth order is O(2^m).
+     *  Thus, we can assume this loop will run less than 10 times, and on average just a few times.
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The address to withdraw its rewards.
-     *  @param _contributedTo Rulings that received contributions from contributor.
+     *  @param _ruling Rulings that received contributions from contributor.
      */
     function withdrawFeesAndRewardsForAllRounds(
         uint256 _localDisputeID,
         address payable _contributor,
-        uint256[] memory _contributedTo
+        uint256 _ruling
     ) external override {
         uint256 numberOfRounds = disputeIDtoRoundArray[_localDisputeID].length;
         for (uint256 roundNumber = 0; roundNumber < numberOfRounds; roundNumber++) {
-            withdrawFeesAndRewardsForMultipleRulings(_localDisputeID, _contributor, roundNumber, _contributedTo);
-        }
-    }
-
-    /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets solved for multiple ruling options at once.
-     *  This function has O(n) time complexity where n is number of ruling options contributed by given user.
-     *  It is safe to assume n is always less than 3 as it does not make sense to contribute to different ruling options in the same round, so it will rarely be greater than 1.
-     *  @param _localDisputeID Index of the dispute in disputes array.
-     *  @param _contributor The address to withdraw its rewards.
-     *  @param _roundNumber The number of the round caller wants to withdraw from.
-     *  @param _contributedTo Rulings that received contributions from contributor.
-     */
-    function withdrawFeesAndRewardsForMultipleRulings(
-        uint256 _localDisputeID,
-        address payable _contributor,
-        uint256 _roundNumber,
-        uint256[] memory _contributedTo
-    ) public override {
-        uint256 contributionArrayLength = _contributedTo.length;
-        for (uint256 contributionNumber = 0; contributionNumber < contributionArrayLength; contributionNumber++) {
-            withdrawFeesAndRewards(_localDisputeID, _contributor, _roundNumber, _contributedTo[contributionNumber]);
+            withdrawFeesAndRewards(_localDisputeID, _contributor, roundNumber, _ruling);
         }
     }
 
@@ -268,17 +246,17 @@ contract ArbitrableProxy is IDisputeResolver {
     }
 
     /** @notice Returns the sum of withdrawable amount.
-     *  @dev This function has O(m*n) time complexity where m is number of rounds and n is the number of ruling options contributed by given user.
-     *  It is safe to assume m is always less than 10 as appeal cost growth order is O(m^2). And n being greater than 1 is unlikely.
+     *  @dev This function has O(m) time complexity where m is number of rounds.
+     *  It is safe to assume m is always less than 10 as appeal cost growth order is O(2^m).
      *  @param _localDisputeID Index of the dispute in disputes array.
      *  @param _contributor The contributor for which to query.
-     *  @param _contributedTo The array which includes ruling options to search for potential withdrawal. Caller can obtain this information using Contribution events.
+     *  @param _ruling The ruling option to search for potential withdrawal. Caller can obtain this information using Contribution events.
      *  @return sum The total amount available to withdraw.
      */
     function getTotalWithdrawableAmount(
         uint256 _localDisputeID,
         address payable _contributor,
-        uint256[] memory _contributedTo
+        uint256 _ruling
     ) external view override returns (uint256 sum) {
         DisputeStruct storage dispute = disputes[_localDisputeID];
         if (!dispute.isRuled) return 0;
@@ -287,11 +265,8 @@ contract ArbitrableProxy is IDisputeResolver {
         uint256 numberOfRounds = disputeIDtoRoundArray[_localDisputeID].length;
         for (uint256 roundNumber = 0; roundNumber < numberOfRounds; roundNumber++) {
             Round storage round = disputeIDtoRoundArray[_localDisputeID][roundNumber];
-            for (uint256 contributionNumber = 0; contributionNumber < _contributedTo.length; contributionNumber++) {
-                uint256 ruling = _contributedTo[contributionNumber];
 
-                sum += getWithdrawableAmount(round, _contributor, ruling, finalRuling);
-            }
+            sum += getWithdrawableAmount(round, _contributor, _ruling, finalRuling);
         }
     }
 
@@ -318,26 +293,26 @@ contract ArbitrableProxy is IDisputeResolver {
     /** @dev Returns withdrawable amount for given parameters.
      *  @param _round The round number to calculate amount for.
      *  @param _contributor The contributor for which to query.
-     *  @param _contributedTo The ruling option to search for potential withdrawal. Caller can obtain this information using Contribution events.
+     *  @param _ruling The ruling option to search for potential withdrawal. Caller can obtain this information using Contribution events.
      *  @return amount The total amount available to withdraw.
      */
     function getWithdrawableAmount(
         Round storage _round,
         address _contributor,
-        uint256 _contributedTo,
+        uint256 _ruling,
         uint256 _finalRuling
     ) internal view returns (uint256 amount) {
-        if (!_round.hasPaid[_contributedTo]) {
+        if (!_round.hasPaid[_ruling]) {
             // Allow to reimburse if funding was unsuccessful for this ruling option.
-            amount = _round.contributions[_contributor][_contributedTo];
+            amount = _round.contributions[_contributor][_ruling];
         } else {
             // Funding was successful for this ruling option.
-            if (_contributedTo == _finalRuling) {
+            if (_ruling == _finalRuling) {
                 // This ruling option is the ultimate winner.
-                amount = _round.paidFees[_contributedTo] > 0 ? (_round.contributions[_contributor][_contributedTo] * _round.feeRewards) / _round.paidFees[_contributedTo] : 0;
+                amount = _round.paidFees[_ruling] > 0 ? (_round.contributions[_contributor][_ruling] * _round.feeRewards) / _round.paidFees[_ruling] : 0;
             } else if (!_round.hasPaid[_finalRuling]) {
                 // The ultimate winner was not funded in this round. In this case funded ruling option(s) wins by default. Prize is distributed among contributors of funded ruling option(s).
-                amount = (_round.contributions[_contributor][_contributedTo] * _round.feeRewards) / (_round.paidFees[_round.fundedRulings[0]] + _round.paidFees[_round.fundedRulings[1]]);
+                amount = (_round.contributions[_contributor][_ruling] * _round.feeRewards) / (_round.paidFees[_round.fundedRulings[0]] + _round.paidFees[_round.fundedRulings[1]]);
             }
         }
     }

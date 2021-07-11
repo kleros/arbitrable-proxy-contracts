@@ -197,8 +197,14 @@ contract BinaryArbitrableProxy is IArbitrable, IEvidence {
             round.contributions[_contributor][uint8(Party.Respondent)] = 0;
         } else if (Party(ruling) == Party.None) {
             // Reimburse unspent fees proportionally if there is no winner and loser.
-            uint256 rewardRequester = round.paidFees[uint8(Party.Requester)] > 0 ? (round.contributions[_contributor][uint8(Party.Requester)] * round.feeRewards) / (round.paidFees[uint8(Party.Requester)] + round.paidFees[uint8(Party.Respondent)]) : 0;
-            uint256 rewardRespondent = round.paidFees[uint8(Party.Respondent)] > 0 ? (round.contributions[_contributor][uint8(Party.Respondent)] * round.feeRewards) / (round.paidFees[uint8(Party.Requester)] + round.paidFees[uint8(Party.Respondent)]) : 0;
+            uint256 rewardRequester =
+                round.paidFees[uint8(Party.Requester)] > 0
+                    ? (round.contributions[_contributor][uint8(Party.Requester)] * round.feeRewards) / (round.paidFees[uint8(Party.Requester)] + round.paidFees[uint8(Party.Respondent)])
+                    : 0;
+            uint256 rewardRespondent =
+                round.paidFees[uint8(Party.Respondent)] > 0
+                    ? (round.contributions[_contributor][uint8(Party.Respondent)] * round.feeRewards) / (round.paidFees[uint8(Party.Requester)] + round.paidFees[uint8(Party.Respondent)])
+                    : 0;
 
             reward = rewardRequester + rewardRespondent;
             round.contributions[_contributor][uint8(Party.Requester)] = 0;

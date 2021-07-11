@@ -70,7 +70,10 @@ contract("ArbitrableProxy", ([sender, receiver, thirdParty, fourthParty, fifthPa
 
     const currentBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
     const balanceDelta = new BN(previousBalanceOfFourthParty).sub(new BN(currentBalanceOfFourthParty));
-    assert(balanceDelta.eq(new BN(ARBITRATION_COST * (1 + WINNER_STAKE_MULTIPLIER / DIVISOR)).add(new BN(tx.receipt.gasUsed))), `Expected ${new BN(ARBITRATION_COST * (1 + WINNER_STAKE_MULTIPLIER / DIVISOR)).add(new BN(tx.receipt.gasUsed))}, actual ${balanceDelta}`);
+    assert(
+      balanceDelta.eq(new BN(ARBITRATION_COST * (1 + WINNER_STAKE_MULTIPLIER / DIVISOR)).add(new BN(tx.receipt.gasUsed))),
+      `Expected ${new BN(ARBITRATION_COST * (1 + WINNER_STAKE_MULTIPLIER / DIVISOR)).add(new BN(tx.receipt.gasUsed))}, actual ${balanceDelta}`
+    );
 
     disputeStatus = (await this.aaa.disputes(0)).status;
     assert(new BN("0").eq(disputeStatus), `Expected disputeStatus 0, actual ${disputeStatus}`);
@@ -83,9 +86,11 @@ contract("ArbitrableProxy", ([sender, receiver, thirdParty, fourthParty, fifthPa
     const previousBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
     const previousBalanceOfFifthParty = await web3.eth.getBalance(fifthParty);
 
-    await this.ap.withdrawFeesAndRewardsForAllRounds(0, thirdParty, [...Array(NUMBER_OF_RULING_OPTIONS + 1).keys()]);
-    await this.ap.withdrawFeesAndRewardsForAllRounds(0, fourthParty, [...Array(NUMBER_OF_RULING_OPTIONS + 1).keys()]);
-    await this.ap.withdrawFeesAndRewardsForAllRounds(0, fifthParty, [...Array(NUMBER_OF_RULING_OPTIONS + 1).keys()]);
+    for (var i = 0; i <= NUMBER_OF_RULING_OPTIONS; i++) {
+      await this.ap.withdrawFeesAndRewardsForAllRounds(0, thirdParty, i);
+      await this.ap.withdrawFeesAndRewardsForAllRounds(0, fourthParty, i);
+      await this.ap.withdrawFeesAndRewardsForAllRounds(0, fifthParty, i);
+    }
 
     const currentBalanceOfThirdParty = await web3.eth.getBalance(thirdParty);
     const currentBalanceOfFourthParty = await web3.eth.getBalance(fourthParty);
