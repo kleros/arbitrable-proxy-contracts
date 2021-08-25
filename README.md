@@ -1,3 +1,4 @@
+[![npm version](https://badge.fury.io/js/%40kleros%2Farbitrable-proxy-contracts.svg)](https://badge.fury.io/js/%40kleros%2Farbitrable-proxy-contracts)
 # General Purpose Arbitrable Contracts
 
 General purpose arbitrable contracts as defined in ERC-792
