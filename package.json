@@ -1,6 +1,6 @@
 {
   "name": "@kleros/arbitrable-proxy-contracts",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "main": "index.js",
   "repository": "https://github.com/kleros/arbitrable-proxy-contracts",
   "author": "Kleros",
