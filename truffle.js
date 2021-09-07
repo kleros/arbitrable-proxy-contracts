@@ -24,10 +24,10 @@ module.exports = {
           providerOrUrl: `wss://mainnet.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
           chainId: 1,
         }),
-      networkCheckTimeout: 99999,
+      networkCheckTimeout: 999999,
       network_id: 1,
       gasPrice: 80000000000, // 80 gwei
-      gas: 10000000,
+      gas: 4000000,
     },
 
     kovan: {
@@ -77,7 +77,7 @@ module.exports = {
       network_id: 100,
       networkCheckTimeout: 2000000,
       gas: 5000000,
-      gasPrice: 10000000000, // 10 gwei
+      gasPrice: 20000000000, // 20 gwei
     },
   },
   // Set default mocha options here, use special reporters etc.

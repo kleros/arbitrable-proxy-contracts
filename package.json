@@ -9,15 +9,15 @@
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.4",
     "@poanet/solidity-flattener": "^3.0.6",
-    "@truffle/hdwallet-provider": "^1.4.0",
+    "@truffle/hdwallet-provider": "^1.5.0",
     "chai": "^4.2.0",
     "eth-gas-reporter": "^0.2.17",
-    "ganache": "^6.4.4",
-    "ganache-cli": "^6.7.0",
+    "ganache": "^6.4.5",
+    "ganache-cli": "^6.12.2",
     "prettier": "^2.2.1",
     "prettier-plugin-solidity": "^1.0.0-beta.3",
     "surya": "^0.4.0",
-    "truffle": "^5.3.4",
+    "truffle": "^5.4.9",
     "truffle-plugin-verify": "^0.5.7"
   },
   "dependencies": {

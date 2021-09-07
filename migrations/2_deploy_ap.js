@@ -9,5 +9,5 @@ const KLEROS = {
 };
 
 module.exports = function (deployer, network) {
-  deployer.deploy(AP, KLEROS.main);
+  deployer.deploy(AP, KLEROS[network]);
 };
