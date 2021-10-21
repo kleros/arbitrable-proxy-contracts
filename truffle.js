@@ -54,6 +54,18 @@ module.exports = {
       skipDryRun: true,
       gas: 2900000,
     },
+    rinkeby: {
+      provider: () =>
+        new HDWalletProvider({
+          privateKeys: privateKeys,
+          providerOrUrl: `wss://rinkeby.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
+          chainId: 4,
+        }),
+      networkCheckTimeout: 99999999,
+      network_id: 4,
+      skipDryRun: true,
+      gas: 2900000,
+    },
     sokol: {
       provider: () =>
         new HDWalletProvider({
