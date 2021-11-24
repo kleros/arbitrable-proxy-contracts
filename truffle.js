@@ -66,6 +66,18 @@ module.exports = {
       skipDryRun: true,
       gas: 2900000,
     },
+    görli: {
+      provider: () =>
+        new HDWalletProvider({
+          privateKeys: privateKeys,
+          providerOrUrl: `wss://goerli.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
+          chainId: 5,
+        }),
+      networkCheckTimeout: 99999999,
+      network_id: 5,
+      skipDryRun: true,
+      gas: 2900000,
+    },
     sokol: {
       provider: () =>
         new HDWalletProvider({
