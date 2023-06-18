@@ -1,0 +1,3714 @@
+{
+  "contractName": "IDisputeResolver",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "_localDisputeID",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "_round",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "ruling",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "_contributor",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Contribution",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "contract IArbitrator",
+          "name": "_arbitrator",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "_disputeID",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "_metaEvidenceID",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "_evidenceGroupID",
+          "type": "uint256"
+        }
+      ],
+      "name": "Dispute",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "contract IArbitrator",
+          "name": "_arbitrator",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "_evidenceGroupID",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "_party",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "_evidence",
+          "type": "string"
+        }
+      ],
+      "name": "Evidence",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "_metaEvidenceID",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "_evidence",
+          "type": "string"
+        }
+      ],
+      "name": "MetaEvidence",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "contract IArbitrator",
+          "name": "_arbitrator",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "_disputeID",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "_ruling",
+          "type": "uint256"
+        }
+      ],
+      "name": "Ruling",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "_localDisputeID",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "_round",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "_ruling",
+          "type": "uint256"
+        }
+      ],
+      "name": "RulingFunded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "_localDisputeID",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "_round",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "_ruling",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "_contributor",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "_reward",
+          "type": "uint256"
+        }
+      ],
+      "name": "Withdrawal",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "VERSION",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_disputeID",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_ruling",
+          "type": "uint256"
+        }
+      ],
+      "name": "rule",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_externalDisputeID",
+          "type": "uint256"
+        }
+      ],
+      "name": "externalIDtoLocalID",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "localDisputeID",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_localDisputeID",
+          "type": "uint256"
+        }
+      ],
+      "name": "numberOfRulingOptions",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "count",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_localDisputeID",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "_evidenceURI",
+          "type": "string"
+        }
+      ],
+      "name": "submitEvidence",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_localDisputeID",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_ruling",
+          "type": "uint256"
+        }
+      ],
+      "name": "fundAppeal",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "fullyFunded",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getMultipliers",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "winnerStakeMultiplier",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "loserStakeMultiplier",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "loserAppealPeriodMultiplier",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "denominator",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_localDisputeID",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address payable",
+          "name": "_contributor",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_round",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_ruling",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawFeesAndRewards",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "sum",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_localDisputeID",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address payable",
+          "name": "_contributor",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_ruling",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawFeesAndRewardsForAllRounds",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_localDisputeID",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address payable",
+          "name": "_contributor",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_ruling",
+          "type": "uint256"
+        }
+      ],
+      "name": "getTotalWithdrawableAmount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "sum",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "metadata": "{\"compiler\":{\"version\":\"0.7.6+commit.7338295f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_localDisputeID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_round\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"ruling\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_contributor\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"Contribution\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"contract IArbitrator\",\"name\":\"_arbitrator\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_disputeID\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_metaEvidenceID\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_evidenceGroupID\",\"type\":\"uint256\"}],\"name\":\"Dispute\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"contract IArbitrator\",\"name\":\"_arbitrator\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_evidenceGroupID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_party\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"_evidence\",\"type\":\"string\"}],\"name\":\"Evidence\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_metaEvidenceID\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"_evidence\",\"type\":\"string\"}],\"name\":\"MetaEvidence\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"contract IArbitrator\",\"name\":\"_arbitrator\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_disputeID\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_ruling\",\"type\":\"uint256\"}],\"name\":\"Ruling\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_localDisputeID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_round\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_ruling\",\"type\":\"uint256\"}],\"name\":\"RulingFunded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_localDisputeID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_round\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_ruling\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_contributor\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_reward\",\"type\":\"uint256\"}],\"name\":\"Withdrawal\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"VERSION\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_externalDisputeID\",\"type\":\"uint256\"}],\"name\":\"externalIDtoLocalID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"localDisputeID\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_localDisputeID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_ruling\",\"type\":\"uint256\"}],\"name\":\"fundAppeal\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"fullyFunded\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMultipliers\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"winnerStakeMultiplier\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"loserStakeMultiplier\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"loserAppealPeriodMultiplier\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"denominator\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_localDisputeID\",\"type\":\"uint256\"},{\"internalType\":\"address payable\",\"name\":\"_contributor\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_ruling\",\"type\":\"uint256\"}],\"name\":\"getTotalWithdrawableAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"sum\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_localDisputeID\",\"type\":\"uint256\"}],\"name\":\"numberOfRulingOptions\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"count\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_disputeID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_ruling\",\"type\":\"uint256\"}],\"name\":\"rule\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_localDisputeID\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"_evidenceURI\",\"type\":\"string\"}],\"name\":\"submitEvidence\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_localDisputeID\",\"type\":\"uint256\"},{\"internalType\":\"address payable\",\"name\":\"_contributor\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_round\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_ruling\",\"type\":\"uint256\"}],\"name\":\"withdrawFeesAndRewards\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"sum\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_localDisputeID\",\"type\":\"uint256\"},{\"internalType\":\"address payable\",\"name\":\"_contributor\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_ruling\",\"type\":\"uint256\"}],\"name\":\"withdrawFeesAndRewardsForAllRounds\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"events\":{\"Contribution(uint256,uint256,uint256,address,uint256)\":{\"details\":\"Raised when a contribution is made, inside fundAppeal function.\",\"params\":{\"_amount\":\"Contribution amount.\",\"_contributor\":\"Caller of fundAppeal function.\",\"_localDisputeID\":\"Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\",\"_round\":\"The round number the contribution was made to.\",\"ruling\":\"Indicates the ruling option which got the contribution.\"}},\"RulingFunded(uint256,uint256,uint256)\":{\"details\":\"To be raised when a ruling option is fully funded for appeal.\",\"params\":{\"_localDisputeID\":\"Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\",\"_round\":\"Number of the round this ruling option was fully funded in.\",\"_ruling\":\"The ruling option which just got fully funded.\"}},\"Withdrawal(uint256,uint256,uint256,address,uint256)\":{\"details\":\"Raised when a contributor withdraws non-zero value.\",\"params\":{\"_contributor\":\"The beneficiary of withdrawal.\",\"_localDisputeID\":\"Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\",\"_reward\":\"Total amount of withdrawal, consists of reimbursed deposits plus rewards.\",\"_round\":\"The round number the withdrawal was made from.\",\"_ruling\":\"Indicates the ruling option which contributor gets rewards from.\"}}},\"kind\":\"dev\",\"methods\":{\"externalIDtoLocalID(uint256)\":{\"details\":\"Maps external (arbitrator side) dispute id to local (arbitrable) dispute id.\",\"params\":{\"_externalDisputeID\":\"Dispute id as in arbitrator contract.\"},\"returns\":{\"localDisputeID\":\"Dispute id as in arbitrable contract.\"}},\"fundAppeal(uint256,uint256)\":{\"details\":\"Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.\",\"params\":{\"_localDisputeID\":\"Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\",\"_ruling\":\"The ruling option to which the caller wants to contribute.\"},\"returns\":{\"fullyFunded\":\"True if the ruling option got fully funded as a result of this contribution.\"}},\"getMultipliers()\":{\"details\":\"Returns appeal multipliers.\",\"returns\":{\"denominator\":\"Multiplier denominator in basis points.\",\"loserAppealPeriodMultiplier\":\"Losers appeal period multiplier. The loser is given less time to fund its appeal to defend against last minute appeal funding attacks.\",\"loserStakeMultiplier\":\"Losers stake multiplier.\",\"winnerStakeMultiplier\":\"Winners stake multiplier.\"}},\"getTotalWithdrawableAmount(uint256,address,uint256)\":{\"details\":\"Returns the sum of withdrawable amount.\",\"params\":{\"_contributor\":\"Beneficiary of withdraw operation.\",\"_localDisputeID\":\"Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\",\"_ruling\":\"Ruling option that caller wants to get withdrawable amount from.\"},\"returns\":{\"sum\":\"The total amount available to withdraw.\"}},\"numberOfRulingOptions(uint256)\":{\"details\":\"Returns number of possible ruling options. Valid rulings are [0, return value].\",\"params\":{\"_localDisputeID\":\"Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\"},\"returns\":{\"count\":\"The number of ruling options.\"}},\"rule(uint256,uint256)\":{\"details\":\"Give a ruling for a dispute. Must be called by the arbitrator. The purpose of this function is to ensure that the address calling it has the right to rule on the contract.\",\"params\":{\"_disputeID\":\"ID of the dispute in the Arbitrator contract.\",\"_ruling\":\"Ruling given by the arbitrator. Note that 0 is reserved for \\\"Not able/wanting to make a decision\\\".\"}},\"submitEvidence(uint256,string)\":{\"details\":\"Allows to submit evidence for a given dispute.\",\"params\":{\"_evidenceURI\":\"IPFS path to evidence, example: '/ipfs/Qmarwkf7C9RuzDEJNnarT3WZ7kem5bk8DZAzx78acJjMFH/evidence.json'\",\"_localDisputeID\":\"Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\"}},\"withdrawFeesAndRewards(uint256,address,uint256,uint256)\":{\"details\":\"Allows to withdraw any reimbursable fees or rewards after the dispute gets resolved.\",\"params\":{\"_contributor\":\"Beneficiary of withdraw operation.\",\"_localDisputeID\":\"Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\",\"_round\":\"Number of the round that caller wants to execute withdraw on.\",\"_ruling\":\"A ruling option that caller wants to execute withdraw on.\"},\"returns\":{\"sum\":\"The amount that is going to be transferred to contributor as a result of this function call.\"}},\"withdrawFeesAndRewardsForAllRounds(uint256,address,uint256)\":{\"details\":\"Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.\",\"params\":{\"_contributor\":\"Beneficiary of withdraw operation.\",\"_localDisputeID\":\"Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\",\"_ruling\":\"Ruling option that caller wants to execute withdraw on.\"}}},\"title\":\"This serves as a standard interface for crowdfunded appeals and evidence submission, which aren't a part of the arbitration (erc-792 and erc-1497) standard yet. This interface is used in Dispute Resolver (resolve.kleros.io).\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"@kleros/dispute-resolver-interface-contract/contracts/solc-0.7.x/IDisputeResolver.sol\":\"IDisputeResolver\"},\"evmVersion\":\"byzantium\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":20000},\"remappings\":[]},\"sources\":{\"@kleros/dispute-resolver-interface-contract/contracts/solc-0.7.x/IDisputeResolver.sol\":{\"keccak256\":\"0x4775f15699805c40aefdb7b4cc4781553c7c5c0861dee3a5a7d98c8a640858f0\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://34472b16f66262aafb17e1ae3877fdbf0fc743045f2d029bc7b3ea8416b81475\",\"dweb:/ipfs/QmZo1BYpvjgkKeHFHmEzzsPJQ1VNQqLzw2983QM4z7Wugj\"]},\"@kleros/erc-792/contracts/IArbitrable.sol\":{\"keccak256\":\"0x1803a3433a78c509b20bd9477a2c60a71b2ce1ee7e17eb0ef0601618a8a72526\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://a72a4b4b7048818eb14e698b7b493cb0e44456f91237b1a9a9251669b1de6484\",\"dweb:/ipfs/QmQLXrMT9S5uMe5WHFcf1G1s1GGZGCtNgXcQQGxwukQkXB\"]},\"@kleros/erc-792/contracts/IArbitrator.sol\":{\"keccak256\":\"0x240a4142f9ec379da0333dfc82409b7b058cff9ea118368eb5e8f15447996c1e\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://6a3a6d3631ce0ca5ef1266f1dc7cd6adb842c875fb6a45385a5adfad65f48c67\",\"dweb:/ipfs/QmZi9SpTkcVnUvwmwRdDin3KFALskAQCYWYAsh9AFzmi86\"]},\"@kleros/erc-792/contracts/erc-1497/IEvidence.sol\":{\"keccak256\":\"0x1ccedf5213730632540c748486637d7b1977ee73375818bf498a8276ca49dd13\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://d58a60e8a3cdfe8515aa67a009cc139aab20d10fe0adc6058cc963b26c2e34a4\",\"dweb:/ipfs/QmUJY5dhS4KpXbLYhTBqMi33fNCUjFG19aLzxcDyeeBFkv\"]}},\"version\":1}",
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "immutableReferences": {},
+  "generatedSources": [],
+  "deployedGeneratedSources": [],
+  "sourceMap": "",
+  "deployedSourceMap": "",
+  "source": "// SPDX-License-Identifier: MIT\n\n/**\n *  @authors: [@ferittuncer]\n *  @reviewers: [@mtsalenc*, @hbarcelos*, @unknownunknown1*, @MerlinEgalite*]\n *  @auditors: []\n *  @bounties: []\n *  @deployments: []\n */\n\npragma solidity ^0.7.0;\n\nimport \"@kleros/erc-792/contracts/IArbitrable.sol\";\nimport \"@kleros/erc-792/contracts/erc-1497/IEvidence.sol\";\nimport \"@kleros/erc-792/contracts/IArbitrator.sol\";\n\n/**\n *  @title This serves as a standard interface for crowdfunded appeals and evidence submission, which aren't a part of the arbitration (erc-792 and erc-1497) standard yet.\n    This interface is used in Dispute Resolver (resolve.kleros.io).\n */\nabstract contract IDisputeResolver is IArbitrable, IEvidence {\n    string public constant VERSION = \"2.0.0\"; // Can be used to distinguish between multiple deployed versions, if necessary.\n\n    /** @dev Raised when a contribution is made, inside fundAppeal function.\n     *  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n     *  @param _round The round number the contribution was made to.\n     *  @param ruling Indicates the ruling option which got the contribution.\n     *  @param _contributor Caller of fundAppeal function.\n     *  @param _amount Contribution amount.\n     */\n    event Contribution(uint256 indexed _localDisputeID, uint256 indexed _round, uint256 ruling, address indexed _contributor, uint256 _amount);\n\n    /** @dev Raised when a contributor withdraws non-zero value.\n     *  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n     *  @param _round The round number the withdrawal was made from.\n     *  @param _ruling Indicates the ruling option which contributor gets rewards from.\n     *  @param _contributor The beneficiary of withdrawal.\n     *  @param _reward Total amount of withdrawal, consists of reimbursed deposits plus rewards.\n     */\n    event Withdrawal(uint256 indexed _localDisputeID, uint256 indexed _round, uint256 _ruling, address indexed _contributor, uint256 _reward);\n\n    /** @dev To be raised when a ruling option is fully funded for appeal.\n     *  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n     *  @param _round Number of the round this ruling option was fully funded in.\n     *  @param _ruling The ruling option which just got fully funded.\n     */\n    event RulingFunded(uint256 indexed _localDisputeID, uint256 indexed _round, uint256 indexed _ruling);\n\n    /** @dev Maps external (arbitrator side) dispute id to local (arbitrable) dispute id.\n     *  @param _externalDisputeID Dispute id as in arbitrator contract.\n     *  @return localDisputeID Dispute id as in arbitrable contract.\n     */\n    function externalIDtoLocalID(uint256 _externalDisputeID) external virtual returns (uint256 localDisputeID);\n\n    /** @dev Returns number of possible ruling options. Valid rulings are [0, return value].\n     *  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n     *  @return count The number of ruling options.\n     */\n    function numberOfRulingOptions(uint256 _localDisputeID) external view virtual returns (uint256 count);\n\n    /** @dev Allows to submit evidence for a given dispute.\n     *  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n     *  @param _evidenceURI IPFS path to evidence, example: '/ipfs/Qmarwkf7C9RuzDEJNnarT3WZ7kem5bk8DZAzx78acJjMFH/evidence.json'\n     */\n    function submitEvidence(uint256 _localDisputeID, string calldata _evidenceURI) external virtual;\n\n    /** @dev Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.\n     *  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n     *  @param _ruling The ruling option to which the caller wants to contribute.\n     *  @return fullyFunded True if the ruling option got fully funded as a result of this contribution.\n     */\n    function fundAppeal(uint256 _localDisputeID, uint256 _ruling) external payable virtual returns (bool fullyFunded);\n\n    /** @dev Returns appeal multipliers.\n     *  @return winnerStakeMultiplier Winners stake multiplier.\n     *  @return loserStakeMultiplier Losers stake multiplier.\n     *  @return loserAppealPeriodMultiplier Losers appeal period multiplier. The loser is given less time to fund its appeal to defend against last minute appeal funding attacks.\n     *  @return denominator Multiplier denominator in basis points.\n     */\n    function getMultipliers()\n        external\n        view\n        virtual\n        returns (\n            uint256 winnerStakeMultiplier,\n            uint256 loserStakeMultiplier,\n            uint256 loserAppealPeriodMultiplier,\n            uint256 denominator\n        );\n\n    /** @dev Allows to withdraw any reimbursable fees or rewards after the dispute gets resolved.\n     *  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n     *  @param _contributor Beneficiary of withdraw operation.\n     *  @param _round Number of the round that caller wants to execute withdraw on.\n     *  @param _ruling A ruling option that caller wants to execute withdraw on.\n     *  @return sum The amount that is going to be transferred to contributor as a result of this function call.\n     */\n    function withdrawFeesAndRewards(\n        uint256 _localDisputeID,\n        address payable _contributor,\n        uint256 _round,\n        uint256 _ruling\n    ) external virtual returns (uint256 sum);\n\n    /** @dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.\n     *  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n     *  @param _contributor Beneficiary of withdraw operation.\n     *  @param _ruling Ruling option that caller wants to execute withdraw on.\n     */\n    function withdrawFeesAndRewardsForAllRounds(\n        uint256 _localDisputeID,\n        address payable _contributor,\n        uint256 _ruling\n    ) external virtual;\n\n    /** @dev Returns the sum of withdrawable amount.\n     *  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n     *  @param _contributor Beneficiary of withdraw operation.\n     *  @param _ruling Ruling option that caller wants to get withdrawable amount from.\n     *  @return sum The total amount available to withdraw.\n     */\n    function getTotalWithdrawableAmount(\n        uint256 _localDisputeID,\n        address payable _contributor,\n        uint256 _ruling\n    ) external view virtual returns (uint256 sum);\n}\n",
+  "sourcePath": "@kleros/dispute-resolver-interface-contract/contracts/solc-0.7.x/IDisputeResolver.sol",
+  "ast": {
+    "absolutePath": "@kleros/dispute-resolver-interface-contract/contracts/solc-0.7.x/IDisputeResolver.sol",
+    "exportedSymbols": {
+      "IArbitrable": [
+        240
+      ],
+      "IArbitrator": [
+        332
+      ],
+      "IDisputeResolver": [
+        218
+      ],
+      "IEvidence": [
+        366
+      ]
+    },
+    "id": 219,
+    "license": "MIT",
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 89,
+        "literals": [
+          "solidity",
+          "^",
+          "0.7",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "206:23:1"
+      },
+      {
+        "absolutePath": "@kleros/erc-792/contracts/IArbitrable.sol",
+        "file": "@kleros/erc-792/contracts/IArbitrable.sol",
+        "id": 90,
+        "nodeType": "ImportDirective",
+        "scope": 219,
+        "sourceUnit": 241,
+        "src": "231:51:1",
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "absolutePath": "@kleros/erc-792/contracts/erc-1497/IEvidence.sol",
+        "file": "@kleros/erc-792/contracts/erc-1497/IEvidence.sol",
+        "id": 91,
+        "nodeType": "ImportDirective",
+        "scope": 219,
+        "sourceUnit": 367,
+        "src": "283:58:1",
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "absolutePath": "@kleros/erc-792/contracts/IArbitrator.sol",
+        "file": "@kleros/erc-792/contracts/IArbitrator.sol",
+        "id": 92,
+        "nodeType": "ImportDirective",
+        "scope": 219,
+        "sourceUnit": 333,
+        "src": "342:51:1",
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "abstract": true,
+        "baseContracts": [
+          {
+            "baseName": {
+              "id": 94,
+              "name": "IArbitrable",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 240,
+              "src": "681:11:1",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_IArbitrable_$240",
+                "typeString": "contract IArbitrable"
+              }
+            },
+            "id": 95,
+            "nodeType": "InheritanceSpecifier",
+            "src": "681:11:1"
+          },
+          {
+            "baseName": {
+              "id": 96,
+              "name": "IEvidence",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 366,
+              "src": "694:9:1",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_IEvidence_$366",
+                "typeString": "contract IEvidence"
+              }
+            },
+            "id": 97,
+            "nodeType": "InheritanceSpecifier",
+            "src": "694:9:1"
+          }
+        ],
+        "contractDependencies": [
+          240,
+          366
+        ],
+        "contractKind": "contract",
+        "documentation": {
+          "id": 93,
+          "nodeType": "StructuredDocumentation",
+          "src": "395:247:1",
+          "text": "  @title This serves as a standard interface for crowdfunded appeals and evidence submission, which aren't a part of the arbitration (erc-792 and erc-1497) standard yet.\nThis interface is used in Dispute Resolver (resolve.kleros.io)."
+        },
+        "fullyImplemented": false,
+        "id": 218,
+        "linearizedBaseContracts": [
+          218,
+          366,
+          240
+        ],
+        "name": "IDisputeResolver",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "constant": true,
+            "functionSelector": "ffa1ad74",
+            "id": 100,
+            "mutability": "constant",
+            "name": "VERSION",
+            "nodeType": "VariableDeclaration",
+            "scope": 218,
+            "src": "710:40:1",
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_string_memory_ptr",
+              "typeString": "string"
+            },
+            "typeName": {
+              "id": 98,
+              "name": "string",
+              "nodeType": "ElementaryTypeName",
+              "src": "710:6:1",
+              "typeDescriptions": {
+                "typeIdentifier": "t_string_storage_ptr",
+                "typeString": "string"
+              }
+            },
+            "value": {
+              "hexValue": "322e302e30",
+              "id": 99,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "string",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "743:7:1",
+              "typeDescriptions": {
+                "typeIdentifier": "t_stringliteral_b4bcb154e38601c389396fa918314da42d4626f13ef6d0ceb07e5f5d26b2fbc3",
+                "typeString": "literal_string \"2.0.0\""
+              },
+              "value": "2.0.0"
+            },
+            "visibility": "public"
+          },
+          {
+            "anonymous": false,
+            "documentation": {
+              "id": 101,
+              "nodeType": "StructuredDocumentation",
+              "src": "837:489:1",
+              "text": "@dev Raised when a contribution is made, inside fundAppeal function.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _round The round number the contribution was made to.\n  @param ruling Indicates the ruling option which got the contribution.\n  @param _contributor Caller of fundAppeal function.\n  @param _amount Contribution amount."
+            },
+            "id": 113,
+            "name": "Contribution",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 112,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 103,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "_localDisputeID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 113,
+                  "src": "1350:31:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 102,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1350:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 105,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "_round",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 113,
+                  "src": "1383:22:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 104,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1383:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 107,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "ruling",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 113,
+                  "src": "1407:14:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 106,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1407:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 109,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "_contributor",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 113,
+                  "src": "1423:28:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 108,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1423:7:1",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 111,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "_amount",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 113,
+                  "src": "1453:15:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 110,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1453:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1349:120:1"
+            },
+            "src": "1331:139:1"
+          },
+          {
+            "anonymous": false,
+            "documentation": {
+              "id": 114,
+              "nodeType": "StructuredDocumentation",
+              "src": "1476:540:1",
+              "text": "@dev Raised when a contributor withdraws non-zero value.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _round The round number the withdrawal was made from.\n  @param _ruling Indicates the ruling option which contributor gets rewards from.\n  @param _contributor The beneficiary of withdrawal.\n  @param _reward Total amount of withdrawal, consists of reimbursed deposits plus rewards."
+            },
+            "id": 126,
+            "name": "Withdrawal",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 125,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 116,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "_localDisputeID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 126,
+                  "src": "2038:31:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 115,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2038:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 118,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "_round",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 126,
+                  "src": "2071:22:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 117,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2071:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 120,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "_ruling",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 126,
+                  "src": "2095:15:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 119,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2095:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 122,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "_contributor",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 126,
+                  "src": "2112:28:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 121,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2112:7:1",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 124,
+                  "indexed": false,
+                  "mutability": "mutable",
+                  "name": "_reward",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 126,
+                  "src": "2142:15:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 123,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2142:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2037:121:1"
+            },
+            "src": "2021:138:1"
+          },
+          {
+            "anonymous": false,
+            "documentation": {
+              "id": 127,
+              "nodeType": "StructuredDocumentation",
+              "src": "2165:389:1",
+              "text": "@dev To be raised when a ruling option is fully funded for appeal.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _round Number of the round this ruling option was fully funded in.\n  @param _ruling The ruling option which just got fully funded."
+            },
+            "id": 135,
+            "name": "RulingFunded",
+            "nodeType": "EventDefinition",
+            "parameters": {
+              "id": 134,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 129,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "_localDisputeID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 135,
+                  "src": "2578:31:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 128,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2578:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 131,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "_round",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 135,
+                  "src": "2611:22:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 130,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2611:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 133,
+                  "indexed": true,
+                  "mutability": "mutable",
+                  "name": "_ruling",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 135,
+                  "src": "2635:23:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 132,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2635:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2577:82:1"
+            },
+            "src": "2559:101:1"
+          },
+          {
+            "documentation": {
+              "id": 136,
+              "nodeType": "StructuredDocumentation",
+              "src": "2666:234:1",
+              "text": "@dev Maps external (arbitrator side) dispute id to local (arbitrable) dispute id.\n  @param _externalDisputeID Dispute id as in arbitrator contract.\n  @return localDisputeID Dispute id as in arbitrable contract."
+            },
+            "functionSelector": "c21ae061",
+            "id": 143,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "externalIDtoLocalID",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 139,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 138,
+                  "mutability": "mutable",
+                  "name": "_externalDisputeID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 143,
+                  "src": "2934:26:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 137,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2934:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2933:28:1"
+            },
+            "returnParameters": {
+              "id": 142,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 141,
+                  "mutability": "mutable",
+                  "name": "localDisputeID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 143,
+                  "src": "2988:22:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 140,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2988:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2987:24:1"
+            },
+            "scope": 218,
+            "src": "2905:107:1",
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "documentation": {
+              "id": 144,
+              "nodeType": "StructuredDocumentation",
+              "src": "3018:307:1",
+              "text": "@dev Returns number of possible ruling options. Valid rulings are [0, return value].\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @return count The number of ruling options."
+            },
+            "functionSelector": "8d8b2d7e",
+            "id": 151,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "numberOfRulingOptions",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 147,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 146,
+                  "mutability": "mutable",
+                  "name": "_localDisputeID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 151,
+                  "src": "3361:23:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 145,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3361:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3360:25:1"
+            },
+            "returnParameters": {
+              "id": 150,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 149,
+                  "mutability": "mutable",
+                  "name": "count",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 151,
+                  "src": "3417:13:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 148,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3417:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3416:15:1"
+            },
+            "scope": 218,
+            "src": "3330:102:1",
+            "stateMutability": "view",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "documentation": {
+              "id": 152,
+              "nodeType": "StructuredDocumentation",
+              "src": "3438:351:1",
+              "text": "@dev Allows to submit evidence for a given dispute.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _evidenceURI IPFS path to evidence, example: '/ipfs/Qmarwkf7C9RuzDEJNnarT3WZ7kem5bk8DZAzx78acJjMFH/evidence.json'"
+            },
+            "functionSelector": "a6a7f0eb",
+            "id": 159,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "submitEvidence",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 157,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 154,
+                  "mutability": "mutable",
+                  "name": "_localDisputeID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 159,
+                  "src": "3818:23:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 153,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3818:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 156,
+                  "mutability": "mutable",
+                  "name": "_evidenceURI",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 159,
+                  "src": "3843:28:1",
+                  "stateVariable": false,
+                  "storageLocation": "calldata",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_string_calldata_ptr",
+                    "typeString": "string"
+                  },
+                  "typeName": {
+                    "id": 155,
+                    "name": "string",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3843:6:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_string_storage_ptr",
+                      "typeString": "string"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3817:55:1"
+            },
+            "returnParameters": {
+              "id": 158,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3889:0:1"
+            },
+            "scope": 218,
+            "src": "3794:96:1",
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "documentation": {
+              "id": 160,
+              "nodeType": "StructuredDocumentation",
+              "src": "3896:502:1",
+              "text": "@dev Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _ruling The ruling option to which the caller wants to contribute.\n  @return fullyFunded True if the ruling option got fully funded as a result of this contribution."
+            },
+            "functionSelector": "4b2f0ea0",
+            "id": 169,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "fundAppeal",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 165,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 162,
+                  "mutability": "mutable",
+                  "name": "_localDisputeID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 169,
+                  "src": "4423:23:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 161,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4423:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 164,
+                  "mutability": "mutable",
+                  "name": "_ruling",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 169,
+                  "src": "4448:15:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 163,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4448:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4422:42:1"
+            },
+            "returnParameters": {
+              "id": 168,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 167,
+                  "mutability": "mutable",
+                  "name": "fullyFunded",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 169,
+                  "src": "4499:16:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 166,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4499:4:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4498:18:1"
+            },
+            "scope": 218,
+            "src": "4403:114:1",
+            "stateMutability": "payable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "documentation": {
+              "id": 170,
+              "nodeType": "StructuredDocumentation",
+              "src": "4523:417:1",
+              "text": "@dev Returns appeal multipliers.\n  @return winnerStakeMultiplier Winners stake multiplier.\n  @return loserStakeMultiplier Losers stake multiplier.\n  @return loserAppealPeriodMultiplier Losers appeal period multiplier. The loser is given less time to fund its appeal to defend against last minute appeal funding attacks.\n  @return denominator Multiplier denominator in basis points."
+            },
+            "functionSelector": "79873f8a",
+            "id": 181,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getMultipliers",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 171,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "4968:2:1"
+            },
+            "returnParameters": {
+              "id": 180,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 173,
+                  "mutability": "mutable",
+                  "name": "winnerStakeMultiplier",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 181,
+                  "src": "5047:29:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 172,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5047:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 175,
+                  "mutability": "mutable",
+                  "name": "loserStakeMultiplier",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 181,
+                  "src": "5090:28:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 174,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5090:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 177,
+                  "mutability": "mutable",
+                  "name": "loserAppealPeriodMultiplier",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 181,
+                  "src": "5132:35:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 176,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5132:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 179,
+                  "mutability": "mutable",
+                  "name": "denominator",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 181,
+                  "src": "5181:19:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 178,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5181:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5033:177:1"
+            },
+            "scope": 218,
+            "src": "4945:266:1",
+            "stateMutability": "view",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "documentation": {
+              "id": 182,
+              "nodeType": "StructuredDocumentation",
+              "src": "5217:601:1",
+              "text": "@dev Allows to withdraw any reimbursable fees or rewards after the dispute gets resolved.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _contributor Beneficiary of withdraw operation.\n  @param _round Number of the round that caller wants to execute withdraw on.\n  @param _ruling A ruling option that caller wants to execute withdraw on.\n  @return sum The amount that is going to be transferred to contributor as a result of this function call."
+            },
+            "functionSelector": "362c3479",
+            "id": 195,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "withdrawFeesAndRewards",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 191,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 184,
+                  "mutability": "mutable",
+                  "name": "_localDisputeID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 195,
+                  "src": "5864:23:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 183,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5864:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 186,
+                  "mutability": "mutable",
+                  "name": "_contributor",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 195,
+                  "src": "5897:28:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address_payable",
+                    "typeString": "address payable"
+                  },
+                  "typeName": {
+                    "id": 185,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5897:15:1",
+                    "stateMutability": "payable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address_payable",
+                      "typeString": "address payable"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 188,
+                  "mutability": "mutable",
+                  "name": "_round",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 195,
+                  "src": "5935:14:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 187,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5935:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 190,
+                  "mutability": "mutable",
+                  "name": "_ruling",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 195,
+                  "src": "5959:15:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 189,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "5959:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "5854:126:1"
+            },
+            "returnParameters": {
+              "id": 194,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 193,
+                  "mutability": "mutable",
+                  "name": "sum",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 195,
+                  "src": "6007:11:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 192,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6007:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6006:13:1"
+            },
+            "scope": 218,
+            "src": "5823:197:1",
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "documentation": {
+              "id": 196,
+              "nodeType": "StructuredDocumentation",
+              "src": "6026:459:1",
+              "text": "@dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _contributor Beneficiary of withdraw operation.\n  @param _ruling Ruling option that caller wants to execute withdraw on."
+            },
+            "functionSelector": "fe2dddeb",
+            "id": 205,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "withdrawFeesAndRewardsForAllRounds",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 203,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 198,
+                  "mutability": "mutable",
+                  "name": "_localDisputeID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 205,
+                  "src": "6543:23:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 197,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6543:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 200,
+                  "mutability": "mutable",
+                  "name": "_contributor",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 205,
+                  "src": "6576:28:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address_payable",
+                    "typeString": "address payable"
+                  },
+                  "typeName": {
+                    "id": 199,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6576:15:1",
+                    "stateMutability": "payable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address_payable",
+                      "typeString": "address payable"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 202,
+                  "mutability": "mutable",
+                  "name": "_ruling",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 205,
+                  "src": "6614:15:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 201,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "6614:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "6533:102:1"
+            },
+            "returnParameters": {
+              "id": 204,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "6652:0:1"
+            },
+            "scope": 218,
+            "src": "6490:163:1",
+            "stateMutability": "nonpayable",
+            "virtual": true,
+            "visibility": "external"
+          },
+          {
+            "documentation": {
+              "id": 206,
+              "nodeType": "StructuredDocumentation",
+              "src": "6659:426:1",
+              "text": "@dev Returns the sum of withdrawable amount.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _contributor Beneficiary of withdraw operation.\n  @param _ruling Ruling option that caller wants to get withdrawable amount from.\n  @return sum The total amount available to withdraw."
+            },
+            "functionSelector": "ec85635b",
+            "id": 217,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getTotalWithdrawableAmount",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 213,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 208,
+                  "mutability": "mutable",
+                  "name": "_localDisputeID",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 217,
+                  "src": "7135:23:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 207,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7135:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 210,
+                  "mutability": "mutable",
+                  "name": "_contributor",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 217,
+                  "src": "7168:28:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address_payable",
+                    "typeString": "address payable"
+                  },
+                  "typeName": {
+                    "id": 209,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7168:15:1",
+                    "stateMutability": "payable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address_payable",
+                      "typeString": "address payable"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 212,
+                  "mutability": "mutable",
+                  "name": "_ruling",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 217,
+                  "src": "7206:15:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 211,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7206:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7125:102:1"
+            },
+            "returnParameters": {
+              "id": 216,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 215,
+                  "mutability": "mutable",
+                  "name": "sum",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 217,
+                  "src": "7259:11:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 214,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "7259:7:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "7258:13:1"
+            },
+            "scope": 218,
+            "src": "7090:182:1",
+            "stateMutability": "view",
+            "virtual": true,
+            "visibility": "external"
+          }
+        ],
+        "scope": 219,
+        "src": "643:6631:1"
+      }
+    ],
+    "src": "206:7069:1"
+  },
+  "legacyAST": {
+    "attributes": {
+      "absolutePath": "@kleros/dispute-resolver-interface-contract/contracts/solc-0.7.x/IDisputeResolver.sol",
+      "exportedSymbols": {
+        "IArbitrable": [
+          240
+        ],
+        "IArbitrator": [
+          332
+        ],
+        "IDisputeResolver": [
+          218
+        ],
+        "IEvidence": [
+          366
+        ]
+      },
+      "license": "MIT"
+    },
+    "children": [
+      {
+        "attributes": {
+          "literals": [
+            "solidity",
+            "^",
+            "0.7",
+            ".0"
+          ]
+        },
+        "id": 89,
+        "name": "PragmaDirective",
+        "src": "206:23:1"
+      },
+      {
+        "attributes": {
+          "SourceUnit": 241,
+          "absolutePath": "@kleros/erc-792/contracts/IArbitrable.sol",
+          "file": "@kleros/erc-792/contracts/IArbitrable.sol",
+          "scope": 219,
+          "symbolAliases": [
+            null
+          ],
+          "unitAlias": ""
+        },
+        "id": 90,
+        "name": "ImportDirective",
+        "src": "231:51:1"
+      },
+      {
+        "attributes": {
+          "SourceUnit": 367,
+          "absolutePath": "@kleros/erc-792/contracts/erc-1497/IEvidence.sol",
+          "file": "@kleros/erc-792/contracts/erc-1497/IEvidence.sol",
+          "scope": 219,
+          "symbolAliases": [
+            null
+          ],
+          "unitAlias": ""
+        },
+        "id": 91,
+        "name": "ImportDirective",
+        "src": "283:58:1"
+      },
+      {
+        "attributes": {
+          "SourceUnit": 333,
+          "absolutePath": "@kleros/erc-792/contracts/IArbitrator.sol",
+          "file": "@kleros/erc-792/contracts/IArbitrator.sol",
+          "scope": 219,
+          "symbolAliases": [
+            null
+          ],
+          "unitAlias": ""
+        },
+        "id": 92,
+        "name": "ImportDirective",
+        "src": "342:51:1"
+      },
+      {
+        "attributes": {
+          "abstract": true,
+          "contractDependencies": [
+            240,
+            366
+          ],
+          "contractKind": "contract",
+          "fullyImplemented": false,
+          "linearizedBaseContracts": [
+            218,
+            366,
+            240
+          ],
+          "name": "IDisputeResolver",
+          "scope": 219
+        },
+        "children": [
+          {
+            "attributes": {
+              "text": "  @title This serves as a standard interface for crowdfunded appeals and evidence submission, which aren't a part of the arbitration (erc-792 and erc-1497) standard yet.\nThis interface is used in Dispute Resolver (resolve.kleros.io)."
+            },
+            "id": 93,
+            "name": "StructuredDocumentation",
+            "src": "395:247:1"
+          },
+          {
+            "attributes": {},
+            "children": [
+              {
+                "attributes": {
+                  "name": "IArbitrable",
+                  "referencedDeclaration": 240,
+                  "type": "contract IArbitrable"
+                },
+                "id": 94,
+                "name": "UserDefinedTypeName",
+                "src": "681:11:1"
+              }
+            ],
+            "id": 95,
+            "name": "InheritanceSpecifier",
+            "src": "681:11:1"
+          },
+          {
+            "attributes": {},
+            "children": [
+              {
+                "attributes": {
+                  "name": "IEvidence",
+                  "referencedDeclaration": 366,
+                  "type": "contract IEvidence"
+                },
+                "id": 96,
+                "name": "UserDefinedTypeName",
+                "src": "694:9:1"
+              }
+            ],
+            "id": 97,
+            "name": "InheritanceSpecifier",
+            "src": "694:9:1"
+          },
+          {
+            "attributes": {
+              "constant": true,
+              "functionSelector": "ffa1ad74",
+              "mutability": "constant",
+              "name": "VERSION",
+              "scope": 218,
+              "stateVariable": true,
+              "storageLocation": "default",
+              "type": "string",
+              "visibility": "public"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "name": "string",
+                  "type": "string"
+                },
+                "id": 98,
+                "name": "ElementaryTypeName",
+                "src": "710:6:1"
+              },
+              {
+                "attributes": {
+                  "hexvalue": "322e302e30",
+                  "isConstant": false,
+                  "isLValue": false,
+                  "isPure": true,
+                  "lValueRequested": false,
+                  "token": "string",
+                  "type": "literal_string \"2.0.0\"",
+                  "value": "2.0.0"
+                },
+                "id": 99,
+                "name": "Literal",
+                "src": "743:7:1"
+              }
+            ],
+            "id": 100,
+            "name": "VariableDeclaration",
+            "src": "710:40:1"
+          },
+          {
+            "attributes": {
+              "anonymous": false,
+              "name": "Contribution"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "text": "@dev Raised when a contribution is made, inside fundAppeal function.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _round The round number the contribution was made to.\n  @param ruling Indicates the ruling option which got the contribution.\n  @param _contributor Caller of fundAppeal function.\n  @param _amount Contribution amount."
+                },
+                "id": 101,
+                "name": "StructuredDocumentation",
+                "src": "837:489:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": true,
+                      "mutability": "mutable",
+                      "name": "_localDisputeID",
+                      "scope": 113,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 102,
+                        "name": "ElementaryTypeName",
+                        "src": "1350:7:1"
+                      }
+                    ],
+                    "id": 103,
+                    "name": "VariableDeclaration",
+                    "src": "1350:31:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": true,
+                      "mutability": "mutable",
+                      "name": "_round",
+                      "scope": 113,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 104,
+                        "name": "ElementaryTypeName",
+                        "src": "1383:7:1"
+                      }
+                    ],
+                    "id": 105,
+                    "name": "VariableDeclaration",
+                    "src": "1383:22:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": false,
+                      "mutability": "mutable",
+                      "name": "ruling",
+                      "scope": 113,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 106,
+                        "name": "ElementaryTypeName",
+                        "src": "1407:7:1"
+                      }
+                    ],
+                    "id": 107,
+                    "name": "VariableDeclaration",
+                    "src": "1407:14:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": true,
+                      "mutability": "mutable",
+                      "name": "_contributor",
+                      "scope": 113,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "address",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "address",
+                          "stateMutability": "nonpayable",
+                          "type": "address"
+                        },
+                        "id": 108,
+                        "name": "ElementaryTypeName",
+                        "src": "1423:7:1"
+                      }
+                    ],
+                    "id": 109,
+                    "name": "VariableDeclaration",
+                    "src": "1423:28:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": false,
+                      "mutability": "mutable",
+                      "name": "_amount",
+                      "scope": 113,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 110,
+                        "name": "ElementaryTypeName",
+                        "src": "1453:7:1"
+                      }
+                    ],
+                    "id": 111,
+                    "name": "VariableDeclaration",
+                    "src": "1453:15:1"
+                  }
+                ],
+                "id": 112,
+                "name": "ParameterList",
+                "src": "1349:120:1"
+              }
+            ],
+            "id": 113,
+            "name": "EventDefinition",
+            "src": "1331:139:1"
+          },
+          {
+            "attributes": {
+              "anonymous": false,
+              "name": "Withdrawal"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "text": "@dev Raised when a contributor withdraws non-zero value.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _round The round number the withdrawal was made from.\n  @param _ruling Indicates the ruling option which contributor gets rewards from.\n  @param _contributor The beneficiary of withdrawal.\n  @param _reward Total amount of withdrawal, consists of reimbursed deposits plus rewards."
+                },
+                "id": 114,
+                "name": "StructuredDocumentation",
+                "src": "1476:540:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": true,
+                      "mutability": "mutable",
+                      "name": "_localDisputeID",
+                      "scope": 126,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 115,
+                        "name": "ElementaryTypeName",
+                        "src": "2038:7:1"
+                      }
+                    ],
+                    "id": 116,
+                    "name": "VariableDeclaration",
+                    "src": "2038:31:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": true,
+                      "mutability": "mutable",
+                      "name": "_round",
+                      "scope": 126,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 117,
+                        "name": "ElementaryTypeName",
+                        "src": "2071:7:1"
+                      }
+                    ],
+                    "id": 118,
+                    "name": "VariableDeclaration",
+                    "src": "2071:22:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": false,
+                      "mutability": "mutable",
+                      "name": "_ruling",
+                      "scope": 126,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 119,
+                        "name": "ElementaryTypeName",
+                        "src": "2095:7:1"
+                      }
+                    ],
+                    "id": 120,
+                    "name": "VariableDeclaration",
+                    "src": "2095:15:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": true,
+                      "mutability": "mutable",
+                      "name": "_contributor",
+                      "scope": 126,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "address",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "address",
+                          "stateMutability": "nonpayable",
+                          "type": "address"
+                        },
+                        "id": 121,
+                        "name": "ElementaryTypeName",
+                        "src": "2112:7:1"
+                      }
+                    ],
+                    "id": 122,
+                    "name": "VariableDeclaration",
+                    "src": "2112:28:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": false,
+                      "mutability": "mutable",
+                      "name": "_reward",
+                      "scope": 126,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 123,
+                        "name": "ElementaryTypeName",
+                        "src": "2142:7:1"
+                      }
+                    ],
+                    "id": 124,
+                    "name": "VariableDeclaration",
+                    "src": "2142:15:1"
+                  }
+                ],
+                "id": 125,
+                "name": "ParameterList",
+                "src": "2037:121:1"
+              }
+            ],
+            "id": 126,
+            "name": "EventDefinition",
+            "src": "2021:138:1"
+          },
+          {
+            "attributes": {
+              "anonymous": false,
+              "name": "RulingFunded"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "text": "@dev To be raised when a ruling option is fully funded for appeal.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _round Number of the round this ruling option was fully funded in.\n  @param _ruling The ruling option which just got fully funded."
+                },
+                "id": 127,
+                "name": "StructuredDocumentation",
+                "src": "2165:389:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": true,
+                      "mutability": "mutable",
+                      "name": "_localDisputeID",
+                      "scope": 135,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 128,
+                        "name": "ElementaryTypeName",
+                        "src": "2578:7:1"
+                      }
+                    ],
+                    "id": 129,
+                    "name": "VariableDeclaration",
+                    "src": "2578:31:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": true,
+                      "mutability": "mutable",
+                      "name": "_round",
+                      "scope": 135,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 130,
+                        "name": "ElementaryTypeName",
+                        "src": "2611:7:1"
+                      }
+                    ],
+                    "id": 131,
+                    "name": "VariableDeclaration",
+                    "src": "2611:22:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "indexed": true,
+                      "mutability": "mutable",
+                      "name": "_ruling",
+                      "scope": 135,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 132,
+                        "name": "ElementaryTypeName",
+                        "src": "2635:7:1"
+                      }
+                    ],
+                    "id": 133,
+                    "name": "VariableDeclaration",
+                    "src": "2635:23:1"
+                  }
+                ],
+                "id": 134,
+                "name": "ParameterList",
+                "src": "2577:82:1"
+              }
+            ],
+            "id": 135,
+            "name": "EventDefinition",
+            "src": "2559:101:1"
+          },
+          {
+            "attributes": {
+              "functionSelector": "c21ae061",
+              "implemented": false,
+              "isConstructor": false,
+              "kind": "function",
+              "modifiers": [
+                null
+              ],
+              "name": "externalIDtoLocalID",
+              "scope": 218,
+              "stateMutability": "nonpayable",
+              "virtual": true,
+              "visibility": "external"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "text": "@dev Maps external (arbitrator side) dispute id to local (arbitrable) dispute id.\n  @param _externalDisputeID Dispute id as in arbitrator contract.\n  @return localDisputeID Dispute id as in arbitrable contract."
+                },
+                "id": 136,
+                "name": "StructuredDocumentation",
+                "src": "2666:234:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_externalDisputeID",
+                      "scope": 143,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 137,
+                        "name": "ElementaryTypeName",
+                        "src": "2934:7:1"
+                      }
+                    ],
+                    "id": 138,
+                    "name": "VariableDeclaration",
+                    "src": "2934:26:1"
+                  }
+                ],
+                "id": 139,
+                "name": "ParameterList",
+                "src": "2933:28:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "localDisputeID",
+                      "scope": 143,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 140,
+                        "name": "ElementaryTypeName",
+                        "src": "2988:7:1"
+                      }
+                    ],
+                    "id": 141,
+                    "name": "VariableDeclaration",
+                    "src": "2988:22:1"
+                  }
+                ],
+                "id": 142,
+                "name": "ParameterList",
+                "src": "2987:24:1"
+              }
+            ],
+            "id": 143,
+            "name": "FunctionDefinition",
+            "src": "2905:107:1"
+          },
+          {
+            "attributes": {
+              "functionSelector": "8d8b2d7e",
+              "implemented": false,
+              "isConstructor": false,
+              "kind": "function",
+              "modifiers": [
+                null
+              ],
+              "name": "numberOfRulingOptions",
+              "scope": 218,
+              "stateMutability": "view",
+              "virtual": true,
+              "visibility": "external"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "text": "@dev Returns number of possible ruling options. Valid rulings are [0, return value].\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @return count The number of ruling options."
+                },
+                "id": 144,
+                "name": "StructuredDocumentation",
+                "src": "3018:307:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_localDisputeID",
+                      "scope": 151,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 145,
+                        "name": "ElementaryTypeName",
+                        "src": "3361:7:1"
+                      }
+                    ],
+                    "id": 146,
+                    "name": "VariableDeclaration",
+                    "src": "3361:23:1"
+                  }
+                ],
+                "id": 147,
+                "name": "ParameterList",
+                "src": "3360:25:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "count",
+                      "scope": 151,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 148,
+                        "name": "ElementaryTypeName",
+                        "src": "3417:7:1"
+                      }
+                    ],
+                    "id": 149,
+                    "name": "VariableDeclaration",
+                    "src": "3417:13:1"
+                  }
+                ],
+                "id": 150,
+                "name": "ParameterList",
+                "src": "3416:15:1"
+              }
+            ],
+            "id": 151,
+            "name": "FunctionDefinition",
+            "src": "3330:102:1"
+          },
+          {
+            "attributes": {
+              "functionSelector": "a6a7f0eb",
+              "implemented": false,
+              "isConstructor": false,
+              "kind": "function",
+              "modifiers": [
+                null
+              ],
+              "name": "submitEvidence",
+              "scope": 218,
+              "stateMutability": "nonpayable",
+              "virtual": true,
+              "visibility": "external"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "text": "@dev Allows to submit evidence for a given dispute.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _evidenceURI IPFS path to evidence, example: '/ipfs/Qmarwkf7C9RuzDEJNnarT3WZ7kem5bk8DZAzx78acJjMFH/evidence.json'"
+                },
+                "id": 152,
+                "name": "StructuredDocumentation",
+                "src": "3438:351:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_localDisputeID",
+                      "scope": 159,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 153,
+                        "name": "ElementaryTypeName",
+                        "src": "3818:7:1"
+                      }
+                    ],
+                    "id": 154,
+                    "name": "VariableDeclaration",
+                    "src": "3818:23:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_evidenceURI",
+                      "scope": 159,
+                      "stateVariable": false,
+                      "storageLocation": "calldata",
+                      "type": "string",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "string",
+                          "type": "string"
+                        },
+                        "id": 155,
+                        "name": "ElementaryTypeName",
+                        "src": "3843:6:1"
+                      }
+                    ],
+                    "id": 156,
+                    "name": "VariableDeclaration",
+                    "src": "3843:28:1"
+                  }
+                ],
+                "id": 157,
+                "name": "ParameterList",
+                "src": "3817:55:1"
+              },
+              {
+                "attributes": {
+                  "parameters": [
+                    null
+                  ]
+                },
+                "children": [],
+                "id": 158,
+                "name": "ParameterList",
+                "src": "3889:0:1"
+              }
+            ],
+            "id": 159,
+            "name": "FunctionDefinition",
+            "src": "3794:96:1"
+          },
+          {
+            "attributes": {
+              "functionSelector": "4b2f0ea0",
+              "implemented": false,
+              "isConstructor": false,
+              "kind": "function",
+              "modifiers": [
+                null
+              ],
+              "name": "fundAppeal",
+              "scope": 218,
+              "stateMutability": "payable",
+              "virtual": true,
+              "visibility": "external"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "text": "@dev Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _ruling The ruling option to which the caller wants to contribute.\n  @return fullyFunded True if the ruling option got fully funded as a result of this contribution."
+                },
+                "id": 160,
+                "name": "StructuredDocumentation",
+                "src": "3896:502:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_localDisputeID",
+                      "scope": 169,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 161,
+                        "name": "ElementaryTypeName",
+                        "src": "4423:7:1"
+                      }
+                    ],
+                    "id": 162,
+                    "name": "VariableDeclaration",
+                    "src": "4423:23:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_ruling",
+                      "scope": 169,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 163,
+                        "name": "ElementaryTypeName",
+                        "src": "4448:7:1"
+                      }
+                    ],
+                    "id": 164,
+                    "name": "VariableDeclaration",
+                    "src": "4448:15:1"
+                  }
+                ],
+                "id": 165,
+                "name": "ParameterList",
+                "src": "4422:42:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "fullyFunded",
+                      "scope": 169,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "bool",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "bool",
+                          "type": "bool"
+                        },
+                        "id": 166,
+                        "name": "ElementaryTypeName",
+                        "src": "4499:4:1"
+                      }
+                    ],
+                    "id": 167,
+                    "name": "VariableDeclaration",
+                    "src": "4499:16:1"
+                  }
+                ],
+                "id": 168,
+                "name": "ParameterList",
+                "src": "4498:18:1"
+              }
+            ],
+            "id": 169,
+            "name": "FunctionDefinition",
+            "src": "4403:114:1"
+          },
+          {
+            "attributes": {
+              "functionSelector": "79873f8a",
+              "implemented": false,
+              "isConstructor": false,
+              "kind": "function",
+              "modifiers": [
+                null
+              ],
+              "name": "getMultipliers",
+              "scope": 218,
+              "stateMutability": "view",
+              "virtual": true,
+              "visibility": "external"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "text": "@dev Returns appeal multipliers.\n  @return winnerStakeMultiplier Winners stake multiplier.\n  @return loserStakeMultiplier Losers stake multiplier.\n  @return loserAppealPeriodMultiplier Losers appeal period multiplier. The loser is given less time to fund its appeal to defend against last minute appeal funding attacks.\n  @return denominator Multiplier denominator in basis points."
+                },
+                "id": 170,
+                "name": "StructuredDocumentation",
+                "src": "4523:417:1"
+              },
+              {
+                "attributes": {
+                  "parameters": [
+                    null
+                  ]
+                },
+                "children": [],
+                "id": 171,
+                "name": "ParameterList",
+                "src": "4968:2:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "winnerStakeMultiplier",
+                      "scope": 181,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 172,
+                        "name": "ElementaryTypeName",
+                        "src": "5047:7:1"
+                      }
+                    ],
+                    "id": 173,
+                    "name": "VariableDeclaration",
+                    "src": "5047:29:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "loserStakeMultiplier",
+                      "scope": 181,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 174,
+                        "name": "ElementaryTypeName",
+                        "src": "5090:7:1"
+                      }
+                    ],
+                    "id": 175,
+                    "name": "VariableDeclaration",
+                    "src": "5090:28:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "loserAppealPeriodMultiplier",
+                      "scope": 181,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 176,
+                        "name": "ElementaryTypeName",
+                        "src": "5132:7:1"
+                      }
+                    ],
+                    "id": 177,
+                    "name": "VariableDeclaration",
+                    "src": "5132:35:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "denominator",
+                      "scope": 181,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 178,
+                        "name": "ElementaryTypeName",
+                        "src": "5181:7:1"
+                      }
+                    ],
+                    "id": 179,
+                    "name": "VariableDeclaration",
+                    "src": "5181:19:1"
+                  }
+                ],
+                "id": 180,
+                "name": "ParameterList",
+                "src": "5033:177:1"
+              }
+            ],
+            "id": 181,
+            "name": "FunctionDefinition",
+            "src": "4945:266:1"
+          },
+          {
+            "attributes": {
+              "functionSelector": "362c3479",
+              "implemented": false,
+              "isConstructor": false,
+              "kind": "function",
+              "modifiers": [
+                null
+              ],
+              "name": "withdrawFeesAndRewards",
+              "scope": 218,
+              "stateMutability": "nonpayable",
+              "virtual": true,
+              "visibility": "external"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "text": "@dev Allows to withdraw any reimbursable fees or rewards after the dispute gets resolved.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _contributor Beneficiary of withdraw operation.\n  @param _round Number of the round that caller wants to execute withdraw on.\n  @param _ruling A ruling option that caller wants to execute withdraw on.\n  @return sum The amount that is going to be transferred to contributor as a result of this function call."
+                },
+                "id": 182,
+                "name": "StructuredDocumentation",
+                "src": "5217:601:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_localDisputeID",
+                      "scope": 195,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 183,
+                        "name": "ElementaryTypeName",
+                        "src": "5864:7:1"
+                      }
+                    ],
+                    "id": 184,
+                    "name": "VariableDeclaration",
+                    "src": "5864:23:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_contributor",
+                      "scope": 195,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "address payable",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "address",
+                          "stateMutability": "payable",
+                          "type": "address payable"
+                        },
+                        "id": 185,
+                        "name": "ElementaryTypeName",
+                        "src": "5897:15:1"
+                      }
+                    ],
+                    "id": 186,
+                    "name": "VariableDeclaration",
+                    "src": "5897:28:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_round",
+                      "scope": 195,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 187,
+                        "name": "ElementaryTypeName",
+                        "src": "5935:7:1"
+                      }
+                    ],
+                    "id": 188,
+                    "name": "VariableDeclaration",
+                    "src": "5935:14:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_ruling",
+                      "scope": 195,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 189,
+                        "name": "ElementaryTypeName",
+                        "src": "5959:7:1"
+                      }
+                    ],
+                    "id": 190,
+                    "name": "VariableDeclaration",
+                    "src": "5959:15:1"
+                  }
+                ],
+                "id": 191,
+                "name": "ParameterList",
+                "src": "5854:126:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "sum",
+                      "scope": 195,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 192,
+                        "name": "ElementaryTypeName",
+                        "src": "6007:7:1"
+                      }
+                    ],
+                    "id": 193,
+                    "name": "VariableDeclaration",
+                    "src": "6007:11:1"
+                  }
+                ],
+                "id": 194,
+                "name": "ParameterList",
+                "src": "6006:13:1"
+              }
+            ],
+            "id": 195,
+            "name": "FunctionDefinition",
+            "src": "5823:197:1"
+          },
+          {
+            "attributes": {
+              "functionSelector": "fe2dddeb",
+              "implemented": false,
+              "isConstructor": false,
+              "kind": "function",
+              "modifiers": [
+                null
+              ],
+              "name": "withdrawFeesAndRewardsForAllRounds",
+              "scope": 218,
+              "stateMutability": "nonpayable",
+              "virtual": true,
+              "visibility": "external"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "text": "@dev Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _contributor Beneficiary of withdraw operation.\n  @param _ruling Ruling option that caller wants to execute withdraw on."
+                },
+                "id": 196,
+                "name": "StructuredDocumentation",
+                "src": "6026:459:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_localDisputeID",
+                      "scope": 205,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 197,
+                        "name": "ElementaryTypeName",
+                        "src": "6543:7:1"
+                      }
+                    ],
+                    "id": 198,
+                    "name": "VariableDeclaration",
+                    "src": "6543:23:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_contributor",
+                      "scope": 205,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "address payable",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "address",
+                          "stateMutability": "payable",
+                          "type": "address payable"
+                        },
+                        "id": 199,
+                        "name": "ElementaryTypeName",
+                        "src": "6576:15:1"
+                      }
+                    ],
+                    "id": 200,
+                    "name": "VariableDeclaration",
+                    "src": "6576:28:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_ruling",
+                      "scope": 205,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 201,
+                        "name": "ElementaryTypeName",
+                        "src": "6614:7:1"
+                      }
+                    ],
+                    "id": 202,
+                    "name": "VariableDeclaration",
+                    "src": "6614:15:1"
+                  }
+                ],
+                "id": 203,
+                "name": "ParameterList",
+                "src": "6533:102:1"
+              },
+              {
+                "attributes": {
+                  "parameters": [
+                    null
+                  ]
+                },
+                "children": [],
+                "id": 204,
+                "name": "ParameterList",
+                "src": "6652:0:1"
+              }
+            ],
+            "id": 205,
+            "name": "FunctionDefinition",
+            "src": "6490:163:1"
+          },
+          {
+            "attributes": {
+              "functionSelector": "ec85635b",
+              "implemented": false,
+              "isConstructor": false,
+              "kind": "function",
+              "modifiers": [
+                null
+              ],
+              "name": "getTotalWithdrawableAmount",
+              "scope": 218,
+              "stateMutability": "view",
+              "virtual": true,
+              "visibility": "external"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "text": "@dev Returns the sum of withdrawable amount.\n  @param _localDisputeID Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.\n  @param _contributor Beneficiary of withdraw operation.\n  @param _ruling Ruling option that caller wants to get withdrawable amount from.\n  @return sum The total amount available to withdraw."
+                },
+                "id": 206,
+                "name": "StructuredDocumentation",
+                "src": "6659:426:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_localDisputeID",
+                      "scope": 217,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 207,
+                        "name": "ElementaryTypeName",
+                        "src": "7135:7:1"
+                      }
+                    ],
+                    "id": 208,
+                    "name": "VariableDeclaration",
+                    "src": "7135:23:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_contributor",
+                      "scope": 217,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "address payable",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "address",
+                          "stateMutability": "payable",
+                          "type": "address payable"
+                        },
+                        "id": 209,
+                        "name": "ElementaryTypeName",
+                        "src": "7168:15:1"
+                      }
+                    ],
+                    "id": 210,
+                    "name": "VariableDeclaration",
+                    "src": "7168:28:1"
+                  },
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "_ruling",
+                      "scope": 217,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 211,
+                        "name": "ElementaryTypeName",
+                        "src": "7206:7:1"
+                      }
+                    ],
+                    "id": 212,
+                    "name": "VariableDeclaration",
+                    "src": "7206:15:1"
+                  }
+                ],
+                "id": 213,
+                "name": "ParameterList",
+                "src": "7125:102:1"
+              },
+              {
+                "children": [
+                  {
+                    "attributes": {
+                      "constant": false,
+                      "mutability": "mutable",
+                      "name": "sum",
+                      "scope": 217,
+                      "stateVariable": false,
+                      "storageLocation": "default",
+                      "type": "uint256",
+                      "visibility": "internal"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "name": "uint256",
+                          "type": "uint256"
+                        },
+                        "id": 214,
+                        "name": "ElementaryTypeName",
+                        "src": "7259:7:1"
+                      }
+                    ],
+                    "id": 215,
+                    "name": "VariableDeclaration",
+                    "src": "7259:11:1"
+                  }
+                ],
+                "id": 216,
+                "name": "ParameterList",
+                "src": "7258:13:1"
+              }
+            ],
+            "id": 217,
+            "name": "FunctionDefinition",
+            "src": "7090:182:1"
+          }
+        ],
+        "id": 218,
+        "name": "ContractDefinition",
+        "src": "643:6631:1"
+      }
+    ],
+    "id": 219,
+    "name": "SourceUnit",
+    "src": "206:7069:1"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.7.6+commit.7338295f.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.4.3",
+  "updatedAt": "2021-09-02T13:22:02.663Z",
+  "devdoc": {
+    "events": {
+      "Contribution(uint256,uint256,uint256,address,uint256)": {
+        "details": "Raised when a contribution is made, inside fundAppeal function.",
+        "params": {
+          "_amount": "Contribution amount.",
+          "_contributor": "Caller of fundAppeal function.",
+          "_localDisputeID": "Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.",
+          "_round": "The round number the contribution was made to.",
+          "ruling": "Indicates the ruling option which got the contribution."
+        }
+      },
+      "RulingFunded(uint256,uint256,uint256)": {
+        "details": "To be raised when a ruling option is fully funded for appeal.",
+        "params": {
+          "_localDisputeID": "Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.",
+          "_round": "Number of the round this ruling option was fully funded in.",
+          "_ruling": "The ruling option which just got fully funded."
+        }
+      },
+      "Withdrawal(uint256,uint256,uint256,address,uint256)": {
+        "details": "Raised when a contributor withdraws non-zero value.",
+        "params": {
+          "_contributor": "The beneficiary of withdrawal.",
+          "_localDisputeID": "Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.",
+          "_reward": "Total amount of withdrawal, consists of reimbursed deposits plus rewards.",
+          "_round": "The round number the withdrawal was made from.",
+          "_ruling": "Indicates the ruling option which contributor gets rewards from."
+        }
+      }
+    },
+    "kind": "dev",
+    "methods": {
+      "externalIDtoLocalID(uint256)": {
+        "details": "Maps external (arbitrator side) dispute id to local (arbitrable) dispute id.",
+        "params": {
+          "_externalDisputeID": "Dispute id as in arbitrator contract."
+        },
+        "returns": {
+          "localDisputeID": "Dispute id as in arbitrable contract."
+        }
+      },
+      "fundAppeal(uint256,uint256)": {
+        "details": "Manages contributions and calls appeal function of the specified arbitrator to appeal a dispute. This function lets appeals be crowdfunded.",
+        "params": {
+          "_localDisputeID": "Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.",
+          "_ruling": "The ruling option to which the caller wants to contribute."
+        },
+        "returns": {
+          "fullyFunded": "True if the ruling option got fully funded as a result of this contribution."
+        }
+      },
+      "getMultipliers()": {
+        "details": "Returns appeal multipliers.",
+        "returns": {
+          "denominator": "Multiplier denominator in basis points.",
+          "loserAppealPeriodMultiplier": "Losers appeal period multiplier. The loser is given less time to fund its appeal to defend against last minute appeal funding attacks.",
+          "loserStakeMultiplier": "Losers stake multiplier.",
+          "winnerStakeMultiplier": "Winners stake multiplier."
+        }
+      },
+      "getTotalWithdrawableAmount(uint256,address,uint256)": {
+        "details": "Returns the sum of withdrawable amount.",
+        "params": {
+          "_contributor": "Beneficiary of withdraw operation.",
+          "_localDisputeID": "Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.",
+          "_ruling": "Ruling option that caller wants to get withdrawable amount from."
+        },
+        "returns": {
+          "sum": "The total amount available to withdraw."
+        }
+      },
+      "numberOfRulingOptions(uint256)": {
+        "details": "Returns number of possible ruling options. Valid rulings are [0, return value].",
+        "params": {
+          "_localDisputeID": "Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID."
+        },
+        "returns": {
+          "count": "The number of ruling options."
+        }
+      },
+      "rule(uint256,uint256)": {
+        "details": "Give a ruling for a dispute. Must be called by the arbitrator. The purpose of this function is to ensure that the address calling it has the right to rule on the contract.",
+        "params": {
+          "_disputeID": "ID of the dispute in the Arbitrator contract.",
+          "_ruling": "Ruling given by the arbitrator. Note that 0 is reserved for \"Not able/wanting to make a decision\"."
+        }
+      },
+      "submitEvidence(uint256,string)": {
+        "details": "Allows to submit evidence for a given dispute.",
+        "params": {
+          "_evidenceURI": "IPFS path to evidence, example: '/ipfs/Qmarwkf7C9RuzDEJNnarT3WZ7kem5bk8DZAzx78acJjMFH/evidence.json'",
+          "_localDisputeID": "Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID."
+        }
+      },
+      "withdrawFeesAndRewards(uint256,address,uint256,uint256)": {
+        "details": "Allows to withdraw any reimbursable fees or rewards after the dispute gets resolved.",
+        "params": {
+          "_contributor": "Beneficiary of withdraw operation.",
+          "_localDisputeID": "Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.",
+          "_round": "Number of the round that caller wants to execute withdraw on.",
+          "_ruling": "A ruling option that caller wants to execute withdraw on."
+        },
+        "returns": {
+          "sum": "The amount that is going to be transferred to contributor as a result of this function call."
+        }
+      },
+      "withdrawFeesAndRewardsForAllRounds(uint256,address,uint256)": {
+        "details": "Allows to withdraw any rewards or reimbursable fees after the dispute gets resolved. For multiple rulings options and for all rounds at once.",
+        "params": {
+          "_contributor": "Beneficiary of withdraw operation.",
+          "_localDisputeID": "Identifier of a dispute in scope of arbitrable contract. Arbitrator ids can be translated to local ids via externalIDtoLocalID.",
+          "_ruling": "Ruling option that caller wants to execute withdraw on."
+        }
+      }
+    },
+    "title": "This serves as a standard interface for crowdfunded appeals and evidence submission, which aren't a part of the arbitration (erc-792 and erc-1497) standard yet. This interface is used in Dispute Resolver (resolve.kleros.io).",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  }
+}

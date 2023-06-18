@@ -78,6 +78,18 @@ module.exports = {
       skipDryRun: true,
       gas: 2900000,
     },
+    sepolia: {
+      provider: () =>
+        new HDWalletProvider({
+          privateKeys: privateKeys,
+          providerOrUrl: `wss://sepolia.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
+          chainId: 11155111,
+        }),
+      networkCheckTimeout: 99999999,
+      network_id: 11155111,
+      skipDryRun: true,
+      gas: 3900000,
+    },
     sokol: {
       provider: () =>
         new HDWalletProvider({
@@ -99,6 +111,34 @@ module.exports = {
           chainId: 100,
         }),
       network_id: 100,
+      networkCheckTimeout: 2000000,
+      gas: 5000000,
+      gasPrice: 20000000000, // 20 gwei
+    },
+
+
+
+    polygon: {
+      provider: () =>
+        new HDWalletProvider({
+          privateKeys: privateKeys,
+          providerOrUrl: "https://matic-mainnet.chainstacklabs.com",
+          chainId: 137,
+        }),
+      network_id: 137,
+      networkCheckTimeout: 2000000,
+      gas: 5000000,
+      gasPrice: 20000000000, // 20 gwei
+    },
+
+    mumbai: {
+      provider: () =>
+        new HDWalletProvider({
+          privateKeys: privateKeys,
+          providerOrUrl: "https://polygon-mumbai.g.alchemy.com/v2/PX_3q-P-AbxWKn8qiTvF5A6TFSMfQ4jz",
+          chainId: 80001,
+        }),
+      network_id: 80001,
       networkCheckTimeout: 2000000,
       gas: 5000000,
       gasPrice: 20000000000, // 20 gwei

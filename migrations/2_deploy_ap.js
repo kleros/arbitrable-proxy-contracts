@@ -8,6 +8,7 @@ const KLEROS = {
   kovan: "0x60B2AbfDfaD9c0873242f59f2A8c32A3Cc682f80",
   sokol: "0xb701ff19fBD9702DD7Ca099Ee7D0D42a2612baB5",
   xdai: "0x9C1dA9A04925bDfDedf0f6421bC7EEa8305F9002",
+  sepolia: "0x90992fb4E15ce0C59aEFfb376460Fda4Ee19C879"
 };
 
 module.exports = function (deployer, network) {
