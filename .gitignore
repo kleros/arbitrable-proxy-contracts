@@ -1,4 +1,8 @@
-node_modules/
 *.log
 
 .idea/
+
+# Ignore everything in node_modules
+/node_modules/*
+# Except for the specific folder
+!/node_modules/@kleros/
