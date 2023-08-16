@@ -7,6 +7,7 @@
   "license": "MIT",
   "private": false,
   "devDependencies": {
+    "@openzeppelin/test-helpers": "^0.5.16",
     "@poanet/solidity-flattener": "^3.0.6",
     "@truffle/hdwallet-provider": "^1.5.0",
     "chai": "^4.2.0",
