@@ -7,7 +7,6 @@
   "license": "MIT",
   "private": false,
   "devDependencies": {
-    "@openzeppelin/test-helpers": "^0.5.4",
     "@poanet/solidity-flattener": "^3.0.6",
     "@truffle/hdwallet-provider": "^1.5.0",
     "chai": "^4.2.0",
@@ -18,7 +17,7 @@
     "prettier-plugin-solidity": "^1.0.0-beta.3",
     "surya": "^0.4.0",
     "truffle": "^5.4.9",
-    "truffle-plugin-verify": "^0.5.7"
+    "truffle-plugin-verify": "^0.6.5"
   },
   "dependencies": {
     "@kleros/dispute-resolver-interface-contract": "^2",
@@ -56,7 +55,7 @@
     ]
   },
   "volta": {
-    "node": "12.22.6",
+    "node": "18.17.1",
     "yarn": "1.22.11"
   }
 }

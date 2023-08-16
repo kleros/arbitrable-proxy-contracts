@@ -12,7 +12,7 @@ pragma solidity >=0.7;
 
 import "@kleros/erc-792/contracts/IArbitrable.sol";
 import "@kleros/erc-792/contracts/IArbitrator.sol";
-import "/@kleros/ethereum-libraries/contracts/CappedMath.sol";
+import "@kleros/ethereum-libraries/contracts/CappedMath.sol";
 
 /** @title Auto Appealable Arbitrator
  *  @dev This is a centralized arbitrator which either gives direct rulings or provides a time and fee for appeal.

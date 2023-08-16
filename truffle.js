@@ -46,7 +46,7 @@ module.exports = {
       provider: () =>
         new HDWalletProvider({
           privateKeys: privateKeys,
-          providerOrUrl: `wss://ropsten.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
+          providerOrUrl: `https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
           chainId: 3,
         }),
       networkCheckTimeout: 99999999,
@@ -78,13 +78,24 @@ module.exports = {
       skipDryRun: true,
       gas: 2900000,
     },
+    sepolia2: {
+      url: `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+      from: '0x32861C06ff9a7B16a841363DE69A5307d1F25BC1',
+      privateKeys: privateKeys,
+      networkCheckTimeout: 99999999,
+      network_id: 11155111,
+      skipDryRun: true,
+      gas: 3900000,
+      gasLimit: 10000000
+    },
     sepolia: {
-      provider: () =>
-        new HDWalletProvider({
+      provider: function() {
+        return new HDWalletProvider({
           privateKeys: privateKeys,
-          providerOrUrl: `wss://sepolia.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
+          providerOrUrl: `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
           chainId: 11155111,
-        }),
+        });
+      },
       networkCheckTimeout: 99999999,
       network_id: 11155111,
       skipDryRun: true,
@@ -170,4 +181,7 @@ module.exports = {
   api_keys: {
     etherscan: process.env.ETHERSCAN,
   },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN
+  }
 };
