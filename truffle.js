@@ -78,16 +78,7 @@ module.exports = {
       skipDryRun: true,
       gas: 2900000,
     },
-    sepolia2: {
-      url: `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-      from: '0x32861C06ff9a7B16a841363DE69A5307d1F25BC1',
-      privateKeys: privateKeys,
-      networkCheckTimeout: 99999999,
-      network_id: 11155111,
-      skipDryRun: true,
-      gas: 3900000,
-      gasLimit: 10000000
-    },
+
     sepolia: {
       provider: function() {
         return new HDWalletProvider({
@@ -99,7 +90,6 @@ module.exports = {
       networkCheckTimeout: 99999999,
       network_id: 11155111,
       skipDryRun: true,
-      gas: 3900000,
     },
     sokol: {
       provider: () =>
