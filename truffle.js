@@ -30,55 +30,6 @@ module.exports = {
       gas: 4000000,
     },
 
-    kovan: {
-      provider: () =>
-        new HDWalletProvider({
-          privateKeys: privateKeys,
-          providerOrUrl: `wss://kovan.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
-          chainId: 42,
-        }),
-      networkCheckTimeout: 99999999,
-      network_id: 42,
-      skipDryRun: true,
-      gas: 10000000,
-    },
-    ropsten: {
-      provider: () =>
-        new HDWalletProvider({
-          privateKeys: privateKeys,
-          providerOrUrl: `https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-          chainId: 3,
-        }),
-      networkCheckTimeout: 99999999,
-      network_id: 3,
-      skipDryRun: true,
-      gas: 2900000,
-    },
-    rinkeby: {
-      provider: () =>
-        new HDWalletProvider({
-          privateKeys: privateKeys,
-          providerOrUrl: `wss://rinkeby.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
-          chainId: 4,
-        }),
-      networkCheckTimeout: 99999999,
-      network_id: 4,
-      skipDryRun: true,
-      gas: 2900000,
-    },
-    görli: {
-      provider: () =>
-        new HDWalletProvider({
-          privateKeys: privateKeys,
-          providerOrUrl: `wss://goerli.infura.io/ws/v3/${process.env.INFURA_PROJECT_ID}`,
-          chainId: 5,
-        }),
-      networkCheckTimeout: 99999999,
-      network_id: 5,
-      skipDryRun: true,
-      gas: 2900000,
-    },
-
     sepolia: {
       provider: function() {
         return new HDWalletProvider({
