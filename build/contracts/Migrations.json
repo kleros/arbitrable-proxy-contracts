@@ -68,7 +68,7 @@
   "sourceMap": "66:526:6:-:0;;;164:56;;;;;;;;;-1:-1:-1;195:5:6;:18;;-1:-1:-1;;;;;;195:18:6;203:10;195:18;;;66:526;;;;;;",
   "deployedSourceMap": "66:526:6:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;415:175;;;;;;;;;;;;;;;;-1:-1:-1;415:175:6;;;;:::i;:::-;;118:39;;;:::i;:::-;;;;;;;;;;;;;;;;92:20;;;:::i;:::-;;;;;;;;;;;;;;;;;;;297:112;;;;;;;;;;;;;;;;-1:-1:-1;297:112:6;;:::i;415:175::-;276:5;;;;262:10;:19;258:26;;;481:19:::1;514:11;481:45;;536:8;:21;;;558:24;;536:47;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;::::0;::::1;;;;;;;;;;;;::::0;::::1;;;;;;;;;283:1;258:26:::0;415:175;:::o;118:39::-;;;;:::o;92:20::-;;;;;;:::o;297:112::-;276:5;;;;262:10;:19;258:26;;;366:24:::1;:36:::0;297:112::o",
   "source": "// SPDX-License-Identifier: MIT\n\npragma solidity >=0.7.0 <0.8.0;\n\ncontract Migrations {\n    address public owner;\n    uint256 public last_completed_migration;\n\n    constructor() public {\n        owner = msg.sender;\n    }\n\n    modifier restricted() {\n        if (msg.sender == owner) _;\n    }\n\n    function setCompleted(uint256 completed) public restricted {\n        last_completed_migration = completed;\n    }\n\n    function upgrade(address new_address) public restricted {\n        Migrations upgraded = Migrations(new_address);\n        upgraded.setCompleted(last_completed_migration);\n    }\n}\n",
-  "sourcePath": "/home/f/repos/arbitrable-proxy-contracts/contracts/Migrations.sol",
+  "sourcePath": "/Users/ferit/IdeaProjects/arbitrable-proxy-contracts/contracts/Migrations.sol",
   "ast": {
     "absolutePath": "project:/contracts/Migrations.sol",
     "exportedSymbols": {
@@ -1455,7 +1455,7 @@
     }
   },
   "schemaVersion": "3.4.15",
-  "updatedAt": "2023-08-16T12:01:40.238Z",
+  "updatedAt": "2024-01-13T16:19:14.885Z",
   "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",

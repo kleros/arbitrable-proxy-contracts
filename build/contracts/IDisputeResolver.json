@@ -3586,7 +3586,7 @@
   },
   "networks": {},
   "schemaVersion": "3.4.15",
-  "updatedAt": "2023-08-16T11:07:53.958Z",
+  "updatedAt": "2024-01-13T15:27:00.892Z",
   "devdoc": {
     "events": {
       "Contribution(uint256,uint256,uint256,address,uint256)": {
